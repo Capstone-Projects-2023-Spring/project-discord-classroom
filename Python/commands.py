@@ -8,3 +8,6 @@ def handle_command(message) -> str:
 
     if command == 'roll':
         return str(random.randint(1, 6))
+
+    if command == 'help':
+        return "I can't help you right now."
