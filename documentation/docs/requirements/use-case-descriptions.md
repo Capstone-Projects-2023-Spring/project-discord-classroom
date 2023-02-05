@@ -44,6 +44,4 @@ As a user, I want open a ticket/question that can be answered by the TA/Teacher.
 1. The user types the !cticket command in the bot commands channel.
 2. The bot opens a private chat with the Student, TAs, and the Teacher.
 3. The student can now ask a question privately in the newly opened chat
-4. When the teacher/TA replies they can answer publicly and announce to the rest of the class, or privately in the chat created. 
-
-
+4. When the teacher/TA replies they can answer publicly and announce to the rest of the class, or privately in the chat created.
