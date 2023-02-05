@@ -8,9 +8,9 @@ sidebar_position: 2
 title: System Block Diagram
 ---
 flowchart TB
-    A[<img src='https://cdn-icons-png.flaticon.com/512/1995/1995574.png'>Educator]
-    B[<img src='https://cdn-icons-png.flaticon.com/512/5850/5850276.png'>Student]
-    C[<img src='https://cdn-icons-png.flaticon.com/512/6032/6032273.png'>Assistant]
+    A[User: Educator]
+    B[User: Student]
+    C[User: Assistant]
     D[<img src='https://www.svgrepo.com/show/353655/discord-icon.svg'>Discord]
     E[<img src='https://cdn.discordapp.com/attachments/494945996892012544/1071574051623030834/Discord_Classroom.jpg'>Classroom Bot]
     F[<img src='https://s3-eu-west-1.amazonaws.com/tpd/logos/5dc1fb0c303176000104b2d4/0x0.png'>SparkedHost]
