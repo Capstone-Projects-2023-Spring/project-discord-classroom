@@ -39,4 +39,11 @@ As a user, I want to track the attendance of students in my class.
 3. The bot writes the attendance data to the SQL database: marking a student as present if it revived a response, or absent if it did not.
 4. The bot notifies the user of any absences after the attendance taking period closes.
 
+Use Case 6<br>
+As a user, I want open a ticket/question that can be answered by the TA/Teacher.
+1. The user types the !cticket command in the bot commands channel.
+2. The bot opens a private chat with the Student, TAs, and the Teacher.
+3. The student can now ask a question privately in the newly opened chat
+4. When the teacher/TA replies they can answer publicly and announce to the rest of the class, or privately in the chat created. 
+
 
