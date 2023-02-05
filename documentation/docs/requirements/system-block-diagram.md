@@ -3,6 +3,7 @@ sidebar_position: 2
 ---
 
 # System Block Diagram
+```mermaid
 ---
 title: System Block Diagram
 ---
@@ -22,3 +23,4 @@ flowchart TB
     E<-->|Discord.py library used to host bot on SparkedHost|F
     F<-->|Server POST/GET data from its DB|G
     H-- SparkedHost pulls code from GitHub -->F
+```
