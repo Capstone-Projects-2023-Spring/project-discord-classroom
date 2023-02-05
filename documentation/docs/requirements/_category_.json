@@ -3,6 +3,6 @@
   "position": 4,
   "link": {
     "type": "generated-index",
-    "description": "Document Overview goes here."
+    "description": "The requirements specifications document defines the features and requirements for Discord Classroom. Discord Classroom will allow users to set up a virtual classroom within a discord channel."
   }
 }
