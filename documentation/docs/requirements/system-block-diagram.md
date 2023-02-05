@@ -4,10 +4,10 @@ sidebar_position: 2
 
 # System Block Diagram
 ```mermaid
-%%{init: { 'theme':'dark', "themeCSS": ".label foreignObject { overflow: visible; }" } }%%
 ---
 title: System Block Diagram
 ---
+%%{init: { 'theme':'dark', "themeCSS": ".label foreignObject { overflow: visible; }" } }%%
 flowchart TB
     A[<img src='https://cdn-icons-png.flaticon.com/512/1995/1995574.png'>Educator]
     B[<img src='https://cdn-icons-png.flaticon.com/512/5850/5850276.png'>Student]
