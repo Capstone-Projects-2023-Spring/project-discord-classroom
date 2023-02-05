@@ -4,6 +4,7 @@ sidebar_position: 2
 
 # System Block Diagram
 ```mermaid
+ %%{init: { 'theme':'dark', "themeCSS": ".label foreignObject { overflow: visible; }" } }%%
 ---
 title: System Block Diagram
 ---
