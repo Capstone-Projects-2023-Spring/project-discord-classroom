@@ -3,7 +3,7 @@ sidebar_position: 4
 ---
 
 # Development Environment
-Requirements:
+
 Editors and IDEs:
   ● VS Code
 Languages, Frameworks, and Management Systems:
