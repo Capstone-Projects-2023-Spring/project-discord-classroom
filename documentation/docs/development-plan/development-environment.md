@@ -6,6 +6,7 @@ sidebar_position: 4
 
 Editors and IDEs:
   ● VS Code
+  ● MySQL Workbench
 Languages, Frameworks, and Management Systems:
   ● Python
   ● Discord.py
