@@ -8,6 +8,7 @@ Editors and IDEs:
   ● VS Code
 Languages, Frameworks, and Management Systems:
   ● Python
+  ● Discord.py
   ● SQL
 Documentation tools:
   ● Jira
