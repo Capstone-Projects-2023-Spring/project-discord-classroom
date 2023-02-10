@@ -4,8 +4,8 @@ sidebar_position: 5
 
 # Use-case descriptions
 Use Case 1<br />
-As a user, I want to be able to create a poll to get feedback from my students.
-1. The user types the command `!pollcreate` in the bot commands channel.
+As a user, I want to be able to create a poll so I can get feedback from my students. This will help me understand the students better, allow me address the issues accordingly. 
+1. The user types the command `!pollcreate` in the bot commands channel. Optionally they can add a time argument `!pollcreate 5` to have the poll end 5 minutes after it is created.
 2. The user is prompted to enter question(s) and possible answers.
 3. Every student is then notified from the bot that there is a new poll and are prompted to enter their answers. 
 4. The user can type the command `!pollend` to end the poll
