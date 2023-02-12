@@ -11,9 +11,8 @@ sidebar_position: 1
 3. Develop poll functionality that allows users to create and respond to polls
 4. Develop assignment functionality that allows users to create and submit assignments
 5. Develop quiz functionality that allows users to create and take quizzes
-6. Develop gradebook functionality that allows users to store and access course grades
-7. Develop question functionality that allows users to submit and respond to questions
-8. Develop server administration functionality that allows users to manage the classroom server
+7. Develop gradebook functionality that allows users to store and access course grades
+8. Develop functionality that allows users to manage the classroom server
 
 ## Detailed Design
 
@@ -33,3 +32,16 @@ sidebar_position: 1
     1. Implement educator command that creates an assignments and allows them to upload associated documents
     2. Implement student command that allows them to submit files
     3. Integrate with cloud storage service to store and access assignment submissions
+5. Develop quiz functionality that allows users to create and take quizzes
+    1. Implement educator command that creates a quiz
+    2. Implement functionality for adding questions to the quiz
+    3. Implement functionality for students to take the quiz
+    4. Integrate with database to store quiz grades
+    5. Implement functionality for generating quiz score report with class statistics
+6. Develop gradebook functionality that allows users to store and access course grades
+    1. Integrate server with database to store grades
+    2. Implement educator command to generate grade reports for the course
+    3. Implement student command to retrieve their own grades
+7. Develop functionality that allows users to manage the classroom server
+    1. Implement command for publishing course syllabus on server
+    2. Implement command to generate server participation activity report
