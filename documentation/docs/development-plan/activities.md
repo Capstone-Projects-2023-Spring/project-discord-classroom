@@ -14,7 +14,7 @@ Another step to gathering resources is looking at popular virtual education envi
 ## Detailed Design
 
 ## Testing
-- Unit Test: <br />
+- Unit Test
   - The team will conduct unit tests for testing individual components during the software development cycle. The unit tests will cover aspects such as command parsing, the expected output of functions, error handling, etc.
 
 
