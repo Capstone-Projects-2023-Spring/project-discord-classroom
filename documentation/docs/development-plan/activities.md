@@ -14,3 +14,11 @@ Another step to gathering resources is looking at popular virtual education envi
 ## Detailed Design
 
 ## Testing
+- Unit Test: <br />
+  - The team will conduct unit tests for testing individual components during the software development cycle. The unit tests will cover aspects such as command parsing, the expected output of functions, error handling, etc.
+
+
+- Functional Testing
+  - The team will conduct tests to verify that the Discord bot and FastAPI behave as expected. Functional testing will cover aspects such as the behavior of the bot with various commands, API responses, etc.
+
+ 
