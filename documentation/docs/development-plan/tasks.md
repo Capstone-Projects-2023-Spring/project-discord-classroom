@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Tasks
 
-###Initial Commands and Dependencies
+### Initial Commands and Dependencies
 
 1.1. Command to create the classroom and to make the channels.
 1.2. Role assignments for various positions.
@@ -15,7 +15,7 @@ sidebar_position: 2
 1.7. Integrate Fast Api with the Classroom Bot.
 
 
-###Creation Commands and Further Development
+### Creation Commands and Further Development
 
 2.1. Update Help command with information for other features or commands added previously. 
 2.2. Create a Quiz command.
@@ -24,7 +24,7 @@ sidebar_position: 2
 2.5. Create Grades command.
 
 
-###Command Expansion
+### Command Expansion
 
 3.1. Update Help command with new or updated information.
 3.2. Create publish Quiz command.
@@ -33,7 +33,7 @@ sidebar_position: 2
 3.5. Create Assignment Submission command.
 
 
-###Miscellaneous Commands and Features
+### Miscellaneous Commands and Features
 
 4.1. Reminder Command for students.
 4.2. Quiz game for studying.
@@ -41,7 +41,7 @@ sidebar_position: 2
 4.4. Important message log report sent to Teacher.
 
 
-###Quiz Webpage (need further discussion)
+### Quiz Webpage (need further discussion)
 
 5.1. Frontend Pages and Interactions.
 5.2. Backend Structure.
