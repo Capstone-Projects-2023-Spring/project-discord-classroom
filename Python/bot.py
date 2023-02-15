@@ -16,13 +16,14 @@ else:
 
 def run_discord_bot():
     DISCORD_TOKEN = configData["DiscordToken"]
+    PREFIX = configData["Prefix"]
     SB_URL = configData["SupaUrl"]
     SB_KEY = configData["SupaKey"]
     SB_SECRET = configData["SupaSecret"]
 
     supabase: Client = create_client(SB_URL, SB_KEY)
 
-    bot = commands.Bot(command_prefix="!")
+    bot = commands.Bot(command_prefix=PREFIX)
 
     @bot.event
     async def on_ready():
