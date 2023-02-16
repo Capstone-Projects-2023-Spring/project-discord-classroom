@@ -130,11 +130,11 @@ sequenceDiagram
     Student->>Discord: User sends "!grades" command
     activate Student
     activate Discord
-    Discord-->>ClassroomBot: ClassroomBot reads command from Discord
+    Discord->>ClassroomBot: ClassroomBot reads command from Discord
     activate ClassroomBot
-    ClassroomBot-->>FastAPI: GET grades from GRADES table where student_id == Student
+    ClassroomBot->>FastAPI: GET grades from GRADES table where student_id == Student
     activate FastAPI
-    FastAPI-->>Supabase DB: API request to database
+    FastAPI->>Supabase DB: API request to database
     activate Supabase DB
     Supabase DB-->>FastAPI: Returns list of GRADED assignments, quizzes, disucssions
     deactivate Supabase DB
