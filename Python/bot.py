@@ -23,11 +23,46 @@ def run_discord_bot():
 
     supabase: Client = create_client(SB_URL, SB_KEY)
 
-    bot = commands.Bot(command_prefix=PREFIX)
+    bot = commands.Bot(command_prefix=PREFIX, intents=discord.Intents.all())
 
     @bot.event
     async def on_ready():
         print(f'{bot.user} is now running!')
+    
+
+    @bot.event
+    async def on_guild_join(guild):
+        owner = guild.owner
+        #to create a private channel (lounge) for educators
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(read_messages=False, send_messages=False),
+            owner: discord.PermissionOverwrite(read_messages=True, send_messages=True)
+        }
+        lounge = await guild.create_text_channel("Lounge", overwrites=overwrites)
+
+        assignments_category = await guild.create_category("Assignments")
+        quizzes_category = await guild.create_category("Quizzes")
+        discussions_category = await guild.create_category("Discussions")
+        submissions_category = await guild.create_category("Submissions")
+
+        assignment_text = await assignments_category.create_text_channel("Assignment")
+        quiz_text = await quizzes_category.create_text_channel("Quiz")
+        discussion_text = await discussions_category.create_text_channel("Discussion")
+        submission_text = await submissions_category.create_text_channel("Submission")
+
+    @bot.command()
+    async def create_channel(ctx, category, topic):
+        if ctx.author.id != ctx.guild.owner_id:
+            await ctx.send("Error, enter '!help' for  more information.")
+            return
+
+        category_list = discord.utils.get(ctx.guild.categories, name=category)
+        if category_list is None:
+            await ctx.send(f"Category '{category}' not found.")
+            return
+            
+        channel = await category_list.create_text_channel(name=topic)
+
 
     @bot.command()
     async def testInsert(ctx, arg1, arg2):
