@@ -146,7 +146,7 @@ sequenceDiagram
     deactivate Discord
     deactivate Student
 ```
-**Figure 3.2 Use Case #2 Sequence Diagram: As a user I want to check my grades or attendance in the class.**
+__**Figure 3.2 Use Case #2 Sequence Diagram: As a user I want to check my grades or attendance in the class.**__
 
 This diagram shows the process of a student checking their grades (total grade and grade per assignment, quiz, and discussion).
 
