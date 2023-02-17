@@ -188,3 +188,56 @@ This diagram shows the process of a student checking their grades (total grade a
 6. FastAPI sends the list to the application
 7. The application parses through the grades and neatly organizes them and direct messages the student their grades
 8. The student reads their DMs to check their grades.
+
+
+Student wants to take a Practice Quiz
+```mermaid
+
+sequenceDiagram
+actor u as Student
+participant d as Discord
+participant c as ClassroomBot
+participant f as FastAPI
+participant s as Supabase DB
+
+u->>d: Student types !pquiz in Quiz text channel
+d->>c: Reads command from Discord
+c->>f: GET list of current practice quizes from DataBase
+f->>s: API request from DataBase
+s-->>f: Return list of Practice Quizes
+f-->>c: Sends list from DataBase to ClassRoom Bot
+c-->>d: The Bot lists the available Practice Quizes
+d-->>u: Student reads the list of Quizes they can take
+u->>d: Student types !pquiz 2 in Quiz text channel
+d->>c: Reads command from Discord
+c->>f: GET Practice Quiz 2 from the DataBase
+f->>s: API request from DataBase
+s-->>f: Return Practice Quiz 2
+f-->>c: Sends Practice Quiz 2 from the DatBase to ClassRoom Bot
+c-->>d: The Bot Dms the student the questions for the practice quiz
+d-->>u: Student reads the questions as they are messaged them
+u->>d: Student answers the questions to the Bot via DM
+d->>c: Reads answers and copies them
+c->>f: PUSH answers to DataBase
+f->>s: Record students answers
+s-->>f: Return Student answers and Practice Quiz answers 
+f-->>c: Compare the answers and Return Correct and incorect answers 
+c-->>d: The Bot DMs the results to the student
+d-->>u: Student knows where they stand on the topic by the results
+```
+This Diagram shows the process of a student wanting to take a Practice Quiz.
+
+1. Student types !pquiz
+2. The Bot reads the command and sends a request for the list of quizzes available to the API.
+3. The API gets the data from the database and returns it to the Bot.
+4. The Bot lists the available quizzes.
+5. The Student reads the available quizzes and types !pquiz 2 to take the quiz they want.
+6. The bot reads the command and send the request for the specific quiz to the API.
+7. The API gets the questions from the database and returns them to the Bot.
+8. The Bot DMs the student the questions.
+9. The Student answers the questions.
+10. The Bot reads the answers and pushes them to the API.
+11. The API pushes the answers to the Database to be saved and then returns the answers key for the quiz and the student answers.
+12. The API compares the two and returns the incorrect and correct answers to the Bot.
+13. The Bot messages the Student their results.
+14. The student knows where they stand on the topic due to their results.
