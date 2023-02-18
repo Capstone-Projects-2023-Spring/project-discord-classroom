@@ -227,3 +227,31 @@ This Diagram shows the process of a student wanting to take a Practice Quiz.
 12. The API compares the two and returns the incorrect and correct answers to the Bot.
 13. The Bot messages the Student their results.
 14. The student knows where they stand on the topic due to their results.
+
+Student wants to ask the teacher a question
+```mermaid
+
+sequenceDiagram
+    actor Student
+    actor Teacher
+    participant Discord
+    participant ClassroomBot
+    Student->>Discord: User sends "!ticketcreate" command
+    activate Student
+    activate Discord
+    Discord->>ClassroomBot: ClassroomBot reads command from Discord
+    activate ClassroomBot
+    ClassroomBot->>Discord: creates a new private chat
+    deactivate ClassroomBot
+    activate Teacher
+    Discord->>Teacher: Teacher is added to private chat
+    Discord->>Student: Student is added to private chat
+    Student->>Discord: Student asks question in chat
+    Discord->>Teacher: Teacher receives question
+    Teacher->>Discord: Teacher responds to question
+    Discord->>Student: Student receives teacher's response
+    deactivate Discord
+    deactivate Teacher
+    deactivate Student
+    
+```
