@@ -5,6 +5,8 @@ from supabase import create_client, Client
 import random
 from discord.ext import commands
 from typing import Optional
+import io
+from tika import parser
 
 if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:
@@ -50,6 +52,7 @@ def run_discord_bot():
         discussion_text = await discussions_category.create_text_channel("Discussion")
         submission_text = await submissions_category.create_text_channel("Submission")
 
+
     @bot.command()
     async def create_channel(ctx, category, topic):
         if ctx.author.id != ctx.guild.owner_id:
@@ -62,6 +65,51 @@ def run_discord_bot():
             return
             
         channel = await category_list.create_text_channel(name=topic)
+
+
+    @bot.command()
+    async def syllabus(ctx):
+        if ctx.author.id != ctx.guild.owner_id:
+            await ctx.send("Error, enter '!help' for  more information.")
+            return
+        owner = ctx.guild.owner
+        #restrict syllabus channel but allow for visibility.
+        overwrites = {
+            ctx.guild.default_role: discord.PermissionOverwrite(read_messages=True, send_messages=False),
+            owner: discord.PermissionOverwrite(read_messages=True, send_messages=True)
+        }
+
+        attachments = ctx.message.attachments
+        if len(attachments) == 0:
+            await ctx.send("Please attach a syllabus file to upload.")
+        else:
+            pdf = attachments[0]
+            if pdf.filename.endswith(".pdf"):
+                file_data =  await pdf.read()
+                # Check whether "syllabus" channel exists;
+                channel = discord.utils.get(ctx.guild.channels, name="syllabus")
+                if channel is None:
+                    channel = await ctx.guild.create_text_channel("syllabus", overwrites=overwrites)
+
+                await channel.send("**```diff\n+ Class Syllabus```**")
+                raw = parser.from_buffer(file_data)
+                text = raw['content']
+                text_bytes = text.encode('utf-8')
+                max_char = 1500
+                #append and exclude unicodeerror
+                chunks = [text_bytes[i:i+max_char].decode('utf-8', errors='ignore') for i in range(0, len(text_bytes), max_char)]
+                
+                #send text representation of syllabus to syllabus channel
+                for chunk in chunks:
+                    await channel.send("```"+chunk+"```")
+                await channel.send("**```diff\n- Please note, the text representation of the syllabus may not be completely accurate. For a more precise version, download syllabus provided below.```**")
+                
+                # Send PDF "syllabus" channel
+                await channel.send(file=discord.File(io.BytesIO(file_data), filename=pdf.filename))
+                await ctx.send("Syllabus uploaded successfully.")
+                
+            else:
+                await ctx.send("Invalid file format, only PDF files are accepted.")
 
 
     @bot.command()
