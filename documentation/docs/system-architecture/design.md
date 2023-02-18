@@ -255,3 +255,11 @@ sequenceDiagram
     deactivate Student
     
 ```
+This diagram shows a student asking a question to the teacher by creating a ticket for a private chat
+1. Student types "!ticketCreate" command
+2. ClassroomBot reads the command from discord
+3. The bot creates a new private chat
+4. The teacher and student are added to the private chat
+5. Student can message the question to the teacher
+6. Teacher responds to the students question
+7. Student receives the teacher's response
