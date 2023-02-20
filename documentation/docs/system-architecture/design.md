@@ -312,3 +312,73 @@ sequenceDiagram
 5. The ClassroomBot reads the data from Discord
 6. The ClassroomBot formats the poll message and publishes it to Discord
 7. The teacher receives confirmation that their poll was created
+
+```mermaid 
+sequenceDiagram
+    actor User
+    participant Discord
+    participant ClassroomBot
+    participant Student1
+    participant Student2
+    participant FastAPI
+    participant Database
+
+    User->>Discord: !attendance
+    activate Discord
+
+    Discord->>ClassroomBot: attendance()
+    deactivate Discord
+    activate ClassroomBot
+
+    ClassroomBot->>ClassroomBot: timerOn()
+    
+    loop
+        ClassroomBot->> Student1: asks for an input (!present)
+        activate Student1
+        ClassroomBot->>Student1: remainingTime(5 minute)
+        Student1-->>Discord: !present
+        deactivate Student1
+        Discord->>ClassroomBot: !present
+        ClassroomBot->> Student2: asks for an input (!present)
+        ClassroomBot->>Student2: remainingTime(5 minute)
+    end
+
+    Student2-->>Discord: null 
+    Discord->>ClassroomBot: null
+    ClassroomBot->>ClassroomBot: timerOff()
+    ClassroomBot->>FastAPI: markAttendance()
+    deactivate ClassroomBot
+    activate FastAPI
+    FastAPI->>Database:save(student1_attended)
+    activate Database
+    FastAPI->>Database:save(student2_absent)
+    deactivate FastAPI
+    deactivate Database    
+    ClassroomBot->>FastAPI: retrieveAttendance()
+
+    activate FastAPI
+    FastAPI->>Database: retrieve_student_absent_list()
+    
+    activate Database
+
+    Database-->>FastAPI: students_absent_list
+    deactivate FastAPI
+    deactivate Database
+    activate FastAPI
+    FastAPI-->>ClassroomBot: Students_absent_list
+    deactivate FastAPI
+
+    activate ClassroomBot
+    ClassroomBot-->>Discord: Students_absent_list
+    deactivate ClassroomBot
+```
+This diagram shows the process of recording students attendance. 
+1. User sends a command to the Discord server to initiate attendance tracking by typing `!attendance`.
+2. The Discord server then passes the attendance request to the ClassroomBot.
+3. The ClassroomBot starts a timer and begins a loop asking students in the classroom if they are present or not.
+4. Student1  responds with a `"!present"` whereas Student2 does not.
+5. Once loop is complete, the ClassroomBot deactivates and sends a request to FastAPI to mark the attendance.
+6. The FastAPI stores the attendance data in a Database.
+7. The FastAPI service then retrieves the list of students who were marked absent in the database and sends it back to the ClassroomBot.
+8. The ClassroomBot activates again and receives the list of absent students from the FastAPI service.
+9. The ClassroomBot sends the list of absent students to the Discord server for notification to the User.
