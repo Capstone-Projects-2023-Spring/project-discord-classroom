@@ -263,3 +263,35 @@ This diagram shows a student asking a question to the teacher by creating a tick
 5. Student can message the question to the teacher
 6. Teacher responds to the students question
 7. Student receives the teacher's response
+
+`!pollcreate`
+
+This diagram demonstrates the command for creating a poll.
+
+```mermaid
+
+sequenceDiagram
+    actor Teacher
+    participant Discord
+    participant ClassroomBot
+    Teacher->>Discord: User sends "!pollcreate" command
+    activate Discord
+    Discord->>ClassroomBot: ClassroomBot reads command from Discord
+    activate ClassroomBot
+    ClassroomBot->>Discord: ClassroomBot prompts user for poll options
+    Discord->>Teacher: Teacher receives poll prompt
+    Teacher->>Discord: Teacher replies with poll question and options
+    Discord->>ClassroomBot: ClassroomBot reads response from Discord
+    ClassroomBot->>Discord: ClassroomBot publishes poll to Discord and sends confirmation to teacher
+    Discord->>Teacher: Teacher receives confirmation that poll was created
+    deactivate ClassroomBot
+    deactivate Discord
+    
+```
+1. The teacher enters the `!pollcreate` command
+2. The ClassroomBot reads the command from Discord
+3. The bot prompts the user for the poll question and options
+4. The teacher enters the specified information on Discord
+5. The ClassroomBot reads the data from Discord
+6. The ClassroomBot formats the poll message and publishes it to Discord
+7. The teacher receives confirmation that their poll was created
