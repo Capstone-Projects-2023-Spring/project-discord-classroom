@@ -2,29 +2,44 @@
 sidebar_position: 1
 ---
 
-**Purpose**
+## Class Diagram
 
-The Design Document - Part I Architecture describes the software architecture and how the requirements are mapped into the design. This document will be a combination of diagrams and text that describes what the diagrams are showing.
-
-**Requirements**
-
-In addition to the general requirements the Design Document - Part I Architecture will contain:
-
-A description the different components and their interfaces. For example: client, server, database.
-
-For each component provide class diagrams showing the classes to be developed (or used) and their relationship.
-
-Sequence diagrams showing the data flow for _all_ use cases. One sequence diagram corresponds to one use case and different use cases should have different corresponding sequence diagrams.
-
-Describe algorithms employed in your project, e.g. neural network paradigm, training and training data set, etc.
-
-If there is a database:
-
-Entity-relation diagram.
-
-Table design.
-
-A check list for architecture design is attached here [architecture\_design\_checklist.pdf](https://templeu.instructure.com/courses/106563/files/16928870/download?wrap=1 "architecture_design_checklist.pdf")  and should be used as a guidance.
+```mermaid
+classDiagram
+title: Class Diagram
+    bot --> main
+    FastAPI --> bot
+    supabase --> bot
+    discord --> bot
+    class main{
+        +run_bot()
+    }
+    class bot{
+        -configData: dictionary
+        -DISCORD_TOKEN: string
+        -PREFIX: char
+        -SB_URL: string
+        -SB_KEY: string
+        -supabase: Client
+        -bot: Bot
+        -app: App
+        +run_discord_bot()
+        -on_ready()
+        -on_guild_join(guide: string)
+        -syllabus(ctx: context)
+        -poll(ctx: context, arg1: string, arg2: string)
+    }
+    class FastAPI{
+        +FastAPI(): App
+    }
+    class supabase{
+        +create_client(): Client
+    }
+    class discord{
+        +commands.Bot(): Bot
+    }
+```
+The class diagram is made up of two python files, main.py and bot.py. Main's only purpose is to run bot.py. bot.py uses three seperate, non-native libraries: supabase, discord, and fastapi. The supabase library is used to connect with the database that is on supabase. It is connected through a URL and KEY pair and creates a Client object when connected. The discord library is used to connect with the Discord Bot through a Discord Token. Also, when creating the bot it needs to know the PREFIX for the commands which is "!" in our case. Finally, FastAPI is used to simplify our API calls to supabase. First we create an App object then give that object methods that are used for the API. 
 
 ## Database Design
 
@@ -101,7 +116,7 @@ erDiagram
     QUIZ ||--|{ QUESTION : contains
     STUDENT }|--o{ GRADES : has
 ```
-Each time the bot is added to a Discord server a new row is added to the CLASSROOM table. This table holds discord server name and the total attendance and grade used to calculate student's grades and attendance scores. Each CLASSROOM contains one or more EDUCATORS and one or more STUDENTS. The STUDENT table holds the student's username, the classroom they belong to, their grade, and their attendance score. Their total grade will equal their grade divided by the CLASSROOM totalGrade. Next we have the ASSIGNMENT, QUIZ, and DISCUSSION tables. The ASSIGNMENT table keeps track of the assignments the EDUCATOR creates which includes the name of the assignment, when to make it available, and when its due. The QUIZ table keeps track of EDUCATOR created quizzes which holds the max score of the quiz, the start/due date, and an optional time limit for the quiz. Each QUIZ is made up of QUESTIONS which contain a prompt, a correct answer, and optional wrong answers depending on the type of question. (If no wrong answers then its a open-ended question or fill-in-the-blank, if one wrong answer could be a True/False, and if all wrong answers are given then its multiple choice). The DISCUSSION table is used to keep track of the Discussions within the Discord server. These will only include max scores and start/due dates. Finally we have the GRADED tables which are used to hold the scores students got on ASSSIGNMENTS, QUIZZES, and DISCUSSIONS. 
+Each time the bot is added to a Discord server a new row is added to the CLASSROOM table. This table holds discord server name and the total attendance and grade used to calculate student's grades and attendance scores. Each CLASSROOM contains one or more EDUCATORS and one or more STUDENTS. The STUDENT table holds the student's username, the classroom they belong to, their grade, and their attendance score. Their total grade will equal their grade divided by the CLASSROOM totalGrade. Next we have the ASSIGNMENT, QUIZ, and DISCUSSION tables. The ASSIGNMENT table keeps track of the assignments the EDUCATOR creates which includes the name of the assignment, when to make it available, and when its due. The QUIZ table keeps track of EDUCATOR created quizzes which holds the max score of the quiz, the start/due date, and an optional time limit for the quiz. Each QUIZ is made up of QUESTIONS which contain a prompt, a correct answer, and optional wrong answers depending on the type of question. (If no wrong answers then its a open-ended question or fill-in-the-blank, if one wrong answer could be a True/False, and if all wrong answers are given then its multiple choice). The DISCUSSION table is used to keep track of the Discussions within the Discord server. These will only include max scores and start/due dates. Finally the GRADES table holds all of the grades for the students.
 
 ## Sequence Diagrams
 Teacher !attendance
