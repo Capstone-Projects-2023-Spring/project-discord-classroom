@@ -5,8 +5,10 @@ sidebar_position: 1
 ## Class Diagram
 
 ```mermaid
-classDiagram
+---
 title: Class Diagram
+---
+classDiagram
     bot --> main
     FastAPI --> bot
     supabase --> bot
