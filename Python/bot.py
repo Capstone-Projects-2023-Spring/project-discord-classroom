@@ -53,7 +53,7 @@ def run_discord_bot():
         submission_text = await submissions_category.create_text_channel("Submission")
 
 
-    @bot.command()
+    @bot.command(name = 'Create channel', help = '!create_channel [category] [topic] when educator wants to create a channel under a category')
     async def create_channel(ctx, category, topic):
         if ctx.author.id != ctx.guild.owner_id:
             await ctx.send("Error, enter '!help' for  more information.")
@@ -67,7 +67,7 @@ def run_discord_bot():
         channel = await category_list.create_text_channel(name=topic)
 
 
-    @bot.command()
+    @bot.command(name = 'syllabus', help = '!syllabus [attach .pdf file] - Creates a syllabus text channel with the .pdf as a message for students to download and view the syllabus. Library to view syllabus contents on discord.')
     async def syllabus(ctx):
         if ctx.author.id != ctx.guild.owner_id:
             await ctx.send("Error, enter '!help' for  more information.")
@@ -119,8 +119,14 @@ def run_discord_bot():
         print(data)
         await ctx.channel.send("Inserted new student")
 
+    @bot.command(name = 'poll', help = '!poll [prompt] [option 1] [option 2] *[option 3] ... [*option n] - Creates a poll where students vote through reactions.')
     async def poll(ctx, prompt, opt1, opt2, opt3:Optional[str] = None, opt4:Optional[str] = None):
         # TODO - poll command, 'prompt' is the question and the opt1 -> opt4 are the options. opt1 and 2 being required, others are optional
         return
+
+    @bot.command(name = 'attendance', help = '!attendance - Creates a simple poll with one option prompting user to react to prove they are attending the class. ')
+    async def attendance(ctx)
+        if(@commands.has_role(admin))
+        #similar functionality to poll FINISH after poll is implemented 
 
     bot.run(DISCORD_TOKEN)
