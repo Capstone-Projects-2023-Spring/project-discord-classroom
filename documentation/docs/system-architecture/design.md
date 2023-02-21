@@ -151,6 +151,16 @@ sequenceDiagram
     deactivate Teacher
     deactivate ClassroomBot
 ```
+This Diagram shows the process for a teacher to record attendance
+
+1. Teacher types `!attendance command`
+2. The Bot reads the command and sends a attendance message to the discord
+3. The students are able to react to the message
+4. The teacher sends a command to close the attendance 
+5. The bot checks the attendance metrics (by checking the reactions)
+6. The bot sends the metrics to the Supabase Database
+7. The bot sends the attendance summary to the teacher, with a list of missing students
+
 
 Student !grades
 ```mermaid
