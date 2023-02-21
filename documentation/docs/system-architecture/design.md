@@ -9,10 +9,10 @@ sidebar_position: 1
 title: Class Diagram
 ---
 classDiagram
-    bot --> main
-    FastAPI --> bot
-    supabase --> bot
-    discord --> bot
+    bot <-- main
+    FastAPI <-- bot
+    supabase <-- bot
+    discord <-- bot
     class main{
         +run_bot()
     }
