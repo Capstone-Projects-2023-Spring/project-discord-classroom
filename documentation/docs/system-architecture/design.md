@@ -2,7 +2,7 @@
 sidebar_position: 1
 ---
 
-## Class Diagram
+# Class Diagram
 
 ```mermaid
 ---
@@ -43,7 +43,7 @@ classDiagram
 ```
 The class diagram is made up of two python files, main.py and bot.py. Main's only purpose is to run bot.py. bot.py uses three seperate, non-native libraries: supabase, discord, and fastapi. The supabase library is used to connect with the database that is on supabase. It is connected through a URL and KEY pair and creates a Client object when connected. The discord library is used to connect with the Discord Bot through a Discord Token. Also, when creating the bot it needs to know the PREFIX for the commands which is "!" in our case. Finally, FastAPI is used to simplify our API calls to supabase. First we create an App object then give that object methods that are used for the API. 
 
-## Database Design
+# Database Design
 
 ```mermaid
 ---
@@ -132,10 +132,15 @@ erDiagram
 
 Each time the bot is added to a Discord server a new row is added to the CLASSROOM table. This table holds discord server name and the total attendance and grade used to calculate student's grades and attendance scores. Each CLASSROOM contains one or more EDUCATORS and one or more STUDENTS. The STUDENT table holds the student's username, the classroom they belong to, their grade, and their attendance score. Their total grade will equal their grade divided by the CLASSROOM totalGrade. Next we have the ASSIGNMENT, QUIZ, and DISCUSSION tables. The ASSIGNMENT table keeps track of the assignments the EDUCATOR creates which includes the name of the assignment, when to make it available, and when its due. The QUIZ table keeps track of EDUCATOR created quizzes which holds the max score of the quiz, the start/due date, and an optional time limit for the quiz. Each QUIZ is made up of QUESTIONS which contain a prompt, a correct answer, and optional wrong answers depending on the type of question. (If no wrong answers then its a open-ended question or fill-in-the-blank, if one wrong answer could be a True/False, and if all wrong answers are given then its multiple choice). The DISCUSSION table is used to keep track of the Discussions within the Discord server. These will only include max scores and start/due dates. Finally the GRADES table holds all of the grades for the students.
 
-## Sequence Diagrams
-Teacher !attendance
-```mermaid
+# Sequence Diagrams
 
+<details>
+    
+<summary>
+
+## Use Case #1: Teacher !attendance command
+
+```mermaid
 sequenceDiagram
     actor Teacher
     actor Student1
@@ -163,18 +168,30 @@ sequenceDiagram
     deactivate Teacher
     deactivate ClassroomBot
 ```
-This Diagram shows the process for a teacher to record attendance
 
-1. Teacher types `!attendance command`
+</summary>
+<div>
+<div>As a teacher user I want to record attendance of a lecture.</div>
+<br/>
+
+1. Teacher types `!attendance` command
 2. The Bot reads the command and sends a attendance message to the discord
 3. The students are able to react to the message
 4. The teacher sends a command to close the attendance 
 5. The bot checks the attendance metrics (by checking the reactions)
 6. The bot sends the metrics to the Supabase Database
 7. The bot sends the attendance summary to the teacher, with a list of missing students
+    
+</div>
+    
+</details>
 
+<details>
+    
+<summary>
 
-Student !grades
+## Use Case #2: Student !grades command
+
 ```mermaid
 sequenceDiagram
     actor Student
@@ -201,9 +218,11 @@ sequenceDiagram
     deactivate Discord
     deactivate Student
 ```
-__**Figure 3.2 Use Case #2 Sequence Diagram: As a user I want to check my grades or attendance in the class.**__
 
-This diagram shows the process of a student checking their grades (total grade and grade per assignment, quiz, and discussion).
+</summary>
+<div>
+<div>As a student user I want to check my grades for the class.</div>
+<br/>
 
 1. The student types "!grades" command within the classroom discord server.
 2. The ClassroomBot reads the command from the server
@@ -213,6 +232,11 @@ This diagram shows the process of a student checking their grades (total grade a
 6. FastAPI sends the list to the application
 7. The application parses through the grades and neatly organizes them and direct messages the student their grades
 8. The student reads their DMs to check their grades.
+    
+</div>
+    
+</details>
+
 
 
 Student wants to take a Practice Quiz
