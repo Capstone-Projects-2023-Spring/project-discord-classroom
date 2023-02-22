@@ -46,11 +46,27 @@ def run_discord_bot():
         quizzes_category = await guild.create_category("Quizzes")
         discussions_category = await guild.create_category("Discussions")
         submissions_category = await guild.create_category("Submissions")
+        questions_category = await guild.create_category("Questions")
 
         assignment_text = await assignments_category.create_text_channel("Assignment")
         quiz_text = await quizzes_category.create_text_channel("Quiz")
         discussion_text = await discussions_category.create_text_channel("Discussion")
         submission_text = await submissions_category.create_text_channel("Submission")
+        private_question_text = await questions_category.create_text_channel("Private Questions")
+        public_quesion_text = await questions_category.create_text_channel("Public Questions")
+
+    @bot.event
+    async def on_message(message):
+        if message.author == bot.user:
+            return
+        if isinstance(message.channel, discord.DMChannel):
+            channel = bot.get_channel(message.channel.id)
+            content = message.content
+            author_name = message.author.name
+            anonymous_content = f"**Anonymous**: {content}"
+            await channel.send(anonymous_content)
+            await message.author.send("Your message has been forwarded anonymously to the moderators.")
+            return
 
 
     @bot.command(name = 'channelCreate', help = '!channelCreate [category] [topic] when educator wants to create a channel under a category')
