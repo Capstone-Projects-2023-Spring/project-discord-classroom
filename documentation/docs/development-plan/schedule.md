@@ -6,7 +6,7 @@ sidebar_position: 3
 
 ```mermaid
 gantt
-    title Discord Classroom
+    title Discord Classroom Schedule
     dateFormat  YYYY-MM-DD
     
     section Elaboration Phase 
@@ -31,6 +31,7 @@ gantt
          Testing :  , 2023-03-13, 1w
 
          Milestone Demo 1 :crit, milestone,  , 2023-03-14, 1d
+         Milestone Goal - Functional bot, hosted and accessible, with working database: milestone, 2023-3-14, 1d
          
          Sprint 3: , 2023-03-15, 2w
          Implement Logic To Determine Status of Command Issuer:  , 2023-03-15, 4d
@@ -42,6 +43,7 @@ gantt
          Testing :  , 2023-03-15, 2w
 
          Milestone Demo 2 :crit, milestone,  , 2023-03-28, 1d
+         Milestone Goal - The bot can facilitate appropriate interactions between educators and students: milestone, 2023-3-28, 1d
 
          Sprint 4: , 2023-03-29, 2w
          Educator Can Upload Quiz:  , 2023-03-29, 4d
@@ -52,6 +54,7 @@ gantt
          Testing :  , 2023-03-29, 2w
 
          Milestone Demo 3 :crit, milestone,  , 2023-04-11, 1d
+         Milestone Goal - Educators and students are able to store, retrieve, and update school work: milestone, 2023-4-11, 1d
          
          Sprint 5: , 2023-04-12, 16d
          Student Can Open Ticket:  , 2023-04-12, 3d
