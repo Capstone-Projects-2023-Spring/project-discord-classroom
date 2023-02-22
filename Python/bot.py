@@ -53,7 +53,7 @@ def run_discord_bot():
         submission_text = await submissions_category.create_text_channel("Submission")
 
 
-    @bot.command(name = 'Create channel', help = '!create_channel [category] [topic] when educator wants to create a channel under a category')
+    @bot.command(name = 'channelCreate', help = '!channelCreate [category] [topic] when educator wants to create a channel under a category')
     async def create_channel(ctx, category, topic):
         if ctx.author.id != ctx.guild.owner_id:
             await ctx.send("Error, enter '!help' for  more information.")
