@@ -6,7 +6,7 @@ import random
 from discord.ext import commands
 from typing import Optional
 import io
-from tika import parser
+from PyPDF2 import PdfReader
 
 if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:
@@ -92,8 +92,10 @@ def run_discord_bot():
                     channel = await ctx.guild.create_text_channel("syllabus", overwrites=overwrites)
 
                 await channel.send("**```diff\n+ Class Syllabus```**")
-                raw = parser.from_buffer(file_data)
-                text = raw['content']
+                pdf_reader = PdfReader(io.BytesIO(file_data))
+                text = ""
+                for page in pdf_reader.pages:
+                    text += page.extract_text()
                 text_bytes = text.encode('utf-8')
                 max_char = 1500
                 #append and exclude unicodeerror
@@ -125,8 +127,10 @@ def run_discord_bot():
         return
 
     @bot.command(name = 'attendance', help = '!attendance - Creates a simple poll with one option prompting user to react to prove they are attending the class. ')
-    async def attendance(ctx)
-        if(@commands.has_role(admin))
+    async def attendance(ctx):
+        # if(@commands.has_role(admin))
+        #     pass
         #similar functionality to poll FINISH after poll is implemented 
+        pass
 
     bot.run(DISCORD_TOKEN)
