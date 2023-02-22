@@ -63,12 +63,12 @@ erDiagram
     EDUCATOR {
         int id PK
         string name
-        int classroom_id FK
+        int section_id FK
     }
     STUDENT {
         int id PK
         string name
-        int classroom_id FK
+        int section_id FK
         int attendance
     }
     TASK {
