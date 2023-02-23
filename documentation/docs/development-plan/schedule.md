@@ -66,3 +66,67 @@ gantt
          Final Presentation & Demo :crit, milestone,  , 2023-04-27, 1d
          Test Report Document Assignment: milestone, , 2023-05-06, 1d
 ```
+
+# Milestones
+
+## Milestone Demo 1
+
+F: Discord bot sets up the channel with preset Categories, Text Channels, Voice channels, and Roles
+
+R: Assigns the owner of the Discord the educator role
+
+R: Allows students to pick their sections within the "role" text channel
+
+R: When the bot joins the discord server, it automatically sets up seperate channels for the users
+
+R: Educator can use !ta command to give users the Assistant role
+
+F: Educator uses the !syllabus command to upload the syllabus to the dsicord server
+
+R: Bot reads the pdf file attachment with the !syllabus command
+
+R: Bot parses through the PDF to print a text version of the syllabus to discord
+
+F: Help command for users to know how certain commands work
+
+R: Discord command for !help with optional arguments
+
+R: If an argument is given, it returns the syntax for that argument
+
+F: Poll command used by users to create polls for users to vote through reactions
+
+R: The command itself implemented within the bot
+
+R: Takes two required and more optional arguments for each option
+
+R: The bot reacts to the poll it creates so the users can click on each reaction
+
+## Milestone Demo 2
+
+F: Educator can create content for the classroom such as Assignments, Quizzes, and Discussions
+
+R: !assignment command available to educators
+
+R: !quiz command available to educators
+
+R: !discussion command available to educators
+
+F: Educators can start lectures within the Discord voice channel
+
+R: attendance command used to track which students attended the lecture
+
+R: command to announce to the discord server that a lecture is about to start
+
+## Milestone Demo 3
+
+F: Students can submit classroom work such as Assigmnets, Quizzes, and Discussions
+
+R: !submit command for assignments
+
+R: !start command for quizzes
+
+F: Teachers can look at the work students submitted and grade them
+
+R: !grade command for educators
+
+R: !grades command for students to check their grade
