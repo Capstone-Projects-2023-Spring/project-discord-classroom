@@ -79,7 +79,6 @@ erDiagram
     }
     ASSIGNMENT {
         int id PK
-        int section_id FK
         string name
         int maxScore
         dateFormat startDate
@@ -87,7 +86,6 @@ erDiagram
     }
     QUIZ {
         int id PK
-        int classroom_id FK
         string name
         int maxScore
         dateFormat startDate
@@ -105,7 +103,6 @@ erDiagram
     }
     DISCUSSION {
        int id PK
-       int classroom_id FK
        int name
        int maxScore
        dateFormat startDate
