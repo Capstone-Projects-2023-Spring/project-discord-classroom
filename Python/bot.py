@@ -26,12 +26,15 @@ def run_discord_bot():
     supabase: Client = create_client(SB_URL, SB_KEY)
 
     bot = commands.Bot(command_prefix=PREFIX, intents=discord.Intents.all())
+    #ids for private and public questions
+    public_question_id = 12345
+    private_question_id = 12345
 
     @bot.event
     async def on_ready():
         print(f'{bot.user} is now running!')
+        
     
-
     @bot.event
     async def on_guild_join(guild):
         owner = guild.owner
@@ -53,19 +56,31 @@ def run_discord_bot():
         discussion_text = await discussions_category.create_text_channel("Discussion")
         submission_text = await submissions_category.create_text_channel("Submission")
         private_question_text = await questions_category.create_text_channel("Private Questions")
+        private_question_id = private_question_text.id
         public_quesion_text = await questions_category.create_text_channel("Public Questions")
+        public_question_id = public_quesion_text.id
 
+    #public and private questions from dms to proper channels 
     @bot.event
     async def on_message(message):
         if message.author == bot.user:
             return
         if isinstance(message.channel, discord.DMChannel):
-            channel = bot.get_channel(message.channel.id)
-            content = message.content
+            target_channel_id = None
+            if content.startswith('!public '):
+                taret_channel_id = public_question_id
+                content = content[len('!public '):]
+            elif content.startswith('!private '):
+                taret_channel_id = private_question_id
+                content = content[len('!private '):]
+            if target_channel_id is None:
+                await message.author.send("Invalid command. Use `!public <message>` or `!private <message>` to send a message to a public or private channel, respectively.")
+                return
+            target_channel = bot.get_channel(target_channel_id)
             author_name = message.author.name
-            anonymous_content = f"**Anonymous**: {content}"
-            await channel.send(anonymous_content)
-            await message.author.send("Your message has been forwarded anonymously to the moderators.")
+            message_content = f"{'**Anonymous**' if target_channel_id == public_question_id else '**{author_name}**'}: {content}"
+            await target_channel.send(message_content)
+            await message.author.send(f"Your message has been forwarded to the {'public' if target_channel_id == public_question_id else 'private'} channel.")
             return
 
 
