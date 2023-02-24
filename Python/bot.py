@@ -12,7 +12,7 @@ if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:
         configData = json.load(f)
 else:
-    configTemp = {"DiscordToken": "", "Prefix": "!", "SupaUrl": "", "SupaKey": "", "SupaSecret": ""}
+    configTemp = {"DiscordToken": "", "Prefix": "!", "SupaUrl": "", "SupaKey": ""}
     with open(os.getcwd() + "/config.json", "w+") as f:
         json.dump(configTemp, f)
 
@@ -21,67 +21,90 @@ def run_discord_bot():
     PREFIX = configData["Prefix"]
     SB_URL = configData["SupaUrl"]
     SB_KEY = configData["SupaKey"]
-    SB_SECRET = configData["SupaSecret"]
 
     supabase: Client = create_client(SB_URL, SB_KEY)
 
     bot = commands.Bot(command_prefix=PREFIX, intents=discord.Intents.all())
-    #ids for private and public questions
-    public_question_id = 12345
-    private_question_id = 12345
 
     @bot.event
     async def on_ready():
         print(f'{bot.user} is now running!')
-        
     
     @bot.event
     async def on_guild_join(guild):
-        owner = guild.owner
-        #to create a private channel (lounge) for educators
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(read_messages=False, send_messages=False),
-            owner: discord.PermissionOverwrite(read_messages=True, send_messages=True)
-        }
-        lounge = await guild.create_text_channel("Lounge", overwrites=overwrites)
+        all_perms = discord.Permissions.all()
+        owner_role = await guild.create_role(name="Educator", color=discord.Color(0xffff00), permissions=all_perms)
+        grading_perms = discord.Permissions.all_channel()
+        await guild.create_role(name="Assistant", color=discord.Color(0xff8800), permissions=grading_perms)
+        student_perms = discord.Permissions.none()
+        student_perms.update(
+            add_reactions=True, stream=True, read_messages=True, view_channel=True,
+            send_messages=True, embed_links=True, attach_files=True, read_message_history=True,
+            connect=True, speak=True, use_voice_activation=True, change_nickname=True, use_application_commands=True,
+            create_public_threads=True, send_messages_in_threads=True, use_embedded_activites=True
+        )
+        await guild.create_role(name="Student", color=discord.Color(0x8affe9), permissions=student_perms)
+        #gives discord owner the Educator role
+        await guild.owner.add_roles(owner_role)
+        everyone_perms = discord.Permissions.none()
+        everyone_perms.update(
+            read_message_history=True, read_messages=True
+        )
+        everyone = guild.default_role
+        await everyone.edit(permissions=everyone_perms)
 
-        assignments_category = await guild.create_category("Assignments")
-        quizzes_category = await guild.create_category("Quizzes")
-        discussions_category = await guild.create_category("Discussions")
-        submissions_category = await guild.create_category("Submissions")
-        questions_category = await guild.create_category("Questions")
+        general = await guild.create_category("General")
+        await guild.create_text_channel("General", category=general)
+        await guild.create_text_channel("Announcements", category=general)
+        await guild.create_text_channel("Lounge", category=general)
+        await guild.create_text_channel("Syllabus", category=general)
+        roles = await guild.create_text_channel("Roles", category=general)
+        await roles.set_permissions(everyone, read_messages=True, send_messages=False)
+        await guild.create_category("Assignments")
+        await guild.create_category("Quizzes")
+        await guild.create_category("Discussions")
+        await guild.create_category("Submissions")
+        questions = await guild.create_category("Questions")
+        await guild.create_text_channel("Public", category=questions)
 
-        assignment_text = await assignments_category.create_text_channel("Assignment")
-        quiz_text = await quizzes_category.create_text_channel("Quiz")
-        discussion_text = await discussions_category.create_text_channel("Discussion")
-        submission_text = await submissions_category.create_text_channel("Submission")
-        private_question_text = await questions_category.create_text_channel("Private Questions")
-        private_question_id = private_question_text.id
-        public_quesion_text = await questions_category.create_text_channel("Public Questions")
-        public_question_id = public_quesion_text.id
+    #Gives new users the Student role
+    @bot.event
+    async def on_member_join(member):
+        role = discord.utils.get(member.guild.roles, name="Student")
+        await member.add_roles(role)
+
+    @bot.event
+    async def on_guild_channel_create(channel):
+        #Add guild to Classroom table
+        pass
+
+    @bot.event
+    async def on_guild_channel_delete(channel):
+        #Remove guild from Classroom table
+        pass
 
     #public and private questions from dms to proper channels 
-    @bot.event
-    async def on_message(message):
-        if message.author == bot.user:
-            return
-        if isinstance(message.channel, discord.DMChannel):
-            target_channel_id = None
-            if content.startswith('!public '):
-                taret_channel_id = public_question_id
-                content = content[len('!public '):]
-            elif content.startswith('!private '):
-                taret_channel_id = private_question_id
-                content = content[len('!private '):]
-            if target_channel_id is None:
-                await message.author.send("Invalid command. Use `!public <message>` or `!private <message>` to send a message to a public or private channel, respectively.")
-                return
-            target_channel = bot.get_channel(target_channel_id)
-            author_name = message.author.name
-            message_content = f"{'**Anonymous**' if target_channel_id == public_question_id else '**{author_name}**'}: {content}"
-            await target_channel.send(message_content)
-            await message.author.send(f"Your message has been forwarded to the {'public' if target_channel_id == public_question_id else 'private'} channel.")
-            return
+    # @bot.event
+    # async def on_message(message):
+    #     if message.author == bot.user:
+    #         return
+    #     if isinstance(message.channel, discord.DMChannel):
+    #         target_channel_id = None
+    #         if message.content.startswith('!public '):
+    #             taret_channel_id = public_question_id
+    #             content = message.content[len('!public '):]
+    #         elif message.content.startswith('!private '):
+    #             taret_channel_id = private_question_id
+    #             content = message.content[len('!private '):]
+    #         if target_channel_id is None:
+    #             await message.author.send("Invalid command. Use `!public <message>` or `!private <message>` to send a message to a public or private channel, respectively.")
+    #             return
+    #         target_channel = bot.get_channel(target_channel_id)
+    #         author_name = message.author.name
+    #         message_content = f"{'**Anonymous**' if target_channel_id == public_question_id else '**{author_name}**'}: {content}"
+    #         await target_channel.send(message_content)
+    #         await message.author.send(f"Your message has been forwarded to the {'public' if target_channel_id == public_question_id else 'private'} channel.")
+    #         return
 
 
     @bot.command(name = 'channelCreate', help = '!channelCreate [category] [topic] when educator wants to create a channel under a category')
@@ -144,14 +167,6 @@ def run_discord_bot():
             else:
                 await ctx.send("Invalid file format, only PDF files are accepted.")
 
-
-    @bot.command()
-    async def testInsert(ctx, arg1, arg2):
-        list = {'student_name': arg1, 'grade': arg2}
-        data = supabase.table("TestTable").insert(list).execute()
-        print(data)
-        await ctx.channel.send("Inserted new student")
-
     @bot.command(name = 'poll', help = '!poll [prompt] [option 1] [option 2] *[option 3] ... [*option n] - Creates a poll where students vote through reactions.')
     async def poll(ctx, prompt, opt1, opt2, opt3:Optional[str] = None, opt4:Optional[str] = None):
         # TODO - poll command, 'prompt' is the question and the opt1 -> opt4 are the options. opt1 and 2 being required, others are optional
@@ -163,5 +178,74 @@ def run_discord_bot():
         #     pass
         #similar functionality to poll FINISH after poll is implemented 
         pass
+
+    @bot.command(name='ta', help='!ta @user - Gives the user the assistant role')
+    async def ta(ctx, user: discord.Member):
+        role = discord.utils.get(ctx.guild.roles, name="Assistant")
+        await user.add_roles(role)
+        await ctx.send(f"{user.mention} has been given the Assistant role")
+
+    @bot.command(name='edu', help='!edu @user - Gives the user the educator role')
+    async def edu(ctx, user: discord.Member):
+        role = discord.utils.get(ctx.guild.roles, name="Educator")
+        await user.add_roles(role)
+        await ctx.send(f"{user.mention} has been given the Educator role")
+
+    @bot.command(name='private', help=' !private - Creates a private text-channel between the student and teacher')
+    async def private(ctx, *args):
+        question = ' '.join(args)
+        user = ctx.author.mention
+        u = ctx.author
+        response = user
+        q = discord.utils.get(ctx.guild.categories, name="Questions")
+
+        if q is None:
+            q = await ctx.guild.create_category("Questions")
+
+        private_channel = await ctx.guild.create_text_channel("Private:{u}", category=q)
+
+        await private_channel.send(f"{user} asked: {question}")
+
+        await ctx.message.delete()
+
+    #TESTING COMMANDS-------------------------------------------------------------------------------
+    @bot.command()
+    async def wipe(ctx):
+        guild = ctx.guild
+        for channel in guild.channels:
+            await channel.delete()
+
+        await guild.create_text_channel("testing")
+
+    @bot.command()
+    async def reset(ctx):
+        guild = ctx.guild
+        for channel in guild.channels:
+            await channel.delete()
+
+        general = await guild.create_category("General")
+        await guild.create_text_channel("General", category=general)
+        await guild.create_text_channel("Announcements", category=general)
+        await guild.create_text_channel("Lounge", category=general)
+        await guild.create_text_channel("Syllabus", category=general)
+        await guild.create_text_channel("Roles", category=general)
+        await guild.create_category("Assignments")
+        await guild.create_category("Quizzes")
+        await guild.create_category("Discussions")
+        await guild.create_category("Submissions")
+        questions = await guild.create_category("Questions")
+        await guild.create_text_channel("Public", category=questions)
+
+    @bot.command()
+    async def testInsert(ctx, arg1, arg2):
+        list = {'student_name': arg1, 'grade': arg2}
+        data = supabase.table("TestTable").insert(list).execute()
+        print(data)
+        await ctx.channel.send("Inserted new student")
+
+    @bot.command()
+    async def test(ctx):
+        print("Test")
+        await ctx.channel.send("Test")
 
     bot.run(DISCORD_TOKEN)
