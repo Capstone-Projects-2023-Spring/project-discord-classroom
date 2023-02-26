@@ -2,7 +2,7 @@
 sidebar_position: 1
 ---
 
-# Design Document
+# Architecture
 
 ## Class Diagram
 
@@ -482,5 +482,3 @@ sequenceDiagram
 </div>
     
 </details>
-
-## API
