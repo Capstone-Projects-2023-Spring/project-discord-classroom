@@ -117,7 +117,6 @@ erDiagram
     }
     CLASSROOM ||--|{ SECTION : contains
     SECTION ||--|{ STUDENT : contains
-    SECTION || -- |{ TASK : has
     TASK }|--|| ASSIGNMENT : is
     TASK }|--|| QUIZ : is
     TASK }|--|| DISCUSSION : is
@@ -234,9 +233,12 @@ sequenceDiagram
     
 </details>
 
+<details>
+    
+<summary>
 
+## Use Case #3: Student takes practice quiz
 
-Student wants to take a Practice Quiz
 ```mermaid
 
 sequenceDiagram
@@ -271,7 +273,11 @@ f-->>c: Compare the answers and Return Correct and incorect answers
 c-->>d: The Bot DMs the results to the student
 d-->>u: Student knows where they stand on the topic by the results
 ```
-This Diagram shows the process of a student wanting to take a Practice Quiz.
+
+</summary>
+<div>
+<div>This Diagram shows the process of a student wanting to take a Practice Quiz.</div>
+<br/>
 
 1. Student types !pquiz
 2. The Bot reads the command and sends a request for the list of quizzes available to the API.
@@ -287,8 +293,18 @@ This Diagram shows the process of a student wanting to take a Practice Quiz.
 12. The API compares the two and returns the incorrect and correct answers to the Bot.
 13. The Bot messages the Student their results.
 14. The student knows where they stand on the topic due to their results.
+    
+</div>
+    
+</details>
 
-Student wants to ask the teacher a question
+
+<details>
+    
+<summary>
+
+## Use Case #4: Student wants to ask the teacher a question
+
 ```mermaid
 
 sequenceDiagram
@@ -315,7 +331,13 @@ sequenceDiagram
     deactivate Student
     
 ```
-This diagram shows a student asking a question to the teacher by creating a ticket for a private chat
+
+
+</summary>
+<div>
+<div>This diagram shows a student asking a question to the teacher by creating a ticket for a private chat</div>
+<br/>
+
 1. Student types "!ticketCreate" command
 2. ClassroomBot reads the command from discord
 3. The bot creates a new private chat
@@ -323,10 +345,16 @@ This diagram shows a student asking a question to the teacher by creating a tick
 5. Student can message the question to the teacher
 6. Teacher responds to the students question
 7. Student receives the teacher's response
+    
+</div>
+    
+</details>
 
-`!pollcreate`
+<details>
+    
+<summary>
 
-This diagram demonstrates the command for creating a poll.
+## Use Case #5: Educator creates poll with !poll
 
 ```mermaid
 
@@ -348,15 +376,33 @@ sequenceDiagram
     deactivate Discord
     
 ```
-1. The teacher enters the `!pollcreate` command
+
+</summary>
+<div>
+<div>This diagram shows an educator creating a poll for the students to respond to</div>
+<br/>
+
+
+1. The teacher enters the `!poll` command
 2. The ClassroomBot reads the command from Discord
 3. The bot prompts the user for the poll question and options
 4. The teacher enters the specified information on Discord
 5. The ClassroomBot reads the data from Discord
 6. The ClassroomBot formats the poll message and publishes it to Discord
 7. The teacher receives confirmation that their poll was created
+    
+</div>
+    
+</details>
+
+<details>
+    
+<summary>
+
+## Use Case #6: Educator takes attendance with !attendance command
 
 ```mermaid 
+
 sequenceDiagram
     actor User
     participant Discord
@@ -415,7 +461,12 @@ sequenceDiagram
     ClassroomBot-->>Discord: Students_absent_list
     deactivate ClassroomBot
 ```
-This diagram shows the process of recording students attendance. 
+
+</summary>
+<div>
+<div>This diagram shows the process of recording students attendance. </div>
+<br/>
+
 1. User sends a command to the Discord server to initiate attendance tracking by typing `!attendance`.
 2. The Discord server then passes the attendance request to the ClassroomBot.
 3. The ClassroomBot starts a timer and begins a loop asking students in the classroom if they are present or not.
@@ -425,3 +476,7 @@ This diagram shows the process of recording students attendance.
 7. The FastAPI service then retrieves the list of students who were marked absent in the database and sends it back to the ClassroomBot.
 8. The ClassroomBot activates again and receives the list of absent students from the FastAPI service.
 9. The ClassroomBot sends the list of absent students to the Discord server for notification to the User.
+    
+</div>
+    
+</details>
