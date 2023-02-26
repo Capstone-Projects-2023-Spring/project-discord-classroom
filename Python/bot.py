@@ -193,6 +193,13 @@ def run_discord_bot():
 
     @bot.command(name = 'section', help = '!section [prompt] [option 1] *[option 2] ... *[option 4] - Creates a roles for each section of the class.')
     async def section(ctx, opt1, opt2:Optional[str] = None, opt3:Optional[str] = None, opt4:Optional[str] = None):
+        # TODO: Verify user is not student
+
+        # Verify 'roles' channel exists
+        channel = discord.utils.get(ctx.guild.channels, name='roles')
+        if channel is None:
+            channel = await ctx.guild.create_text_channel('roles', overwrites=overwrites)
+    
         return
 
     @bot.command(name='private', help=' !private - Creates a private text-channel between the student and teacher')
