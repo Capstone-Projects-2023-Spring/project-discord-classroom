@@ -1,3 +1,5 @@
+import asyncio
+from http import client
 import discord
 import json
 import os
@@ -168,9 +170,24 @@ def run_discord_bot():
                 await ctx.send("Invalid file format, only PDF files are accepted.")
 
     @bot.command(name = 'poll', help = '!poll [prompt] [option 1] [option 2] *[option 3] ... [*option n] - Creates a poll where students vote through reactions.')
-    async def poll(ctx, prompt, opt1, opt2, opt3:Optional[str] = None, opt4:Optional[str] = None):
-        # TODO - poll command, 'prompt' is the question and the opt1 -> opt4 are the options. opt1 and 2 being required, others are optional
-        return
+    async def poll(ctx, prompt, *options):
+        if len(options) <= 1:
+            await ctx.send('You need more than one option to create a poll!')
+            return
+        if len(options) > 8:
+            await ctx.send('You cannot create a poll with more than 8 options!')
+            return
+
+        #Create the poll embed
+        embed = discord.Embed(title=prompt, description=' '.join([f'{chr(0x1f1e6 + i)} {option}\n' for i, option in enumerate(options)]))
+
+        # Send the poll message and add reactions
+        message = await ctx.send(embed=embed)
+        for i in range(len(options)):
+            
+            await message.add_reaction(chr(0x1f1e6 + i))
+
+        
 
     @bot.command(name = 'attendance', help = '!attendance - Creates a simple poll with one option prompting user to react to prove they are attending the class. ')
     async def attendance(ctx):
