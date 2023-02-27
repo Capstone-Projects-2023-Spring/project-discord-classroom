@@ -1,3 +1,5 @@
+import asyncio
+from http import client
 import discord
 import json
 import os
@@ -176,12 +178,13 @@ def run_discord_bot():
             await ctx.send('You cannot create a poll with more than 8 options!')
             return
 
-        # Create the poll embed
+        #Create the poll embed
         embed = discord.Embed(title=prompt, description=' '.join([f'{chr(0x1f1e6 + i)} {option}\n' for i, option in enumerate(options)]))
 
         # Send the poll message and add reactions
         message = await ctx.send(embed=embed)
         for i in range(len(options)):
+            
             await message.add_reaction(chr(0x1f1e6 + i))
 
         
