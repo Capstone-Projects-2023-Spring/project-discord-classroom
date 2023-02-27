@@ -191,24 +191,54 @@ def run_discord_bot():
         await user.add_roles(role)
         await ctx.send(f"{user.mention} has been given the Educator role")
 
-    @bot.command(name = 'section', help = '!section [prompt] [option 1] *[option 2] ... *[option 4] - Creates a roles for each section of the class.')
-    async def section(ctx, guild, opt1, opt2:Optional[str] = None, opt3:Optional[str] = None, opt4:Optional[str] = None):
+    @bot.command(name ='section', help = '!section [prompt] [option 1] *[option 2] ... *[option n] - Creates a roles for each section of the class.')
+    async def section(ctx, *options):
         # TODO: Verify user is not student
+
+        # Verify options
+        if len(options) < 1:
+            await ctx.send('You need to specify at least one section!')
+            return
+        if len(options) > 6:
+            await ctx.send('You cannot create more than 8 sections!')
+            return
+        emojis = [0] * len(options)
 
         # Verify 'roles' channel exists
         channel = discord.utils.get(ctx.guild.channels, name='roles')
         if channel is None:
             channel = await ctx.guild.create_text_channel('roles', overwrites=overwrites)
         
-        # Creates roles fore each section
+        # Creates roles for each section
         # TODO: set color, permissions, etc.
-        await guild.create_role(name=opt1)
-        if opt2:
-            await guild.create_role(name=opt1)
-        if opt3:
-            await guild.create_role(name=opt1)
-        if opt4:
-            await guild.create_role(name=opt1)
+        await ctx.guild.create_role(name=options[0])
+        emojis[0] = 0x1f534
+        if options[1]:
+            await ctx.guild.create_role(name=options[1])
+            emojis[1] = 0x1f7e0
+        if options[2]:
+            await ctx.guild.create_role(name=options[2])
+            emojis[2] = 0x1f7e1
+        if options[3]:
+            await ctx.guild.create_role(name=options[3])
+            emojis[3] = 0x1f7e2
+        if options[4]:
+            await ctx.guild.create_role(name=options[4])
+            emojis[4] = 0x1f535
+        if options[5]:
+            await ctx.guild.create_role(name=options[5])
+            emojis[5] = 0x1f7e3
+
+        # Create embded message for roles
+        embed = discord.Embed(title='React to this message to join your section.', description=''.join([f'{chr(emojis[i])} Section {option}\n' for i, option in enumerate(options)]))
+        
+        # Send reaction message to roles channels
+        # TODO: send to proper channel
+        message = await ctx.send(embed=embed)
+        for i in range(len(options)):
+            await message.add_reaction(chr(emojis[i]))
+
+        # TODO: assign user to role after they react to the appropriate option
         
         return
 
