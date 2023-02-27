@@ -8,12 +8,11 @@ from typing import List
 
 app = FastAPI(
     title="ClassroomBotAPI",
-    description="Markdown",
     version="0.0.1"
 )
 
 if os.path.exists(os.getcwd() + "/config.json"):
-    with open("./config.json") as f:
+    with open("config.json") as f:
         configData = json.load(f)
 else:
     print("ERROR: config.json does not exist")
@@ -62,18 +61,17 @@ class Message(BaseModel):
     message: str
 
 
-@app.get("/classrooms", response_model=Classroom)
+@app.get("/classrooms", response_model=List[Classroom])
 async def get_classrooms():
     response = supabase.table('Classroom').select('*').execute()
     classrooms = response.data
-    return {"classrooms": classrooms}
+    return classrooms
 
 
 @app.get("/classroomId", response_model=ClassroomId, responses={404: {"model": Message}})
 async def get_classroom_id(serverId: int = 0):
     response = supabase.table('Classroom').select('*').eq('serverId', serverId).execute()
     if response.data:
-        print(response.data)
         return {'id': response.data[0]['id']}
     return JSONResponse(status_code=404, content={"message": "Classroom not found"})
 
