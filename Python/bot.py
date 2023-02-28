@@ -8,7 +8,7 @@ import random
 from discord.ext import commands
 from typing import Optional
 import io
-from datetime import date
+import datetime
 from PyPDF2 import PdfReader
 
 if os.path.exists(os.getcwd() + "/config.json"):
