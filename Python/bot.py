@@ -202,6 +202,7 @@ def run_discord_bot():
             await asyncio.sleep(time*60)
             reaction = discord.utils.get(message.reactions, emoji = '✅')
             users = await reaction.users().flatten()
+            print(users)
             users = [user.name for user in users if not user.bot]
             response = "Attendance for {date}:\n" + '\n'.join(users)
             await ctx.author.send(response)
