@@ -2,6 +2,8 @@
 sidebar_position: 1
 ---
 
+# Architecture
+
 ## Class Diagram
 
 ```mermaid
@@ -9,10 +11,10 @@ sidebar_position: 1
 title: Class Diagram
 ---
 classDiagram
-    bot --> main
-    FastAPI --> bot
-    supabase --> bot
-    discord --> bot
+    bot <-- main
+    FastAPI <-- bot
+    supabase <-- bot
+    discord <-- bot
     class main{
         +run_bot()
     }
@@ -53,24 +55,32 @@ erDiagram
     CLASSROOM {
         int id PK
         string name
+    }
+    SECTION {
+        int id PK
+        string name
         int totalAttendance
         int totalGrade
     }
     EDUCATOR {
         int id PK
         string name
-        int classroom_id FK
+        int section_id FK
     }
     STUDENT {
         int id PK
         string name
-        int classroom_id FK
-        float grade
+        int section_id FK
         int attendance
+    }
+    TASK {
+        int id
+        int section_id FK
+        int task_type
+        int task_type_id FK
     }
     ASSIGNMENT {
         int id PK
-        int classroom_id FK
         string name
         int maxScore
         dateFormat startDate
@@ -78,7 +88,6 @@ erDiagram
     }
     QUIZ {
         int id PK
-        int classroom_id FK
         string name
         int maxScore
         dateFormat startDate
@@ -96,34 +105,40 @@ erDiagram
     }
     DISCUSSION {
        int id PK
-       int classroom_id FK
        int name
        int maxScore
        dateFormat startDate
        dateFormat dueDate 
     }
-    GRADES {
+    GRADE {
         int id PK
-        string type
-        int work_id FK
+        int task_id FK
         int student_id FK
         int maxScore
         int score
     }
-    CLASSROOM }|--|{ EDUCATOR : contains
-    CLASSROOM }|--|{ STUDENT : contains
-    CLASSROOM ||--o{ ASSIGNMENT : has
-    CLASSROOM ||--o{ QUIZ : has
-    CLASSROOM ||--o{ DISCUSSION : has
+    CLASSROOM ||--|{ SECTION : contains
+    SECTION ||--|{ STUDENT : contains
+    TASK }|--|| ASSIGNMENT : is
+    TASK }|--|| QUIZ : is
+    TASK }|--|| DISCUSSION : is
     QUIZ ||--|{ QUESTION : contains
-    STUDENT }|--o{ GRADES : has
+    STUDENT ||--o{ GRADE : has
+    SECTION }|--|| EDUCATOR : has
+    GRADE || -- || TASK : contains
 ```
+
 Each time the bot is added to a Discord server a new row is added to the CLASSROOM table. This table holds discord server name and the total attendance and grade used to calculate student's grades and attendance scores. Each CLASSROOM contains one or more EDUCATORS and one or more STUDENTS. The STUDENT table holds the student's username, the classroom they belong to, their grade, and their attendance score. Their total grade will equal their grade divided by the CLASSROOM totalGrade. Next we have the ASSIGNMENT, QUIZ, and DISCUSSION tables. The ASSIGNMENT table keeps track of the assignments the EDUCATOR creates which includes the name of the assignment, when to make it available, and when its due. The QUIZ table keeps track of EDUCATOR created quizzes which holds the max score of the quiz, the start/due date, and an optional time limit for the quiz. Each QUIZ is made up of QUESTIONS which contain a prompt, a correct answer, and optional wrong answers depending on the type of question. (If no wrong answers then its a open-ended question or fill-in-the-blank, if one wrong answer could be a True/False, and if all wrong answers are given then its multiple choice). The DISCUSSION table is used to keep track of the Discussions within the Discord server. These will only include max scores and start/due dates. Finally the GRADES table holds all of the grades for the students.
 
 ## Sequence Diagrams
-Teacher !attendance
-```mermaid
 
+<details>
+    
+<summary>
+
+### Use Case #1: Teacher !attendance command
+
+```mermaid
 sequenceDiagram
     actor Teacher
     actor Student1
@@ -152,7 +167,29 @@ sequenceDiagram
     deactivate ClassroomBot
 ```
 
-Student !grades
+</summary>
+<div>
+<div>As a teacher user I want to record attendance of a lecture.</div>
+<br/>
+
+1. Teacher types `!attendance` command
+2. The Bot reads the command and sends a attendance message to the discord
+3. The students are able to react to the message
+4. The teacher sends a command to close the attendance 
+5. The bot checks the attendance metrics (by checking the reactions)
+6. The bot sends the metrics to the Supabase Database
+7. The bot sends the attendance summary to the teacher, with a list of missing students
+    
+</div>
+    
+</details>
+
+<details>
+    
+<summary>
+
+### Use Case #2: Student !grades command
+
 ```mermaid
 sequenceDiagram
     actor Student
@@ -179,9 +216,11 @@ sequenceDiagram
     deactivate Discord
     deactivate Student
 ```
-__**Figure 3.2 Use Case #2 Sequence Diagram: As a user I want to check my grades or attendance in the class.**__
 
-This diagram shows the process of a student checking their grades (total grade and grade per assignment, quiz, and discussion).
+</summary>
+<div>
+<div>As a student user I want to check my grades for the class.</div>
+<br/>
 
 1. The student types "!grades" command within the classroom discord server.
 2. The ClassroomBot reads the command from the server
@@ -191,9 +230,17 @@ This diagram shows the process of a student checking their grades (total grade a
 6. FastAPI sends the list to the application
 7. The application parses through the grades and neatly organizes them and direct messages the student their grades
 8. The student reads their DMs to check their grades.
+    
+</div>
+    
+</details>
 
+<details>
+    
+<summary>
 
-Student wants to take a Practice Quiz
+### Use Case #3: Student takes practice quiz
+
 ```mermaid
 
 sequenceDiagram
@@ -228,7 +275,11 @@ f-->>c: Compare the answers and Return Correct and incorect answers
 c-->>d: The Bot DMs the results to the student
 d-->>u: Student knows where they stand on the topic by the results
 ```
-This Diagram shows the process of a student wanting to take a Practice Quiz.
+
+</summary>
+<div>
+<div>This Diagram shows the process of a student wanting to take a Practice Quiz.</div>
+<br/>
 
 1. Student types !pquiz
 2. The Bot reads the command and sends a request for the list of quizzes available to the API.
@@ -244,8 +295,18 @@ This Diagram shows the process of a student wanting to take a Practice Quiz.
 12. The API compares the two and returns the incorrect and correct answers to the Bot.
 13. The Bot messages the Student their results.
 14. The student knows where they stand on the topic due to their results.
+    
+</div>
+    
+</details>
 
-Student wants to ask the teacher a question
+
+<details>
+    
+<summary>
+
+### Use Case #4: Student wants to ask the teacher a question
+
 ```mermaid
 
 sequenceDiagram
@@ -272,7 +333,13 @@ sequenceDiagram
     deactivate Student
     
 ```
-This diagram shows a student asking a question to the teacher by creating a ticket for a private chat
+
+
+</summary>
+<div>
+<div>This diagram shows a student asking a question to the teacher by creating a ticket for a private chat</div>
+<br/>
+
 1. Student types "!ticketCreate" command
 2. ClassroomBot reads the command from discord
 3. The bot creates a new private chat
@@ -280,10 +347,16 @@ This diagram shows a student asking a question to the teacher by creating a tick
 5. Student can message the question to the teacher
 6. Teacher responds to the students question
 7. Student receives the teacher's response
+    
+</div>
+    
+</details>
 
-`!pollcreate`
+<details>
+    
+<summary>
 
-This diagram demonstrates the command for creating a poll.
+### Use Case #5: Educator creates poll with !poll
 
 ```mermaid
 
@@ -305,15 +378,33 @@ sequenceDiagram
     deactivate Discord
     
 ```
-1. The teacher enters the `!pollcreate` command
+
+</summary>
+<div>
+<div>This diagram shows an educator creating a poll for the students to respond to</div>
+<br/>
+
+
+1. The teacher enters the `!poll` command
 2. The ClassroomBot reads the command from Discord
 3. The bot prompts the user for the poll question and options
 4. The teacher enters the specified information on Discord
 5. The ClassroomBot reads the data from Discord
 6. The ClassroomBot formats the poll message and publishes it to Discord
 7. The teacher receives confirmation that their poll was created
+    
+</div>
+    
+</details>
+
+<details>
+    
+<summary>
+
+### Use Case #6: Educator takes attendance with !attendance command
 
 ```mermaid 
+
 sequenceDiagram
     actor User
     participant Discord
@@ -372,7 +463,12 @@ sequenceDiagram
     ClassroomBot-->>Discord: Students_absent_list
     deactivate ClassroomBot
 ```
-This diagram shows the process of recording students attendance. 
+
+</summary>
+<div>
+<div>This diagram shows the process of recording students attendance. </div>
+<br/>
+
 1. User sends a command to the Discord server to initiate attendance tracking by typing `!attendance`.
 2. The Discord server then passes the attendance request to the ClassroomBot.
 3. The ClassroomBot starts a timer and begins a loop asking students in the classroom if they are present or not.
@@ -382,3 +478,7 @@ This diagram shows the process of recording students attendance.
 7. The FastAPI service then retrieves the list of students who were marked absent in the database and sends it back to the ClassroomBot.
 8. The ClassroomBot activates again and receives the list of absent students from the FastAPI service.
 9. The ClassroomBot sends the list of absent students to the Discord server for notification to the User.
+    
+</div>
+    
+</details>
