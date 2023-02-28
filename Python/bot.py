@@ -193,54 +193,35 @@ def run_discord_bot():
 
     @bot.command(name ='section', help = '!section [prompt] [option 1] *[option 2] ... *[option n] - Creates a roles for each section of the class.')
     async def section(ctx, *options):
-        # TODO: Verify user is not student
-
-        # Verify options
-        if len(options) < 1:
-            await ctx.send('You need to specify at least one section!')
-            return
-        if len(options) > 6:
-            await ctx.send('You cannot create more than 8 sections!')
-            return
-        emojis = [0] * len(options)
-
-        # Verify 'roles' channel exists
-        channel = discord.utils.get(ctx.guild.channels, name='roles')
-        if channel is None:
-            channel = await ctx.guild.create_text_channel('roles', overwrites=overwrites)
-        
-        # Creates roles for each section
-        # TODO: set color, permissions, etc.
-        await ctx.guild.create_role(name=options[0])
-        emojis[0] = 0x1f534
-        if options[1]:
-            await ctx.guild.create_role(name=options[1])
-            emojis[1] = 0x1f7e0
-        if options[2]:
-            await ctx.guild.create_role(name=options[2])
-            emojis[2] = 0x1f7e1
-        if options[3]:
-            await ctx.guild.create_role(name=options[3])
-            emojis[3] = 0x1f7e2
-        if options[4]:
-            await ctx.guild.create_role(name=options[4])
-            emojis[4] = 0x1f535
-        if options[5]:
-            await ctx.guild.create_role(name=options[5])
-            emojis[5] = 0x1f7e3
-
-        # Create embded message for roles
-        embed = discord.Embed(title='React to this message to join your section.', description=''.join([f'{chr(emojis[i])} Section {option}\n' for i, option in enumerate(options)]))
-        
-        # Send reaction message to roles channels
-        # TODO: send to proper channel
-        message = await ctx.send(embed=embed)
+        # Create roles for each section
         for i in range(len(options)):
-            await message.add_reaction(chr(emojis[i]))
+            await ctx.guild.create_role(name=options[i])
 
-        # TODO: assign user to role after they react to the appropriate option
+        # Create reaction role embed
+        embed = discord.Embed(title="React to this message to join your section.", color=0x00FF00)
+        for i, option in enumerate(options):
+            embed.add_field(name=f"{chr(127462 + i)} Section {option}", value="\u200b", inline=False)
+        channel = discord.utils.get(ctx.guild.channels, name="roles")
+        poll_message = await channel.send(embed=embed)
         
-        return
+        # Add reactions to embed message
+        for i in range(len(options)):
+            await poll_message.add_reaction(chr(127462 + i))
+        
+        # Wait for reactions from users
+        def check(reaction, user):
+            return user != bot.user and reaction.message.id == poll_message.id and str(reaction.emoji) in [chr(127462 + i) for i in range(len(options))]
+        
+        while True:
+            reaction, user = await bot.wait_for('reaction_add', check=check)
+        
+            # Assign role to user who reacted
+            for i in range(len(options)):
+                if reaction.emoji == chr(127462 + i):
+                    role = discord.utils.get(ctx.guild.roles, name=options[i])
+                    await user.add_roles(role)
+                    await channel.send(f'{user.mention} has been assigned to Section {role.name}.')
+
 
     @bot.command(name='private', help=' !private - Creates a private text-channel between the student and teacher')
     async def private(ctx, *args):
