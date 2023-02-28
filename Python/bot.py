@@ -8,6 +8,7 @@ import random
 from discord.ext import commands
 from typing import Optional
 import io
+from datetime import date
 from PyPDF2 import PdfReader
 
 if os.path.exists(os.getcwd() + "/config.json"):
@@ -188,13 +189,23 @@ def run_discord_bot():
             await message.add_reaction(chr(0x1f1e6 + i))
 
         
-
     @bot.command(name = 'attendance', help = '!attendance - Creates a simple poll with one option prompting user to react to prove they are attending the class. ')
-    async def attendance(ctx):
-        # if(@commands.has_role(admin))
-        #     pass
-        #similar functionality to poll FINISH after poll is implemented 
-        pass
+    async def attendance(ctx, time: int = 5):
+        user = ctx.author
+        Assistant = discord.utils.get(ctx.guild.roles, name="Assistant")
+        Educator = discord.utils.get(ctx.guild.roles, name="Educator")
+        #Student = discord.utils.get(member.guild.roles, name="Student")
+        if Educator or Assistant in user.roles:
+            date = datetime.datetime.now().strftime("%m - %d - %y %I:%M %p")
+            message = await ctx.send("React to this message to check into todays attendance")
+            await message.add_reaction('✅')
+            await asyncio.sleep(time*60)
+            reaction = discord.utils.get(message.reactions, emoji = '✅')
+            users = await reaction.users().flatten()
+            users = [user.name for user in users if not user.bot]
+            response = "Attendance for {date}:\n" + '\n'.join(users)
+            await ctx.author.send(response)
+        
 
     @bot.command(name='ta', help='!ta @user - Gives the user the assistant role')
     async def ta(ctx, user: discord.Member):
