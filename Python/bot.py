@@ -218,23 +218,34 @@ def run_discord_bot():
         await guild.create_text_channel("testing")
 
     @bot.command()
+    async def removeRoles(ctx):
+        safeRoles = ["Developer", "@everyone", "Classroom", "ClassroomTest 2", "ClassroomTest 1"]
+        guild = ctx.guild
+        for role in guild.roles:
+            if role.name not in safeRoles:
+                print("Deleting role: ", role.name)
+                await role.delete()
+        await ctx.send('All roles removed')
+
+    @bot.command()
+    async def removeSections(ctx):
+        safeRoles = ["Developer", "@everyone", "Classroom", "ClassroomTest 2", "ClassroomTest 1",
+                     "Educator", "Assistant", "Student"]
+        guild = ctx.guild
+        for role in guild.roles:
+            if role.name not in safeRoles:
+                print("Deleting role: ", role.name)
+                await role.delete()
+        await ctx.send('All roles removed')
+
+    @bot.command()
     async def reset(ctx):
         guild = ctx.guild
         for channel in guild.channels:
-            await channel.delete()
-
-        general = await guild.create_category("General")
-        await guild.create_text_channel("General", category=general)
-        await guild.create_text_channel("Announcements", category=general)
-        await guild.create_text_channel("Lounge", category=general)
-        await guild.create_text_channel("Syllabus", category=general)
-        await guild.create_text_channel("Roles", category=general)
-        await guild.create_category("Assignments")
-        await guild.create_category("Quizzes")
-        await guild.create_category("Discussions")
-        await guild.create_category("Submissions")
-        questions = await guild.create_category("Questions")
-        await guild.create_text_channel("Public", category=questions)
+            if channel.name != 'testing':
+                await channel.delete()
+        await removeRoles(ctx)
+        await on_guild_join(ctx.guild)
 
     @bot.command()
     async def testInsert(ctx, arg1, arg2):
