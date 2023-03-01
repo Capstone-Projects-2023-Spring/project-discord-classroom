@@ -220,6 +220,38 @@ def run_discord_bot():
         await user.add_roles(role)
         await ctx.send(f"{user.mention} has been given the Educator role")
 
+    @bot.command(name ='section', help = '!section [prompt] [option 1] *[option 2] ... *[option n] - Creates a roles for each section of the class.')
+    async def section(ctx, *options):
+        # Create roles for each section
+        for i in range(len(options)):
+            await ctx.guild.create_role(name=options[i])
+
+        # Create reaction role embed
+        embed = discord.Embed(title="React to this message to join your section.", color=0x00FF00)
+        for i, option in enumerate(options):
+            embed.add_field(name=f"{chr(127462 + i)} Section {option}", value="\u200b", inline=False)
+        channel = discord.utils.get(ctx.guild.channels, name="roles")
+        poll_message = await channel.send(embed=embed)
+        
+        # Add reactions to embed message
+        for i in range(len(options)):
+            await poll_message.add_reaction(chr(127462 + i))
+        
+        # Wait for reactions from users
+        def check(reaction, user):
+            return user != bot.user and reaction.message.id == poll_message.id and str(reaction.emoji) in [chr(127462 + i) for i in range(len(options))]
+        
+        while True:
+            reaction, user = await bot.wait_for('reaction_add', check=check)
+        
+            # Assign role to user who reacted
+            for i in range(len(options)):
+                if reaction.emoji == chr(127462 + i):
+                    role = discord.utils.get(ctx.guild.roles, name=options[i])
+                    await user.add_roles(role)
+                    await channel.send(f'{user.mention} has been assigned to Section {role.name}.')
+
+
     @bot.command(name='private', help=' !private - Creates a private text-channel between the student and teacher')
     async def private(ctx, *args):
         question = ' '.join(args)
