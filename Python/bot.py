@@ -69,7 +69,6 @@ def run_discord_bot():
         await guild.create_category("Submissions")
         questions = await guild.create_category("Questions")
         await guild.create_text_channel("Public", category=questions)
-        await guild.create_text_channel("Private", category=questions)
 
     #Gives new users the Student role
     @bot.event
@@ -88,26 +87,27 @@ def run_discord_bot():
         pass
 
     #public and private questions from dms to proper channels 
-    @bot.event
-    async def on_message(message):
-        if message.author == bot.user:
-            return
-        if isinstance(message.channel, discord.DMChannel):
-            if message.content.startswith('!public '):
-                for guild in client.guilds:
-                    if message.author in guild.members:
-                        target_channel_id = discord.utils.get(guild.text_channels, name='Public')
-                        content = message.replace('!public', '').strip()
-                        await target_channel_id.send(f'Anonymous: {content}')
-                        break
-            elif message.content.startswith('!private '):
-                for guild in client.guilds:
-                    if message.author in guild.members:
-                        target_channel_id = discord.utils.get(guild.text_channels, name='Private')
-                        content = message.replace('!private', '').strip()
-                        await target_channel_id.send(f'{message.author}: {content}')
-                        break           
-            
+    # @bot.event
+    # async def on_message(message):
+    #     if message.author == bot.user:
+    #         return
+    #     if isinstance(message.channel, discord.DMChannel):
+    #         target_channel_id = None
+    #         if message.content.startswith('!public '):
+    #             taret_channel_id = public_question_id
+    #             content = message.content[len('!public '):]
+    #         elif message.content.startswith('!private '):
+    #             taret_channel_id = private_question_id
+    #             content = message.content[len('!private '):]
+    #         if target_channel_id is None:
+    #             await message.author.send("Invalid command. Use `!public <message>` or `!private <message>` to send a message to a public or private channel, respectively.")
+    #             return
+    #         target_channel = bot.get_channel(target_channel_id)
+    #         author_name = message.author.name
+    #         message_content = f"{'**Anonymous**' if target_channel_id == public_question_id else '**{author_name}**'}: {content}"
+    #         await target_channel.send(message_content)
+    #         await message.author.send(f"Your message has been forwarded to the {'public' if target_channel_id == public_question_id else 'private'} channel.")
+    #         return
 
 
     @bot.command(name = 'channelCreate', help = '!channelCreate [category] [topic] when educator wants to create a channel under a category')
