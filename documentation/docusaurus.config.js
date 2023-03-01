@@ -93,6 +93,11 @@ const config = {
             spec: 'static/openapi.yml.yaml',
             route: '/api/',
           },
+          {
+            id: 'classroom-yaml',
+            spec: 'static/classroom.yaml',
+            route: '/api/'
+          },
         ],
         // Theme Options for modifying how redoc renders them
         theme: {
