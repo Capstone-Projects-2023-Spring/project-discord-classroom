@@ -69,7 +69,6 @@ def run_discord_bot():
         await guild.create_category("Submissions")
         questions = await guild.create_category("Questions")
         await guild.create_text_channel("Public", category=questions)
-        await guild.create_text_channel("Private", category=questions)
 
     #Gives new users the Student role
     @bot.event
@@ -86,7 +85,6 @@ def run_discord_bot():
     async def on_guild_channel_delete(channel):
         #Remove guild from Classroom table
         pass
-
 
     @bot.slash_command(name = 'syllabus',
                        description='attach pdf file to command',
