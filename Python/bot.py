@@ -6,7 +6,7 @@ import os
 from supabase import create_client, Client
 import random
 from discord.ext import commands
-from typing import Optional
+from typing import Optional, List
 import io
 import datetime
 from PyPDF2 import PdfReader
@@ -86,46 +86,10 @@ def run_discord_bot():
         #Remove guild from Classroom table
         pass
 
-    #public and private questions from dms to proper channels 
-    # @bot.event
-    # async def on_message(message):
-    #     if message.author == bot.user:
-    #         return
-    #     if isinstance(message.channel, discord.DMChannel):
-    #         target_channel_id = None
-    #         if message.content.startswith('!public '):
-    #             taret_channel_id = public_question_id
-    #             content = message.content[len('!public '):]
-    #         elif message.content.startswith('!private '):
-    #             taret_channel_id = private_question_id
-    #             content = message.content[len('!private '):]
-    #         if target_channel_id is None:
-    #             await message.author.send("Invalid command. Use `!public <message>` or `!private <message>` to send a message to a public or private channel, respectively.")
-    #             return
-    #         target_channel = bot.get_channel(target_channel_id)
-    #         author_name = message.author.name
-    #         message_content = f"{'**Anonymous**' if target_channel_id == public_question_id else '**{author_name}**'}: {content}"
-    #         await target_channel.send(message_content)
-    #         await message.author.send(f"Your message has been forwarded to the {'public' if target_channel_id == public_question_id else 'private'} channel.")
-    #         return
-
-
-    @bot.command(name = 'channelCreate', help = '!channelCreate [category] [topic] when educator wants to create a channel under a category')
-    async def create_channel(ctx, category, topic):
-        if ctx.author.id != ctx.guild.owner_id:
-            await ctx.send("Error, enter '!help' for  more information.")
-            return
-
-        category_list = discord.utils.get(ctx.guild.categories, name=category)
-        if category_list is None:
-            await ctx.send(f"Category '{category}' not found.")
-            return
-            
-        channel = await category_list.create_text_channel(name=topic)
-
-
-    @bot.command(name = 'syllabus', help = '!syllabus [attach .pdf file] - Creates a syllabus text channel with the .pdf as a message for students to download and view the syllabus. Library to view syllabus contents on discord.')
-    async def syllabus(ctx):
+    @bot.slash_command(name = 'syllabus',
+                       description='attach pdf file to command',
+                       help = '!syllabus [attach .pdf file] - Creates a syllabus text channel with the .pdf as a message for students to download and view the syllabus. Library to view syllabus contents on discord.')
+    async def syllabus(ctx: discord.ApplicationContext, file: discord.Attachment):
         if ctx.author.id != ctx.guild.owner_id:
             await ctx.send("Error, enter '!help' for  more information.")
             return
@@ -136,11 +100,10 @@ def run_discord_bot():
             owner: discord.PermissionOverwrite(read_messages=True, send_messages=True)
         }
 
-        attachments = ctx.message.attachments
-        if len(attachments) == 0:
-            await ctx.send("Please attach a syllabus file to upload.")
-        else:
-            pdf = attachments[0]
+        await ctx.respond(True)
+
+        if file is not None:
+            pdf = file
             if pdf.filename.endswith(".pdf"):
                 file_data =  await pdf.read()
                 # Check whether "syllabus" channel exists;
@@ -170,61 +133,103 @@ def run_discord_bot():
             else:
                 await ctx.send("Invalid file format, only PDF files are accepted.")
 
-    @bot.command(name = 'poll', help = '!poll [prompt] [option 1] [option 2] *[option 3] ... [*option n] - Creates a poll where students vote through reactions.')
-    async def poll(ctx, prompt, *options):
-        if len(options) <= 1:
-            await ctx.send('You need more than one option to create a poll!')
-            return
-        if len(options) > 8:
-            await ctx.send('You cannot create a poll with more than 8 options!')
-            return
+    @bot.slash_command(name='poll',
+                       description="creates poll (max 8 options)",
+                       help = '!poll [prompt] [option 1] [option 2] *[option 3] ... [*option n] - Creates a poll where students vote through reactions.')
+    async def poll(ctx: discord.ApplicationContext, topic: str, option1: str, option2: str, option3: str=None, option4: str=None, option5: str=None, option6: str=None, option7: str=None, option8: str=None):
+
+        options = []
+        if option1 != None:
+            options.append(option1)
+        if option2 != None:
+            options.append(option2)
+        if option3 != None:
+            options.append(option3)
+        if option4 != None:
+            options.append(option4)
+        if option5 != None:
+            options.append(option5)
+        if option6 != None:
+            options.append(option6)
+        if option7 != None:
+            options.append(option7)
+        if option8 != None:
+            options.append(option8)
 
         #Create the poll embed
-        embed = discord.Embed(title=prompt, description=' '.join([f'{chr(0x1f1e6 + i)} {option}\n' for i, option in enumerate(options)]))
+        embed = discord.Embed(title=topic, description=' '.join([f'{chr(0x1f1e6 + i)} {option}\n' for i, option in enumerate(options)]))
 
         # Send the poll message and add reactions
         message = await ctx.send(embed=embed)
         for i in range(len(options)):
-            
             await message.add_reaction(chr(0x1f1e6 + i))
 
-        
-    @bot.command(name = 'attendance', help = '!attendance - Creates a simple poll with one option prompting user to react to prove they are attending the class. ')
-    async def attendance(ctx, time: int = 5):
-        user = ctx.author
-        Assistant = discord.utils.get(ctx.guild.roles, name="Assistant")
-        Educator = discord.utils.get(ctx.guild.roles, name="Educator")
-        #Student = discord.utils.get(member.guild.roles, name="Student")
-        if Educator or Assistant in user.roles:
-            date = datetime.datetime.now().strftime("%m - %d - %y %I:%M %p")
-            message = await ctx.send("React to this message to check into todays attendance")
-            await message.add_reaction('✅')
-            await asyncio.sleep(time*60)
-            reaction = discord.utils.get(message.reactions, emoji = '✅')
-            users = await reaction.users().flatten()
-            print(users)
-            users = [user.name for user in users if not user.bot]
-            response = "Attendance for {date}:\n" + '\n'.join(users)
-            await ctx.author.send(response)
+        await ctx.respond(True)
+
+    @bot.slash_command(
+        name='attendance',
+        description='take attendance',
+        help='!attendance - Creates a simple poll with one option prompting user to react to prove they are attending the class. ')
+    @commands.has_any_role("Educator", "Assistant")
+    async def attendance(ctx: discord.ApplicationContext, time: float = 5):
+        await ctx.respond(True)
+        date = datetime.datetime.now().strftime("%m - %d - %y %I:%M %p")
+        embed = discord.Embed(title="Attendance", description='React to this message to check into today\'s attendance')
+        message = await ctx.send(embed=embed)
+        await message.add_reaction('✅')
+        timeLeft = time*60
+        while timeLeft >= 0:
+            embed.title = f"Attendance - {int(timeLeft)}s"
+            await asyncio.sleep(1)
+            await message.edit(embed=embed)
+            timeLeft -= 1
+        embed.description = "Attendance CLOSED"
+        await asyncio.sleep(1)
+        await message.edit(embed=embed)
+        attendance_message = await ctx.channel.fetch_message(message.id)
+        reactions = attendance_message.reactions
+        users = []
+        for r in reactions:
+            if r.emoji == '✅':
+                async for user in r.users():
+                    users.append(user)
+        users = [user.nick for user in users if not user.bot]
+
+        response = f"Attendance for {date}:\n" + '\n'.join(users)
+        await ctx.author.send(response)
         
 
-    @bot.command(name='ta', help='!ta @user - Gives the user the assistant role')
-    async def ta(ctx, user: discord.Member):
+    @bot.slash_command(name='ta',
+                       description='Gives the user the assistant role',
+                       help='!ta @user - Gives the user the assistant role')
+    async def ta(ctx: discord.ApplicationContext, user: discord.Member):
         role = discord.utils.get(ctx.guild.roles, name="Assistant")
         await user.add_roles(role)
         await ctx.send(f"{user.mention} has been given the Assistant role")
+        await ctx.respond(True)
 
-    @bot.command(name='edu', help='!edu @user - Gives the user the educator role')
-    async def edu(ctx, user: discord.Member):
+
+    @bot.slash_command(name='edu',
+                       description='Gives the user the Educator role',
+                       help='!edu @user - Gives the user the educator role')
+    async def edu(ctx : discord.ApplicationContext, user: discord.Member):
         role = discord.utils.get(ctx.guild.roles, name="Educator")
         await user.add_roles(role)
         await ctx.send(f"{user.mention} has been given the Educator role")
+        await ctx.respond(True)
 
-    @bot.command(name ='section', help = '!section [prompt] [option 1] *[option 2] ... *[option n] - Creates a roles for each section of the class.')
-    async def section(ctx, *options):
+
+    @bot.slash_command(name ='section',
+                       description='Creates sections for students to join',
+                       help = '!section [prompt] [option 1] *[option 2] ... *[option n] - Creates a roles for each section of the class.')
+    @commands.has_role("Educator")
+    async def section(ctx: discord.ApplicationContext, roles: str):
         # Create roles for each section
+        options = roles.split()
         for i in range(len(options)):
             await ctx.guild.create_role(name=options[i])
+
+        await ctx.respond(True)
 
         # Create reaction role embed
         embed = discord.Embed(title="React to this message to join your section.", color=0x00FF00)
@@ -252,22 +257,22 @@ def run_discord_bot():
                     await channel.send(f'{user.mention} has been assigned to Section {role.name}.')
 
 
-    @bot.command(name='private', help=' !private - Creates a private text-channel between the student and teacher')
-    async def private(ctx, *args):
-        question = ' '.join(args)
+    @bot.slash_command(name='private',
+                       description='creates private channel for the question',
+                       help=' !private - Creates a private text-channel between the student and teacher')
+    @commands.has_role("Student")
+    async def private(ctx: discord.ApplicationContext, question: str):
         user = ctx.author.mention
-        u = ctx.author
+        u = ctx.author.nick
         response = user
         q = discord.utils.get(ctx.guild.categories, name="Questions")
-
         if q is None:
             q = await ctx.guild.create_category("Questions")
-
-        private_channel = await ctx.guild.create_text_channel("Private:{u}", category=q)
+        private_channel = await ctx.guild.create_text_channel(f"Private-{u}", category=q)
 
         await private_channel.send(f"{user} asked: {question}")
 
-        await ctx.message.delete()
+        await ctx.respond(True)
 
     #TESTING COMMANDS-------------------------------------------------------------------------------
     @bot.command()
