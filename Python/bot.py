@@ -32,6 +32,7 @@ def run_discord_bot():
     @bot.event
     async def on_ready():
         print(f'{bot.user} is now running!')
+        
     
     @bot.event
     async def on_guild_join(guild):
@@ -71,10 +72,20 @@ def run_discord_bot():
         await guild.create_text_channel("Public", category=questions)
 
     #Gives new users the Student role
+    # @bot.slash_command(name='simjoin')
     @bot.event
     async def on_member_join(member):
+        print(f'on_member_join() called!')
         role = discord.utils.get(member.guild.roles, name="Student")
         await member.add_roles(role)
+        print(role)
+        #if role == "Educator":
+         #   pass
+        #elif role == "Student":
+        discordNickname = member.display_name  
+        print(discordNickname)
+        supabase.table("Student").insert({ "name": discordNickname }).execute()
+        # supabase.table("TestTable").insert(list)
 
     @bot.event
     async def on_guild_channel_create(channel):
