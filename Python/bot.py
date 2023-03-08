@@ -93,6 +93,14 @@ def run_discord_bot():
         supabase.table("Student").delete().eq("id", userId).execute()
 
     @bot.event
+    async def on_member_update(before, after):
+        id = after.id
+        print(id)
+        if before.nick != after.nick:
+            supabase.table("Student").update({"name": after.nick}).eq("id", id)
+            print(before.nick, after.nick)
+
+    @bot.event
     async def on_guild_channel_create(channel):
         #Add guild to Classroom table
         pass
