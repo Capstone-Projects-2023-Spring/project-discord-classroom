@@ -71,21 +71,26 @@ def run_discord_bot():
         questions = await guild.create_category("Questions")
         await guild.create_text_channel("Public", category=questions)
 
+    def add_member_to_table(role, nickname, did):
+        supabase.table(role).insert({ "name": nickname, "id": did }).execute()
+
     #Gives new users the Student role
-    # @bot.slash_command(name='simjoin')
     @bot.event
     async def on_member_join(member):
         print(f'on_member_join() called!')
         role = discord.utils.get(member.guild.roles, name="Student")
         await member.add_roles(role)
         print(role)
-        #if role == "Educator":
-         #   pass
-        #elif role == "Student":
-        discordNickname = member.display_name  
+        discordNickname = member.display_name
         print(discordNickname)
-        supabase.table("Student").insert({ "name": discordNickname }).execute()
-        # supabase.table("TestTable").insert(list)
+        discordId = member.id
+        print(discordId)
+        add_member_to_table(role, discordNickname, discordId)
+        
+    @bot.event 
+    async def on_member_remove(member):
+        userId = member.id
+        supabase.table("Student").delete().eq("id", userId).execute()
 
     @bot.event
     async def on_guild_channel_create(channel):
