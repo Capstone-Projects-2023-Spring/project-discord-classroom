@@ -70,7 +70,6 @@ def run_discord_bot():
         await guild.create_category("Submissions")
         questions = await guild.create_category("Questions")
         await guild.create_text_channel("Public", category=questions)
-        await guild.create_text_channel("Private", category=questions)
 
     # Gives new users the Student role
     @bot.event
@@ -89,6 +88,7 @@ def run_discord_bot():
         pass
 
     @bot.slash_command(name='syllabus',
+
                        description='attach pdf file to command',
                        help='!syllabus [attach .pdf file] - Creates a syllabus text channel with the .pdf as a message for students to download and view the syllabus. Library to view syllabus contents on discord.')
     async def syllabus(ctx: discord.ApplicationContext, file: discord.Attachment):
