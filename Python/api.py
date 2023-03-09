@@ -71,7 +71,7 @@ async def get_classrooms():
 @app.get("/classroomId", response_model=ClassroomId, responses={404: {"model": Message}})
 async def get_classroom_id(serverId: int = 0):
     response = supabase.table('Classroom').select('*').eq('serverId', serverId).execute()
-    if response.data:
+    if response.data is not []:
         return {'id': response.data[0]['id']}
     return JSONResponse(status_code=404, content={"message": "Classroom not found"})
 
@@ -115,7 +115,7 @@ async def get_sections(classroomId: int = 0):
     response = supabase.table('Section').select('*').eq('classroomId', classroomId).execute()
     sections = []
     data = response.data
-    print("Data:", data)
+    #print("Data:", data)
     for d in data:
         sections.append(d)
     return sections
