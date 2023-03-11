@@ -218,7 +218,7 @@ def run_discord_bot():
             student = await supabase.from_table('Student').select().eq('discordId', str(ctx.author.id)).single().execute()
             attendance = student['attendance']
             response = f"Your attendance count is {attendance}."
-            await ctx.respond(response)
+            await ctx.author.send(response)
 
     @bot.slash_command(name='ta',
                        description='Gives the user the assistant role',
