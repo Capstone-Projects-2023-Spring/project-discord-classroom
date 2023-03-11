@@ -175,37 +175,50 @@ def run_discord_bot():
 
         return 1
 
+    async def increment_attendance(discordId:str):
+        student = await supabase.from_table('Student').select().eq('discord_id', discord_id).single().execute()
+        student_attendance = student['attendance'] + 1
+        await supabase.from_table('Student').update({'attendance_count': attendance_count}).eq('discord_id', discord_id).execute()
+
+
     @bot.slash_command(
         name='attendance',
         description='take attendance',
         help='!attendance - Creates a simple poll with one option prompting user to react to prove they are attending the class. ')
-    @commands.has_any_role("Educator", "Assistant")
     async def attendance(ctx: discord.ApplicationContext, time: float = 5):
-        await ctx.respond("Success", delete_after=0)
-        date = datetime.datetime.now().strftime("%m - %d - %y %I:%M %p")
-        embed = discord.Embed(title="Attendance", description='React to this message to check into today\'s attendance')
-        message = await ctx.send(embed=embed)
-        await message.add_reaction('✅')
-        timeLeft = time * 60
-        while timeLeft >= 0:
-            embed.title = f"Attendance - {int(timeLeft)}s"
+        user_roles = [role.name for role in ctx.author.roles]
+        if  'Educator' in user_roles or 'Assistant' in user_roles:
+            await ctx.respond("Success", delete_after=0)
+            date = datetime.datetime.now().strftime("%m - %d - %y %I:%M %p")
+            embed = discord.Embed(title="Attendance", description='React to this message to check into today\'s attendance')
+            message = await ctx.send(embed=embed)
+            await message.add_reaction('✅')
+            timeLeft = time * 60
+            while timeLeft >= 0:
+                embed.title = f"Attendance - {int(timeLeft)}s"
+                await asyncio.sleep(1)
+                await message.edit(embed=embed)
+                timeLeft -= 1
+            embed.description = "Attendance CLOSED"
             await asyncio.sleep(1)
             await message.edit(embed=embed)
-            timeLeft -= 1
-        embed.description = "Attendance CLOSED"
-        await asyncio.sleep(1)
-        await message.edit(embed=embed)
-        attendance_message = await ctx.channel.fetch_message(message.id)
-        reactions = attendance_message.reactions
-        users = []
-        for r in reactions:
-            if r.emoji == '✅':
-                async for user in r.users():
-                    users.append(user)
-        users = [user.nick for user in users if not user.bot]
+            attendance_message = await ctx.channel.fetch_message(message.id)
+            reactions = attendance_message.reactions
+            users = []
+            for r in reactions:
+                if r.emoji == '✅':
+                    async for user in r.users():
+                        users.append(user)
+                        await increment_attendance(str(user.id))
+            users = [user.nick for user in users if not user.bot]
 
-        response = f"Attendance for {date}:\n" + '\n'.join(users)
-        await ctx.author.send(response)
+            response = f"Attendance for {date}:\n" + '\n'.join(users)
+            await ctx.author.send(response)
+        else:
+            student = await supabase.from_table('Student').select().eq('discordId', str(ctx.author.id)).single().execute()
+            attendance = student['attendance']
+            response = f"Your attendance count is {attendance}."
+            await ctx.author.send(response)
 
     @bot.slash_command(name='ta',
                        description='Gives the user the assistant role',
