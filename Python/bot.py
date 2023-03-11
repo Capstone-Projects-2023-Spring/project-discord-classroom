@@ -175,6 +175,12 @@ def run_discord_bot():
 
         return 1
 
+    async def increment_attendance(discordId:str):
+        student = await supabase.from_table('Student').select().eq('discord_id', discord_id).single().execute()
+        student_attendance = student['attendance'] + 1
+        await supabase.from_table('Student').update({'attendance_count': attendance_count}).eq('discord_id', discord_id).execute()
+
+
     @bot.slash_command(
         name='attendance',
         description='take attendance',
@@ -202,6 +208,7 @@ def run_discord_bot():
             if r.emoji == '✅':
                 async for user in r.users():
                     users.append(user)
+                    await increment_attendance(str(user.id))
         users = [user.nick for user in users if not user.bot]
 
         response = f"Attendance for {date}:\n" + '\n'.join(users)
