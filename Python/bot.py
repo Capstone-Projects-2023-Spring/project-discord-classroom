@@ -144,7 +144,7 @@ def run_discord_bot():
             category = await ctx.guild.create_category('Discussion')
 
         # Create new channel for discussion
-        channel = await ctx.guild.create_text_channel(name=channel_name,category=category)
+        channel = await ctx.guild.create_text_channel(name=channel_name,category='Discussion')
         
         embed = discord.Embed(title=channel_name, description=prompt)
 
