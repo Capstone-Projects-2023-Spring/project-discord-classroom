@@ -146,12 +146,10 @@ def run_discord_bot():
         # Create new channel for discussion
         channel = await ctx.guild.create_text_channel(name=channel_name, category=category)
         
-        embed = discord.Embed(title=channel_name, description=prompt)
-
         # Send discussion prompt to new channel
+        embed = discord.Embed(title=channel_name, description=prompt)
         await channel.send(embed=embed)
-
-        await ctx.respond('Discussion channel created')
+        await ctx.respond('Discussion channel created.')
 
         return channel
 
