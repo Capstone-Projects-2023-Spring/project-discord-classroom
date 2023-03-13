@@ -72,12 +72,39 @@ def run_discord_bot():
         questions = await guild.create_category("Questions")
         await guild.create_text_channel("Public", category=questions)
 
-    # Gives new users the Student role
+    def add_member_to_table(role, nickname, did):
+        supabase.table(role).insert({ "name": nickname, "discordId": did }).execute()
+
+    #Gives new users the Student role
     @bot.event
     async def on_member_join(member):
+        print(f'on_member_join() called!')
         role = discord.utils.get(member.guild.roles, name="Student")
         await member.add_roles(role)
+        print(role)
+        discordNickname = member.display_name
+        print(discordNickname)
+        discordId = member.id
+        print(discordId)
+        add_member_to_table(role, discordNickname, discordId)
+        
+    @bot.event 
+    async def on_member_remove(member):
+        userId = member.id
+        supabase.table("Student").delete().eq("discordId", userId).execute()
 
+    @bot.event
+    async def on_member_update(before, after):
+        id = after.id
+        print(id)
+        if before.nick != after.nick:
+            try:
+                response = supabase.table('Student').update({'name': after.nick}).eq('discordId', str(after.id)).execute()
+                print(f"Nickname updated for {after.name}")
+                
+            except Exception:
+                print("Unable to update user")
+            
     @bot.event
     async def on_guild_channel_create(channel):
         # Add guild to Classroom table
@@ -136,6 +163,26 @@ def run_discord_bot():
             else:
                 await ctx.send("Invalid file format, only PDF files are accepted.")
 
+    @bot.slash_command(name ='discussion',
+                       description='Creates a new text channel with a prompt for discussion',
+                       help='!poll [channel name] [prompt]')
+    async def discussion_create(ctx: discord.ApplicationContext, channel_name: str, prompt: str):
+        # Verify existence of 'Discussion' category, or create it if it does not exist
+        if discord.utils.get(ctx.guild.categories, name='Discussion'):
+            category = discord.utils.get(ctx.guild.categories, name='Discussion')
+        else:
+            category = await ctx.guild.create_category('Discussion')
+
+        # Create new channel for discussion
+        channel = await ctx.guild.create_text_channel(name=channel_name, category=category)
+        
+        # Send discussion prompt to new channel
+        embed = discord.Embed(title=channel_name, description=prompt)
+        await channel.send(embed=embed)
+        await ctx.respond('Discussion channel created.')
+
+        return channel
+
     @bot.slash_command(name='poll',
                        description='```/poll [topic] [option1] [option2] ... [option8]``` - Creates a poll for users (8 max options)')
     async def poll(ctx: discord.ApplicationContext, topic: str, option1: str, option2: str, option3: str = None,
@@ -167,56 +214,69 @@ def run_discord_bot():
         for i in range(len(options)):
             await message.add_reaction(chr(0x1f1e6 + i))
 
+    async def increment_attendance(discordId:str):
+        student = await supabase.from_table('Student').select().eq('discord_id', discord_id).single().execute()
+        student_attendance = student['attendance'] + 1
+        await supabase.from_table('Student').update({'attendance_count': attendance_count}).eq('discord_id', discord_id).execute()
+
     @bot.slash_command(
         name='attendance',
         description='```/attendance [time (minutes)]``` - Creates attendance poll')
     @commands.has_any_role("Educator", "Assistant")
     async def attendance(ctx: discord.ApplicationContext, time: float = 5):
-        await ctx.respond("Now taking Attendance...")
-        date = datetime.datetime.now().strftime("%m - %d - %y %I:%M %p")
-        student_role = discord.utils.get(ctx.guild.roles, name="Student")
-        embed = discord.Embed(title="Attendance", description=f'{student_role.mention} React to this message to check into today\'s attendance')
-        message = await ctx.send(embed=embed)
-        await message.add_reaction('✅')
-        timeLeft = time * 60
-        while timeLeft >= 0:
-            embed.title = f"Attendance - {int(timeLeft)}s"
+        user_roles = [role.name for role in ctx.author.roles]
+        if  'Educator' in user_roles or 'Assistant' in user_roles:
+            await ctx.respond("Now taking Attendance...")
+            date = datetime.datetime.now().strftime("%m - %d - %y %I:%M %p")
+            student_role = discord.utils.get(ctx.guild.roles, name="Student")
+            embed = discord.Embed(title="Attendance", description=f'{student_role.mention} React to this message to check into today\'s attendance')
+            message = await ctx.send(embed=embed)
+            await message.add_reaction('✅')
+            timeLeft = time * 60
+            while timeLeft >= 0:
+                embed.title = f"Attendance - {int(timeLeft)}s"
+                await asyncio.sleep(1)
+                await message.edit(embed=embed)
+                timeLeft -= 1
+            embed.description = "Attendance CLOSED"
             await asyncio.sleep(1)
             await message.edit(embed=embed)
-            timeLeft -= 1
-        embed.description = "Attendance CLOSED"
-        await asyncio.sleep(1)
-        await message.edit(embed=embed)
-        attendance_message = await ctx.channel.fetch_message(message.id)
-        reactions = attendance_message.reactions
-        users = []
-        for r in reactions:
-            if r.emoji == '✅':
-                async for user in r.users():
-                    users.append(user)
-        attended = []
-        for user in users:
-            if not user.bot:
-                if user.nick is not None:
-                    attended.append(user.nick)
-                else:
-                    attended.append(user.name)
+            attendance_message = await ctx.channel.fetch_message(message.id)
+            reactions = attendance_message.reactions
+            users = []
+            for r in reactions:
+                if r.emoji == '✅':
+                    async for user in r.users():
+                        users.append(user)
+            attended = []
+            for user in users:
+                if not user.bot:
+                    if user.nick is not None:
+                        attended.append(user.nick)
+                    else:
+                        attended.append(user.name)
 
-        response = f"Attendance for {date}:\n\nAttended:\n" + '\n'.join(attended)
+            response = f"Attendance for {date}:\n\nAttended:\n" + '\n'.join(attended)
 
-        students = discord.utils.get(ctx.guild.roles, name="Student").members
+            students = discord.utils.get(ctx.guild.roles, name="Student").members
 
-        absent = []
+            absent = []
 
-        for student in students:
-            if student not in users:
-                if student.nick is not None:
-                    absent.append(student.nick)
-                else:
-                    absent.append(student.name)
+            for student in students:
+                if student not in users:
+                    if student.nick is not None:
+                        absent.append(student.nick)
+                    else:
+                        absent.append(student.name)
 
-        response += "\n\nAbsent:\n" + '\n'.join(absent)
-        await ctx.author.send(response)
+            response += "\n\nAbsent:\n" + '\n'.join(absent)
+            await ctx.author.send(response)
+        else:
+            student = await supabase.from_table('Student').select().eq('discordId', str(ctx.author.id)).single().execute()
+            attendance = student['attendance']
+            response = f"Your attendance count is {attendance}."
+            await ctx.author.send(response)
+
 
     @bot.slash_command(name='ta',
                        description='```/ta [user]``` - Gives/Removes the user the Assistant role')

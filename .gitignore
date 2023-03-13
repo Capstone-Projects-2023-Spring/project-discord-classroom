@@ -8,3 +8,4 @@
 .env.test.local
 .env.production.local
 Python/config.json
+Python/__pycache__/
