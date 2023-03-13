@@ -71,7 +71,6 @@ def run_discord_bot():
         await guild.create_category("Submissions")
         questions = await guild.create_category("Questions")
         await guild.create_text_channel("Public", category=questions)
-        await guild.create_text_channel("Private", category=questions)
 
     # Gives new users the Student role
     @bot.event
@@ -90,8 +89,7 @@ def run_discord_bot():
         pass
 
     @bot.slash_command(name='syllabus',
-                       description='attach pdf file to command',
-                       help='!syllabus [attach .pdf file] - Creates a syllabus text channel with the .pdf as a message for students to download and view the syllabus. Library to view syllabus contents on discord.')
+                       description='```/syllabus [.pdf file]``` - Updates the syllabus page with the linked pdf file')
     async def syllabus(ctx: discord.ApplicationContext, file: discord.Attachment):
         if ctx.author.id != ctx.guild.owner_id:
             await ctx.send("Error, enter '!help' for  more information.")
@@ -139,8 +137,7 @@ def run_discord_bot():
                 await ctx.send("Invalid file format, only PDF files are accepted.")
 
     @bot.slash_command(name='poll',
-                       description="creates poll (max 8 options)",
-                       help='!poll [prompt] [option 1] [option 2] *[option 3] ... [*option n] - Creates a poll where students vote through reactions.')
+                       description='```/poll [topic] [option1] [option2] ... [option8]``` - Creates a poll for users (8 max options)')
     async def poll(ctx: discord.ApplicationContext, topic: str, option1: str, option2: str, option3: str = None,
                    option4: str = None, option5: str = None, option6: str = None, option7: str = None,
                    option8: str = None):
@@ -172,8 +169,7 @@ def run_discord_bot():
 
     @bot.slash_command(
         name='attendance',
-        description='take attendance',
-        help='!attendance - Creates a simple poll with one option prompting user to react to prove they are attending the class. ')
+        description='```/attendance [time (minutes)]``` - Creates attendance poll')
     @commands.has_any_role("Educator", "Assistant")
     async def attendance(ctx: discord.ApplicationContext, time: float = 5):
         await ctx.respond("Now taking Attendance...")
@@ -198,30 +194,63 @@ def run_discord_bot():
             if r.emoji == '✅':
                 async for user in r.users():
                     users.append(user)
-        users = [user.nick for user in users if not user.bot]
+        attended = []
+        for user in users:
+            if not user.bot:
+                if user.nick is not None:
+                    attended.append(user.nick)
+                else:
+                    attended.append(user.name)
 
-        response = f"Attendance for {date}:\n" + '\n'.join(users)
+        response = f"Attendance for {date}:\n\nAttended:\n" + '\n'.join(attended)
+
+        students = discord.utils.get(ctx.guild.roles, name="Student").members
+
+        absent = []
+
+        for student in students:
+            if student not in users:
+                if student.nick is not None:
+                    absent.append(student.nick)
+                else:
+                    absent.append(student.name)
+
+        response += "\n\nAbsent:\n" + '\n'.join(absent)
         await ctx.author.send(response)
 
     @bot.slash_command(name='ta',
-                       description='Gives the user the assistant role',
-                       help='!ta @user - Gives the user the assistant role')
+                       description='```/ta [user]``` - Gives/Removes the user the Assistant role')
     async def ta(ctx: discord.ApplicationContext, user: discord.Member):
-        role = discord.utils.get(ctx.guild.roles, name="Assistant")
-        await user.add_roles(role)
-        await ctx.respond(f"{user.mention} has been given the Assistant role")
+        edu_role = discord.utils.get(ctx.guild.roles, name="Educator")
+        if edu_role in ctx.author.roles:
+            role = discord.utils.get(ctx.guild.roles, name="Assistant")
+            if role in user.roles:
+                await user.remove_roles(role)
+                await ctx.respond(f"Removed Assistant role from {user.mention}")
+            else:
+                await user.add_roles(role)
+                await ctx.respond(f"{user.mention} has been given the Assistant role")
+        else:
+            await ctx.respond("You need the Educator role to use this command")
 
     @bot.slash_command(name='edu',
-                       description='Gives the user the Educator role',
-                       help='!edu @user - Gives the user the educator role')
+                       description='```/edu [user]``` - Gives/Removes the user the Educator role')
     async def edu(ctx: discord.ApplicationContext, user: discord.Member):
-        role = discord.utils.get(ctx.guild.roles, name="Educator")
-        await user.add_roles(role)
-        await ctx.respond(f"{user.mention} has been given the Educator role")
+        edu_role = discord.utils.get(ctx.guild.roles, name="Educator")
+        if edu_role in ctx.author.roles:
+            if user == ctx.guild.owner:
+                return await ctx.respond("You cannot remove the Educator role from the owner")
+            if edu_role in user.roles:
+                await user.remove_roles(edu_role)
+                await ctx.respond(f"Removed Educator role from {user.mention}")
+            else:
+                await user.add_roles(edu_role)
+                await ctx.respond(f"{user.mention} has been given the Educator role")
+        else:
+            await ctx.respond("You need the Educator role to use this command")
 
     @bot.slash_command(name='section',
-                       description='Creates sections for students to join',
-                       help='!section [prompt] [role1] *[option 2] ... *[option n] - Creates a roles for each section of the class.')
+                       description='```/section [section1] ... [section6]``` - Allows users to assign themselves to a specific section')
     @commands.has_role("Educator")
     async def section(ctx: discord.ApplicationContext, section_1: str, section_2: str=None, section_3: str=None,
                       section_4: str=None, section_5: str=None, section_6: str=None):
@@ -274,81 +303,98 @@ def run_discord_bot():
                     await channel.send(f'{user.mention} has been assigned to Section {role.name}.')
 
     @bot.slash_command(name='private',
-                       description='creates private channel for the question',
-                       help=' /private - Creates a private text-channel between the student and teacher')
-    @commands.has_role("Student")
+                       description='```/private [question]``` - Creates a private question between Student and Educator/TA')
     async def private(ctx: discord.ApplicationContext, question: str):
-        user = ctx.author.mention
-        u = ctx.author.nick
-        response = user
-        q = discord.utils.get(ctx.guild.categories, name="Questions")
-        if q is None:
-            q = await ctx.guild.create_category("Questions")
-        private_channel = await ctx.guild.create_text_channel(f"Private-{u}", category=q)
+        student_role = discord.utils.get(ctx.guild.roles, name="Student")
+        if student_role in ctx.author.roles:
+            user = ctx.author.mention
+            u = ctx.author.nick
+            response = user
+            q = discord.utils.get(ctx.guild.categories, name="Questions")
+            if q is None:
+                q = await ctx.guild.create_category("Questions")
+            if u is None:
+                u = ctx.author
+            private_channel = await ctx.guild.create_text_channel(f"Private-{u}", category=q)
 
-        await ctx.respond("Private question created", delete_after=3)
+            await ctx.respond("Private question created", delete_after=3)
 
-        await private_channel.send(f"{user} asked: {question}")
+            await private_channel.send(f"{user} asked: {question}")
+        else:
+            await ctx.respond("Only Students can ask private questions")
+
+    @bot.slash_command(name='help', description='```/help``` sends command information to the user')
+    async def help(ctx):
+        message = "**Available Commands:**\n\n"
+        for command in bot.application_commands:
+            if command.name == "create":
+                for create in command.walk_commands():
+                    message += f"{create.description}\n\n"
+            else:
+                message += f"{command.description}\n\n"
+
+        await ctx.author.send(message)
+
+        await ctx.respond("Check Direct Messages for available commands")
 
     create = bot.create_group("create", "create school work")
 
     @create.command(name='quiz',
-                    description='creates a quiz (date format: yyyy-mm-dd)',
-                    help='creates a quiz for students to take')
+                    description='```/create quiz [questions.json]``` - Creates a Quiz for students to take')
     async def quiz(ctx, questions: discord.Attachment = None):
 
         modal = create_commands.create_quiz(bot=bot)
         await ctx.send_modal(modal)
 
     # TESTING COMMANDS-------------------------------------------------------------------------------
-    @bot.command()
-    async def wipe(ctx):
-        guild = ctx.guild
-        for channel in guild.channels:
-            await channel.delete()
-
-        await guild.create_text_channel("testing")
-
-    @bot.command()
-    async def removeRoles(ctx):
-        safeRoles = ["Developer", "@everyone", "Classroom", "ClassroomTest 2", "ClassroomTest 1"]
-        guild = ctx.guild
-        for role in guild.roles:
-            if role.name not in safeRoles:
-                print("Deleting role: ", role.name)
-                await role.delete()
-        await ctx.send('All roles removed')
-
-    @bot.command()
-    async def removeSections(ctx):
-        safeRoles = ["Developer", "@everyone", "Classroom", "ClassroomTest 2", "ClassroomTest 1",
-                     "Educator", "Assistant", "Student"]
-        guild = ctx.guild
-        for role in guild.roles:
-            if role.name not in safeRoles:
-                print("Deleting role: ", role.name)
-                await role.delete()
-        await ctx.send('All roles removed')
-
-    @bot.command()
-    async def reset(ctx):
-        guild = ctx.guild
-        for channel in guild.channels:
-            if channel.name != 'testing':
-                await channel.delete()
-        await removeRoles(ctx)
-        await on_guild_join(ctx.guild)
-
-    @bot.command()
-    async def testInsert(ctx, arg1, arg2):
-        list = {'student_name': arg1, 'grade': arg2}
-        data = supabase.table("TestTable").insert(list).execute()
-        print(data)
-        await ctx.channel.send("Inserted new student")
-
-    @bot.command()
-    async def test(ctx):
-        print("Test")
-        await ctx.channel.send("Test")
+    # @bot.command()
+    # async def wipe(ctx):
+    #     guild = ctx.guild
+    #     for channel in guild.channels:
+    #         await channel.delete()
+    #
+    #     await guild.create_text_channel("testing")
+    #
+    # @bot.command()
+    # async def removeRoles(ctx):
+    #     safeRoles = ["Developer", "@everyone", "Classroom", "ClassroomTest 2", "ClassroomTest 1"]
+    #     guild = ctx.guild
+    #     for role in guild.roles:
+    #         if role.name not in safeRoles:
+    #             print("Deleting role: ", role.name)
+    #             await role.delete()
+    #     await ctx.send('All roles removed')
+    #
+    # @bot.command()
+    # async def removeSections(ctx):
+    #     safeRoles = ["Developer", "@everyone", "Classroom", "ClassroomTest 2", "ClassroomTest 1",
+    #                  "Educator", "Assistant", "Student"]
+    #     guild = ctx.guild
+    #     for role in guild.roles:
+    #         if role.name not in safeRoles:
+    #             print("Deleting role: ", role.name)
+    #             await role.delete()
+    #     await ctx.send('All roles removed')
+    #
+    # @bot.command()
+    # async def reset(ctx):
+    #     guild = ctx.guild
+    #     for channel in guild.channels:
+    #         if channel.name != 'testing':
+    #             await channel.delete()
+    #     await removeRoles(ctx)
+    #     await on_guild_join(ctx.guild)
+    #
+    # @bot.command()
+    # async def testInsert(ctx, arg1, arg2):
+    #     list = {'student_name': arg1, 'grade': arg2}
+    #     data = supabase.table("TestTable").insert(list).execute()
+    #     print(data)
+    #     await ctx.channel.send("Inserted new student")
+    #
+    # @bot.command()
+    # async def test(ctx):
+    #     print("Test")
+    #     await ctx.channel.send("Test")
 
     bot.run(DISCORD_TOKEN)
