@@ -10,6 +10,7 @@ import io
 import datetime
 from PyPDF2 import PdfReader
 import api
+import create_commands
 
 if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:
@@ -144,36 +145,30 @@ def run_discord_bot():
                    option4: str = None, option5: str = None, option6: str = None, option7: str = None,
                    option8: str = None):
 
-        options = []
-        if option1 != None:
-            options.append(option1)
-        if option2 != None:
-            options.append(option2)
-        if option3 != None:
+        options = [option1, option2]
+        if option3:
             options.append(option3)
-        if option4 != None:
+        if option4:
             options.append(option4)
-        if option5 != None:
+        if option5:
             options.append(option5)
-        if option6 != None:
+        if option6:
             options.append(option6)
-        if option7 != None:
+        if option7:
             options.append(option7)
-        if option8 != None:
+        if option8:
             options.append(option8)
 
         # Create the poll embed
         embed = discord.Embed(title=topic, description=' '.join(
             [f'{chr(0x1f1e6 + i)} {option}\n' for i, option in enumerate(options)]))
 
+        await ctx.respond("Poll Created")
+
         # Send the poll message and add reactions
         message = await ctx.send(embed=embed)
         for i in range(len(options)):
             await message.add_reaction(chr(0x1f1e6 + i))
-
-        await ctx.respond("Success", delete_after=0)
-
-        return 1
 
     @bot.slash_command(
         name='attendance',
@@ -181,9 +176,10 @@ def run_discord_bot():
         help='!attendance - Creates a simple poll with one option prompting user to react to prove they are attending the class. ')
     @commands.has_any_role("Educator", "Assistant")
     async def attendance(ctx: discord.ApplicationContext, time: float = 5):
-        await ctx.respond("Success", delete_after=0)
+        await ctx.respond("Now taking Attendance...")
         date = datetime.datetime.now().strftime("%m - %d - %y %I:%M %p")
-        embed = discord.Embed(title="Attendance", description='React to this message to check into today\'s attendance')
+        student_role = discord.utils.get(ctx.guild.roles, name="Student")
+        embed = discord.Embed(title="Attendance", description=f'{student_role.mention} React to this message to check into today\'s attendance')
         message = await ctx.send(embed=embed)
         await message.add_reaction('✅')
         timeLeft = time * 60
@@ -225,20 +221,36 @@ def run_discord_bot():
 
     @bot.slash_command(name='section',
                        description='Creates sections for students to join',
-                       help='!section [prompt] [option 1] *[option 2] ... *[option n] - Creates a roles for each section of the class.')
+                       help='!section [prompt] [role1] *[option 2] ... *[option n] - Creates a roles for each section of the class.')
     @commands.has_role("Educator")
-    async def section(ctx: discord.ApplicationContext, roles: str):
+    async def section(ctx: discord.ApplicationContext, section_1: str, section_2: str=None, section_3: str=None,
+                      section_4: str=None, section_5: str=None, section_6: str=None):
         # Create roles for each section
-        options = roles.split()
+        options = [section_1]
+        if section_2:
+            options.append(section_2)
+        if section_3:
+            options.append(section_3)
+        if section_4:
+            options.append(section_4)
+        if section_5:
+            options.append(section_5)
+        if section_6:
+            options.append(section_6)
+
+        msg = ""
         for i in range(len(options)):
             await ctx.guild.create_role(name=options[i])
+            msg += f"{options[i]} "
 
-        await ctx.respond("Success", delete_after=0)
+        await ctx.respond(f"Sections {msg}created.")
 
         # Create reaction role embed
         embed = discord.Embed(title="React to this message to join your section.", color=0x00FF00)
+
         for i, option in enumerate(options):
             embed.add_field(name=f"{chr(127462 + i)} Section {option}", value="\u200b", inline=False)
+
         channel = discord.utils.get(ctx.guild.channels, name="roles")
         poll_message = await channel.send(embed=embed)
 
@@ -274,7 +286,7 @@ def run_discord_bot():
             q = await ctx.guild.create_category("Questions")
         private_channel = await ctx.guild.create_text_channel(f"Private-{u}", category=q)
 
-        await ctx.respond("Success", delete_after=0)
+        await ctx.respond("Private question created", delete_after=3)
 
         await private_channel.send(f"{user} asked: {question}")
 
@@ -285,292 +297,7 @@ def run_discord_bot():
                     help='creates a quiz for students to take')
     async def quiz(ctx, questions: discord.Attachment = None):
 
-        class QuizModal(discord.ui.Modal):
-
-            def __init__(self, *args, **kwargs) -> None:
-                super().__init__(*args, **kwargs)
-
-                title = discord.ui.InputText(label="Title", style=discord.InputTextStyle.short,
-                                             placeholder="ex: 'Parts of the Cell'", value="Test")
-                points = discord.ui.InputText(label="Points", style=discord.InputTextStyle.short,
-                                              placeholder="ex: '50'", value=20, required=False)
-                start_date = discord.ui.InputText(label="Start Date", style=discord.InputTextStyle.short,
-                                                  placeholder="ex: '2023-05-25'", value="2023-06-01")
-                due_date = discord.ui.InputText(label="Due Date", style=discord.InputTextStyle.short,
-                                                placeholder="ex: '2023-05-30'", value="2023-06-08")
-                time_limit = discord.ui.InputText(label="Time Limit (minutes)", placeholder="ex: '30'",
-                                                  style=discord.InputTextStyle.short, required=False)
-                self.add_item(title)
-                self.add_item(points)
-                self.add_item(start_date)
-                self.add_item(due_date)
-                self.add_item(time_limit)
-
-            async def callback(self, interaction: discord.Interaction):
-                e = discord.Embed(title="Creating Quiz...")
-                title = self.children[0].value
-                if self.children[1].value != "":
-                    try:
-                        points = int(self.children[1].value)
-                    except ValueError:
-                        return await interaction.response.send_message("Invalid points")
-                try:
-                    start_date = datetime.datetime.strptime(self.children[2].value, "%Y-%m-%d").date()
-                except ValueError:
-                    return await interaction.response.send_message("Invalid start date format")
-                try:
-                    due_date = datetime.datetime.strptime(self.children[3].value, "%Y-%m-%d").date()
-                except ValueError:
-                    return await interaction.response.send_message("Invalid due date format")
-                print(self.children[4].value)
-                if self.children[4].value != "":
-                    try:
-                        time_limit = int(self.children[4].value)
-                    except ValueError:
-                        return await interaction.response.send_message("Invalid time limit")
-
-                e.add_field(name="Title", value=title, inline=False)
-                if self.children[1].value != "":
-                    e.add_field(name="Points", value=str(points), inline=False)
-                    even_points = 1
-                else:
-                    e.add_field(name="Points", value="TBD", inline=False)
-                    even_points = 0
-                e.add_field(name="Start Date", value=start_date.strftime('%B %d, %Y'), inline=False)
-                e.add_field(name="Due Date", value=due_date.strftime('%B %d, %Y'), inline=False)
-                if self.children[4].value != "":
-                    e.add_field(name="Time Limit", value=str(time_limit), inline=False)
-                else:
-                    e.add_field(name="Time Limit", value="None", inline=False)
-                e.add_field(name="Number of Questions", value="0", inline=False)
-                e.add_field(name="Sections", value="None", inline=False)
-
-                server = interaction.guild
-                classroom_id = await api.get_classroom_id(server.id)
-                response = await api.get_sections(classroom_id['id'])
-                sections = []
-                for r in response:
-                    sections.append(r['name'])
-                sec_str = ""
-                for i, section in enumerate(sections):
-                    sec_str += f'{chr(0x1f1e6 + i)} {section}\n'
-
-                current_slide = e
-                slides = [e]
-                print("current slide set to e:", e)
-
-                class QuestionModal(discord.ui.Modal):
-                    def __init__(self, quiz_view, *args, **kwargs) -> None:
-                        super().__init__(*args, **kwargs)
-                        self.quiz_view = quiz_view
-                        question = discord.ui.InputText(label="Question", style=discord.InputTextStyle.short,
-                                                        placeholder="ex: 'Who was the first U.S. President?'",
-                                                        value="2+2")
-                        answer = discord.ui.InputText(label="Answer", style=discord.InputTextStyle.short,
-                                                      placeholder="ex: 'George Washington'",
-                                                      required=False, value="4")
-                        wrong = discord.ui.InputText(label="Wrong Options", style=discord.InputTextStyle.short,
-                                                     placeholder="ex: 'Ben Franklin, Thomas Jefferson, John Adams'",
-                                                     required=False, value="5, 6, 7")
-                        self.add_item(question)
-                        self.add_item(answer)
-                        self.add_item(wrong)
-                        if even_points == 0:
-                            ques_points = discord.ui.InputText(label="Points", style=discord.InputTextStyle.short,
-                                                               placeholder="ex: '5'")
-                            self.add_item(ques_points)
-
-                    async def callback(self, interaction: discord.Interaction):
-                        nonlocal current_slide
-                        add_e = discord.Embed(title=f"Question {len(slides)}")
-                        add_e.add_field(name="Question", value=self.children[0].value)
-                        if self.children[1].value != "":
-                            add_e.add_field(name="Answer", value=self.children[1].value)
-                        else:
-                            add_e.add_field(name="Answer", value="None")
-                        if self.children[2].value != "":
-                            add_e.add_field(name="Wrong Options", value=self.children[2].value)
-                        else:
-                            add_e.add_field(name="Wrong Options", value="None")
-                        if even_points == 0:
-                            add_e.add_field(name="Points", value=self.children[3].value)
-                        else:
-                            add_e.add_field(name="Points", value=str(points/len(slides)))
-                        await interaction.response.edit_message(embed=add_e)
-                        slides.append(add_e)
-                        current_slide = add_e
-                        await self.quiz_view.update_buttons(interaction)
-
-                class EditModal(discord.ui.Modal):
-                    def __init__(self, view, modal_embed: discord.Embed, *args, **kwargs) -> None:
-                        super().__init__(*args, **kwargs)
-                        self.quiz_view = view
-                        self.modal_embed = modal_embed
-                        self.quiz_edit = 1 if self.modal_embed.fields[0].name == "Title" else 0
-                        new_its = []
-                        for it in self.modal_embed.fields:
-                            if even_points == 1 and it.name == "Points" and self.quiz_edit == 0:
-                                continue
-                            if (it.name == "Points" or it.name == "Time Limit") and self.quiz_edit == 1:
-                                new_its.append(discord.ui.InputText(label=it.name, style=discord.InputTextStyle.short, value=it.value, required=False))
-                            else:
-                                new_its.append(discord.ui.InputText(label=it.name, style=discord.InputTextStyle.short, value=it.value))
-                        for it in new_its:
-                            if len(self.children) < 5:
-                                self.add_item(it)
-
-                    async def callback(self, interaction: discord.Interaction):
-                        nonlocal current_slide
-                        nonlocal even_points
-                        nonlocal points
-                        index = slides.index(self.modal_embed)
-                        for i, field in enumerate(self.modal_embed.fields):
-                            if i < len(self.children):
-                                field.value = self.children[i].value
-
-                        if self.quiz_edit == 1:
-                            if self.children[1].value != "" and self.children[1].value != "TBD":
-                                even_points = 1
-                                try:
-                                    points = int(self.children[1].value)
-                                except ValueError:
-                                    return await interaction.response.send_message("Invalid points")
-                            else:
-                                even_points = 0
-                                points = None
-
-                        current_slide = self.modal_embed
-                        slides[index] = current_slide
-                        await interaction.response.edit_message(embed=current_slide)
-                        await self.quiz_view.update_buttons(interaction)
-
-
-                class QuizView(discord.ui.View):
-                    async def update_buttons(self, interaction2):
-                        left = self.get_item("left")
-                        right = self.get_item("right")
-                        done = self.get_item("done")
-                        trash = self.get_item("trash")
-                        first = self.get_item("first")
-
-                        if len(slides) > 1:
-                            done.disabled = False
-                        else:
-                            done.disabled = True
-
-                        if current_slide != slides[0]:
-                            # Turns off left arrow if current embed is the first embed
-                            first.disabled = False
-                            left.disabled = False
-                        else:
-                            first.disabled = True
-                            left.disabled = True
-
-                        if current_slide != slides[len(slides) - 1]:
-                            # Turns off right arrow if current embed is the last embed
-                            right.disabled = False
-                        else:
-                            right.disabled = True
-
-                        if current_slide != slides[0]:
-                            trash.disabled = False
-                        else:
-                            trash.disabled = True
-
-                        e.set_field_at(index=5, name="Number of Questions", value=str(len(slides) - 1), inline=False)
-                        self.update_points()
-
-                        await interaction2.followup.edit_message(embed=current_slide, message_id=interaction2.message.id, view=self)
-
-                    def update_points(self):
-                        total_points = 0
-                        for i, slide in enumerate(slides):
-                            if i != 0:
-                                if even_points == 1:
-                                    slide.set_field_at(3, name="Points", value=str(points/(len(slides) - 1)))
-                                else:
-                                    total_points += float(slide.fields[3].value)
-                                slide.title = f"Question {i}"
-                        if even_points == 0:
-                            slides[0].fields[1].value = str(total_points)
-
-
-                    @discord.ui.button(row=0, style=discord.ButtonStyle.secondary, label="<<", disabled=True,
-                                       custom_id="first")
-                    async def first_button_callback(self, button, interaction):
-                        nonlocal current_slide
-
-                        current_slide = e
-                        await interaction.response.edit_message(embed=current_slide)
-                        await self.update_buttons(interaction)
-
-                    @discord.ui.button(row=0, style=discord.ButtonStyle.secondary, label="<", disabled=True,
-                                       custom_id="left")
-                    async def left_button_callback(self, button, interaction):
-                        nonlocal current_slide
-
-                        current_slide = slides[slides.index(current_slide) - 1]
-                        await interaction.response.edit_message(embed=current_slide)
-                        await self.update_buttons(interaction)
-
-                    @discord.ui.button(row=0, style=discord.ButtonStyle.secondary, label=">", disabled=True,
-                                       custom_id="right")
-                    async def right_button_callback(self, button, interaction):
-                        nonlocal current_slide
-
-                        current_slide = slides[slides.index(current_slide) + 1]
-                        await interaction.response.edit_message(embed=current_slide)
-                        await self.update_buttons(interaction)
-
-                    @discord.ui.button(row=0, style=discord.ButtonStyle.secondary, label=">>", disabled=True,
-                                       custom_id="last")
-                    async def last_button_callback(self, button, interaction):
-                        nonlocal current_slide
-
-                        current_slide = slides[len(slides) - 1]
-                        await interaction.response.edit_message(embed=current_slide)
-                        await self.update_buttons(interaction)
-
-                    @discord.ui.button(label="Add Question", row=1, style=discord.ButtonStyle.secondary, emoji="➕", custom_id="add")
-                    async def add_button_callback(self, button, interaction):
-                        await interaction.response.send_modal(QuestionModal(self, title="Create a Question"))
-
-                    @discord.ui.button(label="Remove", row=1, style=discord.ButtonStyle.secondary, emoji="🗑",
-                                       disabled=True, custom_id="trash")
-                    async def remove_button_callback(self, button, interaction):
-                        nonlocal current_slide
-                        slides.remove(current_slide)
-                        current_slide = slides[len(slides) - 1]
-                        await interaction.response.edit_message(embed=current_slide)
-                        await self.update_buttons(interaction)
-
-                    @discord.ui.button(label="Done", row=2, style=discord.ButtonStyle.success, emoji="✅", disabled=True,
-                                       custom_id="done")
-                    async def done_button_callback(self, button, interaction):
-                        await interaction.response.send_message("Created the Quiz!")
-
-                    @discord.ui.button(label="Edit", row=2, style=discord.ButtonStyle.primary, emoji="✂",
-                                       custom_id="edit")
-                    async def edit_button_callback(self, button, interaction):
-                        await interaction.response.send_modal(EditModal(view=self, modal_embed=current_slide, title="Editing Modal"))
-                        #await interaction.response.send_message("Editing the Quiz!")
-
-                    @discord.ui.button(label="Cancel", row=2, style=discord.ButtonStyle.danger, emoji="✖",
-                                       custom_id="cancel")
-                    async def cancel_button_callback(self, button, interaction):
-                        await interaction.response.edit_message(delete_after=0)
-                        await interaction.followup.send("Cancelled Quiz Creation")
-
-                    self.timeout = None
-
-                # await interaction.response.send_message("Success", delete_after=0)
-                await interaction.response.send_message(embed=current_slide, view=QuizView())
-                quiz_message = await interaction.original_response()
-
-                for i in range(len(sections)):
-                    await quiz_message.add_reaction(chr(0x1f1e6 + i))
-
-        modal = QuizModal(title="Creating a Quiz")
+        modal = create_commands.create_quiz(bot=bot)
         await ctx.send_modal(modal)
 
     # TESTING COMMANDS-------------------------------------------------------------------------------
