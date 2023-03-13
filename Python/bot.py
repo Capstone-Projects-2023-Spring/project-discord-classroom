@@ -139,7 +139,7 @@ def run_discord_bot():
     async def discussion_create(channel_name, prompt):
         # Verify existence of 'Discussion' category, or create it if it does not exist
         if discord.utils.get(ctx.guild.categories, name='Discussion'):
-            continue
+            pass
         else:
             category = await guild.create_category('Discussion')
 
