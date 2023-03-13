@@ -97,9 +97,13 @@ def run_discord_bot():
         id = after.id
         print(id)
         if before.nick != after.nick:
-            supabase.table("Student").update({"name": after.nick}).eq("id", id)
-            print(before.nick, after.nick)
-
+            try:
+                response = supabase.table('Student').update({'name': after.nick}).eq('discordId', str(after.id)).execute()
+                print(f"Nickname updated for {after.name}")
+                
+            except Exception:
+                print("Unable to update user")
+            
     @bot.event
     async def on_guild_channel_create(channel):
         #Add guild to Classroom table
