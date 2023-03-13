@@ -136,15 +136,15 @@ def run_discord_bot():
     @bot.slash_command(name ='discussion',
                        description='Creates a new text channel with a prompt for discussion',
                        help='!poll [channel name] [prompt]')
-    async def discussion_create(tx: discord.ApplicationContext, channel_name: str, prompt: str):
+    async def discussion_create(ctx: discord.ApplicationContext, channel_name: str, prompt:):
         # Verify existence of 'Discussion' category, or create it if it does not exist
         if discord.utils.get(ctx.guild.categories, name='Discussion'):
             pass
         else:
-            category = await guild.create_category('Discussion')
+            category = await ctx.guild.create_category('Discussion')
 
         # Create new channel for discussion
-        channel = await guild.create_text_channel(name=channel_name,category=category)
+        channel = await ctx.guild.create_text_channel(name=channel_name,category=category)
         
         # Send discussion prompt to new channel
         await channel.send(prompt)
