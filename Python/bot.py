@@ -149,7 +149,9 @@ def run_discord_bot():
         embed = discord.Embed(title=channel_name, description=prompt)
 
         # Send discussion prompt to new channel
-        await channel.respond(embed=embed)
+        await channel.send(embed=embed)
+
+        await ctx.respond('Discussion channel created')
 
         return channel
 
