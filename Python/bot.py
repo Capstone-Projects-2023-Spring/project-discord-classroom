@@ -72,12 +72,39 @@ def run_discord_bot():
         questions = await guild.create_category("Questions")
         await guild.create_text_channel("Public", category=questions)
 
-    # Gives new users the Student role
+    def add_member_to_table(role, nickname, did):
+        supabase.table(role).insert({ "name": nickname, "discordId": did }).execute()
+
+    #Gives new users the Student role
     @bot.event
     async def on_member_join(member):
+        print(f'on_member_join() called!')
         role = discord.utils.get(member.guild.roles, name="Student")
         await member.add_roles(role)
+        print(role)
+        discordNickname = member.display_name
+        print(discordNickname)
+        discordId = member.id
+        print(discordId)
+        add_member_to_table(role, discordNickname, discordId)
+        
+    @bot.event 
+    async def on_member_remove(member):
+        userId = member.id
+        supabase.table("Student").delete().eq("discordId", userId).execute()
 
+    @bot.event
+    async def on_member_update(before, after):
+        id = after.id
+        print(id)
+        if before.nick != after.nick:
+            try:
+                response = supabase.table('Student').update({'name': after.nick}).eq('discordId', str(after.id)).execute()
+                print(f"Nickname updated for {after.name}")
+                
+            except Exception:
+                print("Unable to update user")
+            
     @bot.event
     async def on_guild_channel_create(channel):
         # Add guild to Classroom table
