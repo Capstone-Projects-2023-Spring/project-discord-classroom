@@ -139,12 +139,12 @@ def run_discord_bot():
     async def discussion_create(ctx: discord.ApplicationContext, channel_name: str, prompt: str):
         # Verify existence of 'Discussion' category, or create it if it does not exist
         if discord.utils.get(ctx.guild.categories, name='Discussion'):
-            pass
+            category = discord.utils.get(ctx.guild.categories, name='Discussion')
         else:
             category = await ctx.guild.create_category('Discussion')
 
         # Create new channel for discussion
-        channel = await ctx.guild.create_text_channel(name=channel_name,category='Discussion')
+        channel = await ctx.guild.create_text_channel(name=channel_name, category=category)
         
         embed = discord.Embed(title=channel_name, description=prompt)
 
