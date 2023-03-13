@@ -72,7 +72,7 @@ def run_discord_bot():
         await guild.create_text_channel("Public", category=questions)
 
     def add_member_to_table(role, nickname, did):
-        supabase.table(role).insert({ "name": nickname, "id": did }).execute()
+        supabase.table(role).insert({ "name": nickname, "discordId": did }).execute()
 
     #Gives new users the Student role
     @bot.event
@@ -90,7 +90,7 @@ def run_discord_bot():
     @bot.event 
     async def on_member_remove(member):
         userId = member.id
-        supabase.table("Student").delete().eq("id", userId).execute()
+        supabase.table("Student").delete().eq("discordId", userId).execute()
 
     @bot.event
     async def on_member_update(before, after):
