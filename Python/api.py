@@ -1,10 +1,16 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
+from storage3.utils import StorageException
 from supabase import create_client
 from fastapi.responses import JSONResponse
 import json
 import os
 from pydantic import BaseModel
 from typing import List
+from cr_classes import Quiz
+from cr_classes import Question
+import hashlib
+import pickle
+import asyncio
 
 app = FastAPI(
     title="ClassroomBotAPI",
@@ -71,7 +77,7 @@ async def get_classrooms():
 @app.get("/classroomId", response_model=ClassroomId, responses={404: {"model": Message}})
 async def get_classroom_id(serverId: int = 0):
     response = supabase.table('Classroom').select('*').eq('serverId', serverId).execute()
-    if response.data:
+    if response.data is not []:
         return {'id': response.data[0]['id']}
     return JSONResponse(status_code=404, content={"message": "Classroom not found"})
 
@@ -111,14 +117,13 @@ async def get_students(classroomId: int = 0):
 
 
 @app.get("/sections/", response_model=List[Section], responses={404: {"model": Message}})
-async def get_sections(classroomId: int = 0):
+async def get_sections(classroomId: int):
     response = supabase.table('Section').select('*').eq('classroomId', classroomId).execute()
     sections = []
     data = response.data
-    print("Data:", data)
     for d in data:
         sections.append(d)
-    return sections
+    return {'sections': sections}
 
 
 @app.get("/grades/", response_model=List[Grade], responses={404: {"model": Message}})
@@ -134,3 +139,55 @@ async def get_grades(studentId: int = 0):
                     'maxScore': r2.data[0]['maxScore']}
         all.append(combined)
     return all
+
+# ---------------------------POST Methods-------------------------------
+
+@app.post("/quizzes/")
+async def create_quiz(quiz: Quiz, server_id: int):
+    list = {'title': quiz.title, 'points': quiz.points, 'startDate': quiz.start, 'dueDate': quiz.due, 'timeLimit': quiz.time, 'questions': quiz.questions}
+    print(list)
+    res = supabase.table("Quiz").insert(list).execute()
+    print(res)
+    response = await get_classroom_id(server_id)
+    classroom_id = response['id']
+    response = await get_sections(classroom_id)
+    print("Classroom Sections: ", response)
+    print("Quiz Sections: ", quiz.sections)
+
+    for section in quiz.sections:
+        response = supabase.table("Section").select('id').eq('name', section).execute()
+        section_id = response.data[0]['id']
+        quiz_id = res.data[0]['id']
+        list = {'sectionId': section_id, 'taskTypeId': quiz_id, 'taskType': "Quiz"}
+        supabase.table("Task").insert(list).execute()
+
+    return {"message": "Quiz created successfully"}
+
+@app.post("/questions/")
+async def create_questions(questions: List[Question]):
+
+    ques_list = []
+    for question in questions:
+        temp = {'question': question.question, 'answer': question.answer, 'wrong': question.wrong,
+                'points': question.points}
+        ques_list.append(temp)
+
+    bytes_obj = pickle.dumps(ques_list)
+    hash_object = hashlib.sha256(bytes_obj)
+    hex_dig = hash_object.hexdigest()
+
+    with open(f"{hex_dig}.json", "w") as outfile:
+        json.dump(ques_list, outfile)
+
+    outfile.close()
+
+    public_url = supabase.storage().from_('questions').get_public_url(f"{hex_dig}.json")
+
+    try:
+        res = supabase.storage().from_('questions').upload(f"{hex_dig}.json", f".\\{hex_dig}.json", {"upsert": 'true'})
+        url = str(res.url)
+    except StorageException:
+        print("StorageException")
+        url = public_url
+
+    return url
