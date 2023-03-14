@@ -9,3 +9,6 @@
 .env.production.local
 Python/config.json
 Python/__pycache__/
+node_modules
+config.json
+mykey.json
