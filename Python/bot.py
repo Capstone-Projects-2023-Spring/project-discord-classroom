@@ -406,6 +406,13 @@ def run_discord_bot():
         modal = create_commands.create_quiz(bot=bot)
         await ctx.send_modal(modal)
 
+    @bot.slash_command(name='upload_file',
+                       description='```/upload file`` - User can follow link to upload file')
+    async def upload_file(ctx):
+        await ctx.respond('https://singular-jalebi-124a92.netlify.app/')
+
+       
+
     # TESTING COMMANDS-------------------------------------------------------------------------------
     # @bot.command()
     # async def wipe(ctx):
