@@ -10,7 +10,8 @@ class Quiz(BaseModel):
     due: str
     time: int
     questions: str
-    sections: List[str]
+    classroom: str
+    channel: str
 
 
 class Question(BaseModel):

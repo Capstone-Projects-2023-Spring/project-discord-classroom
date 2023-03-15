@@ -75,91 +75,80 @@ async def get_classrooms():
 
 
 @app.get("/classroomId", response_model=ClassroomId, responses={404: {"model": Message}})
-async def get_classroom_id(serverId: int = 0):
-    response = supabase.table('Classroom').select('*').eq('serverId', serverId).execute()
+async def get_classroom_id(server_id: str):
+    response = supabase.table('Classroom').select('*').eq('serverId', server_id).execute()
     if response.data is not []:
         return {'id': response.data[0]['id']}
     return JSONResponse(status_code=404, content={"message": "Classroom not found"})
 
 
 @app.get("/educators/", response_model=List[Educator], responses={404: {"model": Message}})
-async def get_educators(classroomId: int = 0):
-    if classroomId == 0:
+async def get_educators(classroom_id: int = 0):
+    if classroom_id == 0:
         return JSONResponse(status_code=404, content={"message": "ClassroomId not given"})
-    response = supabase.table('Section').select('*').eq('classroomId', classroomId).execute()
-    sections = []
+    response = supabase.table('Classroom_User').select('*').match(
+        {'role': "Educator", 'classroomId': classroom_id}).execute()
+    edu_ids = []
     data = response.data
     for d in data:
-        sections.append(d['id'])
+        edu_ids.append(d['userId'])
     educators = []
-    for sect in sections:
-        e = supabase.table('Educator').select('*').eq('sectionId', sect).execute()
-        if e.data:
-            educators.append(e.data[0])
+    for id in edu_ids:
+        stu = supabase.table('User').select('*').eq('id', id).execute()
+        if stu.data:
+            educators.append(stu.data[0])
     if educators:
         return educators
     return JSONResponse(status_code=404, content={"message": "Classroom not found"})
 
 
 @app.get("/students/", response_model=List[Student], responses={404: {"model": Message}})
-async def get_students(classroomId: int = 0):
-    response = supabase.table('Section').select('*').eq('classroomId', classroomId).execute()
-    sections = []
+async def get_students(classroom_id: int = 0):
+    if classroom_id == 0:
+        return JSONResponse(status_code=404, content={"message": "ClassroomId not given"})
+    response = supabase.table('Classroom_User').select('*').match({'role': "Student", 'classroomId': classroom_id}).execute()
+    student_ids = []
     data = response.data
     for d in data:
-        sections.append(d['id'])
+        student_ids.append(d['userId'])
     students = []
-    for sect in sections:
-        stu = supabase.table('Student').select('*').eq('sectionId', sect).execute()
+    for id in student_ids:
+        stu = supabase.table('User').select('*').eq('id', id).execute()
         if stu.data:
             students.append(stu.data[0])
-    return students
-
-
-@app.get("/sections/", response_model=List[Section], responses={404: {"model": Message}})
-async def get_sections(classroomId: int):
-    response = supabase.table('Section').select('*').eq('classroomId', classroomId).execute()
-    sections = []
-    data = response.data
-    for d in data:
-        sections.append(d)
-    return {'sections': sections}
+    if students:
+        return students
+    return JSONResponse(status_code=404, content={"message": "Classroom not found"})
 
 
 @app.get("/grades/", response_model=List[Grade], responses={404: {"model": Message}})
-async def get_grades(studentId: int = 0):
-    r = supabase.table('Grade').select('score', 'taskId').eq('studentId', studentId).execute()
+async def get_grades(student_id: int = 0):
+    r = supabase.table('Grade').select('score', 'taskId').eq('studentId', student_id).execute()
     data = r.data
     all = []
     for info in data:
         taskId = info['taskId']
-        r1 = supabase.table('Task').select('id', 'taskType', 'taskTypeId').eq('id', taskId).execute()
+        r1 = supabase.table('Classroom_Task').select('id', 'taskType', 'taskTypeId').eq('id', taskId).execute()
         r2 = supabase.table(r1.data[0]['taskType']).select('*').eq('id', r1.data[0]['taskTypeId']).execute()
         combined = {'type': r1.data[0]['taskType'], 'name': r2.data[0]['name'], 'score': info['score'],
-                    'maxScore': r2.data[0]['maxScore']}
+                    'points': r2.data[0]['points']}
         all.append(combined)
     return all
 
 # ---------------------------POST Methods-------------------------------
 
 @app.post("/quizzes/")
-async def create_quiz(quiz: Quiz, server_id: int):
-    list = {'title': quiz.title, 'points': quiz.points, 'startDate': quiz.start, 'dueDate': quiz.due, 'timeLimit': quiz.time, 'questions': quiz.questions}
+async def create_quiz(quiz: Quiz, server_id: str):
+    list = {'title': quiz.title, 'points': quiz.points, 'startDate': quiz.start, 'dueDate': quiz.due, 'timeLimit': quiz.time, 'channelId': quiz.channel, 'questions': quiz.questions}
     print(list)
     res = supabase.table("Quiz").insert(list).execute()
     print(res)
     response = await get_classroom_id(server_id)
     classroom_id = response['id']
-    response = await get_sections(classroom_id)
-    print("Classroom Sections: ", response)
-    print("Quiz Sections: ", quiz.sections)
 
-    for section in quiz.sections:
-        response = supabase.table("Section").select('id').eq('name', section).execute()
-        section_id = response.data[0]['id']
-        quiz_id = res.data[0]['id']
-        list = {'sectionId': section_id, 'taskTypeId': quiz_id, 'taskType': "Quiz"}
-        supabase.table("Task").insert(list).execute()
+    quiz_id = res.data[0]['id']
+    list = {'classroomId': classroom_id, 'taskTypeId': quiz_id, 'taskType': "Quiz"}
+    supabase.table("Classroom_Task").insert(list).execute()
 
     return {"message": "Quiz created successfully"}
 
@@ -189,5 +178,33 @@ async def create_questions(questions: List[Question]):
     except StorageException:
         print("StorageException")
         url = public_url
-
     return url
+
+@app.post("/classroom/")
+async def create_classroom(id: str, name: str):
+    list = {'serverId': id, 'serverName': name}
+    supabase.table('Classroom').insert(list).execute()
+    return {'message': 'Classroom created'}
+
+@app.post("/educator/")
+async def create_educator(id: str, name:str, server: str):
+    response = supabase.table("Classroom").select('id').eq("serverId", server).execute()
+    classroom_id = response.data[0]['id']
+    list = {'discordId': id, 'name': name}
+    response = supabase.table('User').insert(list).execute()
+    user_id = response.data[0]['id']
+    list = {'classroomId': classroom_id, 'userId': user_id, 'role': "Educator"}
+    supabase.table('Classroom_User').insert(list).execute()
+    return {'message': 'Educator created'}
+
+@app.post("/student/")
+async def create_student(id: str, name:str, server: str):
+    response = supabase.table("Classroom").select('id').eq("serverId", server).execute()
+    classroom_id = response.data[0]['id']
+    list = {'discordId': id, 'name': name, 'attendance': 0}
+    response = supabase.table('User').insert(list).execute()
+    user_id = response.data[0]['id']
+    list = {'classroomId': classroom_id, 'userId': user_id, 'role': "Student"}
+    supabase.table('Classroom_User').insert(list).execute()
+    return {'message': 'Educator created'}
+
