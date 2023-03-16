@@ -415,6 +415,30 @@ def run_discord_bot():
         modal = create_commands.create_quiz(bot=bot)
         await ctx.send_modal(modal)
 
+    @bot.slash_command(name='start', description='```/start```` - Used to start a Quiz as a Student')
+    async def start(ctx: discord.ApplicationContext):
+        student_role = discord.utils.get(ctx.guild.roles, name="Student")
+        category = ctx.channel.category
+        user = ctx.author
+        if category.name == "Quizzes":
+            if student_role in ctx.author.roles:
+                data = await api.get_quiz(str(ctx.channel_id))
+                print("data:", data)
+                quiz = data['quiz']
+                print("quiz:", quiz)
+                if datetime.date.today() < datetime.datetime.strptime(quiz['startDate'], '%Y-%m-%d').date():
+                    await user.send("Quiz not available yet2")
+                    await ctx.respond("Quiz not available yet")
+                elif datetime.date.today() > datetime.datetime.strptime(quiz['dueDate'], '%Y-%m-%d').date():
+                    await ctx.respond("Quiz is no longer available")
+                else:
+                    await ctx.respond(quiz)
+
+            else:
+                await ctx.respond("Only Students can take Quizzes")
+        else:
+            await ctx.respond("/start command only available for Quizzes")
+
     # TESTING COMMANDS-------------------------------------------------------------------------------
     # @bot.command()
     # async def wipe(ctx):

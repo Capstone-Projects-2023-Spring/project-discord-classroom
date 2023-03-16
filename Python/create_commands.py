@@ -9,6 +9,7 @@ import datetime
 import api
 from cr_classes import Quiz
 from cr_classes import Question
+import random
 
 
 def create_quiz(bot):
@@ -24,7 +25,7 @@ def create_quiz(bot):
             points = discord.ui.InputText(label="Points", style=discord.InputTextStyle.short,
                                           placeholder="ex: '50'", value=20, required=False)
             start_date = discord.ui.InputText(label="Start Date", style=discord.InputTextStyle.short,
-                                              placeholder="ex: '2023-05-25'", value="2023-06-01")
+                                              placeholder="ex: '2023-05-25'", value="2023-03-01")
             due_date = discord.ui.InputText(label="Due Date", style=discord.InputTextStyle.short,
                                             placeholder="ex: '2023-05-30'", value="2023-06-08")
             time_limit = discord.ui.InputText(label="Time Limit (minutes)", placeholder="ex: '30' for 30 minutes or '0' for no time limit",
@@ -67,18 +68,6 @@ def create_quiz(bot):
             e.add_field(name="Due Date", value=due_date, inline=False)
             e.add_field(name="Time Limit", value=str(time_limit), inline=False)
             e.add_field(name="Number of Questions", value="0", inline=False)
-
-            server = interaction.guild
-            classroom_id = await api.get_classroom_id(server.id)
-            response = await api.get_sections(classroom_id['id'])
-            sections = []
-            for r in response['sections']:
-                sections.append(r['name'])
-            sec_str = ""
-            for i, section in enumerate(sections):
-                sec_str += f'{section}\n'
-
-            e.add_field(name="Sections", value=str(sec_str), inline=False)
 
             current_slide = e
             slides = [e]
@@ -170,6 +159,44 @@ def create_quiz(bot):
                     slides[index] = current_slide
                     await interaction.response.edit_message(embed=current_slide)
                     await self.quiz_view.update_buttons(interaction)
+
+            class StartQuiz(discord.ui.View):
+                def __init__(self, questions: List[Question], start, due):
+                    super().__init__(timeout=None)
+                    self.questions = questions
+                    self.start = start
+                    self.due = due
+                    print(start, due, questions)
+
+                @discord.ui.button(row=0, style=discord.ButtonStyle.success, label="Start Quiz", disabled=True, custom_id="start")
+                async def start_button_callback(self, button, interaction):
+                    print(self.questions)
+                    questions_as_embed = []
+                    for i, question in enumerate(self.questions):
+                        embed = discord.Embed(title=f"Question {i}.")
+                        embed.add_field(name="Points", value=str(question.points), inline=False)
+                        embed.add_field(name="Question", value=question.question, inline=False)
+                        if question.wrong is not None:
+                            options = [question.answer]
+                            for w in question.wrong:
+                                options.append(w)
+                            options = random.sample(options, len(options))
+                            options_string = ""
+                            for opt in options:
+                                options_string += f"{opt}\n"
+                            embed.add_field(name="Options", value=options_string, inline=False)
+                        questions_as_embed.append(embed)
+                    print(questions_as_embed)
+                    await interaction.response.send_message(embed=questions_as_embed[0], ephemeral=True)
+
+                @discord.ui.button(row=0, style=discord.ButtonStyle.secondary, emoji='🔃', custom_id="refresh")
+                async def refresh_button_callback(self, button, interaction):
+                    start = self.get_item("start")
+                    if datetime.datetime.strptime(self.start,'%Y-%m-%d') <= datetime.datetime.now() < datetime.datetime.strptime(self.due, '%Y-%m-%d'):
+                        start.disabled = False
+                    else:
+                        start.disabled = True
+                    await interaction.response.edit_message(view=self)
 
             class QuizView(discord.ui.View):
                 def __init__(self):
@@ -285,12 +312,7 @@ def create_quiz(bot):
                 async def done_button_callback(self, button, interaction):
                     fields = slides[0].fields
                     quiz_dict = {'title': fields[0].value, 'points': float(fields[1].value), 'start': fields[2].value,
-                                 'due': fields[3].value, 'time': fields[4].value,
-                                 'sections': fields[6].value.split("\n")}
-
-                    for section in quiz_dict['sections']:
-                        if section == "":
-                            quiz_dict['sections'].remove(section)
+                                 'due': fields[3].value, 'time': fields[4].value}
 
                     question_list = []
 
@@ -324,7 +346,7 @@ def create_quiz(bot):
                     await api.create_quiz(new_quiz, server_id=server)
 
                     slides[0].title = "Quiz"
-                    await new_channel.send(embed=slides[0])
+                    await new_channel.send(embed=slides[0], view=StartQuiz(question_list, quiz_dict['start'], quiz_dict['due']))
                     student_role = discord.utils.get(interaction.guild.roles, name="Student")
                     await new_channel.send(f"{student_role.mention} Type '/start' to take the Quiz")
 
@@ -347,57 +369,8 @@ def create_quiz(bot):
             await interaction.response.send_message(embed=current_slide, view=quiz_view)
             quiz_message = await interaction.original_response()
 
-            for i in range(len(sections)):
-                await quiz_message.add_reaction(chr(0x1f1e6 + i))
-
             def check(reaction, user):
                 return user == interaction.user and reaction.message.id == quiz_message.id
-
-            section_array = []
-
-            while True:
-                tasks = [
-                    asyncio.create_task(self.bot.wait_for("reaction_add", check=check), name="radd"),
-                    asyncio.create_task(self.bot.wait_for("reaction_remove", check=check), name="rrem")
-                ]
-
-                done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-
-                finished = list(done)[0]
-
-                action = finished.get_name()
-                result = finished.result()
-
-                if action == "radd":
-                    reaction, user = result
-                    for i in range(len(sections)):
-                        if reaction.emoji == chr(127462 + i):
-                            section_array.append(sections[i])
-                            section_string = ""
-                            for i, sec in enumerate(section_array):
-                                section_string += f'{sec}\n'
-                            slides[0].set_field_at(index=6, name="Sections", value=str(section_string))
-                    current_slide = slides[0]
-                    await interaction.followup.edit_message(message_id=quiz_message.id, embed=current_slide)
-                    await QuizView.update_buttons(quiz_view, interaction2=interaction)
-
-
-                elif action == "rrem":
-                    reaction, user = result
-                    for i in range(len(sections)):
-                        if reaction.emoji == chr(127462 + i):
-                            section_array.remove(sections[i])
-                            section_string = ""
-                            for k, sec in enumerate(section_array):
-                                section_string += f'{sec}\n'
-                            if len(section_array) > 0:
-                                e.set_field_at(index=6, name="Sections", value=str(section_string))
-                            else:
-                                e.set_field_at(index=6, name="Sections", value=str(sec_str))
-                    slides[0] = e
-                    current_slide = slides[0]
-                    await interaction.followup.edit_message(message_id=quiz_message.id, embed=current_slide)
-                    await QuizView.update_buttons(quiz_view, interaction)
 
     modal = QuizModal(title="Creating a Quiz")
     return modal

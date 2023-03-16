@@ -135,6 +135,14 @@ async def get_grades(student_id: int = 0):
         all.append(combined)
     return all
 
+@app.get("/quiz/")
+async def get_quiz(channel_id: str = 0):
+    if channel_id == 0:
+        return JSONResponse(status_code=404, content={"message": "Channel ID not given"})
+    response = supabase.table("Quiz").select('*').eq('channelId', channel_id).execute()
+    print(response)
+    return {'quiz': response.data[0]}
+
 # ---------------------------POST Methods-------------------------------
 
 @app.post("/quizzes/")
