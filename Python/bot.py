@@ -71,35 +71,44 @@ def run_discord_bot():
         await guild.create_category("Submissions")
         questions = await guild.create_category("Questions")
         await guild.create_text_channel("Public", category=questions)
+        await api.create_classroom(id=guild.id, name=guild.name)
 
-    def add_member_to_table(role, nickname, did):
-        supabase.table(role).insert({ "name": nickname, "discordId": did }).execute()
+    async def add_member_to_table(guild_id, role, nickname, did):
+        print(guild_id, role, nickname, did)
+        if role == "Student":
+            print("Student")
+            response = supabase.table("User").insert({ "name": nickname, "discordId": did, "attendance": 0 }).execute()
+            user_id = response.data[0]['id']
+            print(user_id)
+            classroom_id = await api.get_classroom_id(guild_id)
+            supabase.table("Classroom_User").insert({ "classroomId": classroom_id['id'], 'userId': user_id, 'role': "Student"}).execute()
+        else:
+            print("Not Student")
+            response = supabase.table("User").insert({"name": nickname, "discordId": did}).execute()
+            user_id = response.data[0]['id']
+            classroom_id = await api.get_classroom_id(guild_id)
+            supabase.table("Classroom_User").insert({"classroomId": classroom_id['id'], 'userId': user_id, 'role': "Educator"}).execute()
 
     #Gives new users the Student role
     @bot.event
     async def on_member_join(member):
-        print(f'on_member_join() called!')
         role = discord.utils.get(member.guild.roles, name="Student")
         await member.add_roles(role)
-        print(role)
         discordNickname = member.display_name
-        print(discordNickname)
         discordId = member.id
-        print(discordId)
-        add_member_to_table(role, discordNickname, discordId)
+        await add_member_to_table(guild_id=member.guild.id, role="Student", nickname=discordNickname, did=discordId)
         
     @bot.event 
     async def on_member_remove(member):
         userId = member.id
-        supabase.table("Student").delete().eq("discordId", userId).execute()
+        supabase.table("User").delete().eq("discordId", userId).execute()
 
     @bot.event
     async def on_member_update(before, after):
-        id = after.id
-        print(id)
+        # Here we should update the Database User's Role
         if before.nick != after.nick:
             try:
-                response = supabase.table('Student').update({'name': after.nick}).eq('discordId', str(after.id)).execute()
+                response = supabase.table('User').update({'name': after.nick}).eq('discordId', str(after.id)).execute()
                 print(f"Nickname updated for {after.name}")
                 
             except Exception:
@@ -214,10 +223,10 @@ def run_discord_bot():
         for i in range(len(options)):
             await message.add_reaction(chr(0x1f1e6 + i))
 
-    async def increment_attendance(discordId:str):
-        student = await supabase.from_table('Student').select().eq('discord_id', discord_id).single().execute()
-        student_attendance = student['attendance'] + 1
-        await supabase.from_table('Student').update({'attendance_count': attendance_count}).eq('discord_id', discord_id).execute()
+    async def increment_attendance(discord_id:str):
+        student = supabase.table('User').select().eq('discord_id', discord_id).single().execute()
+        student_attendance = student.data['attendance'] + 1
+        supabase.table('User').update({'attendance': student_attendance}).eq('discordId', discord_id).execute()
 
     @bot.slash_command(
         name='attendance',
@@ -272,8 +281,8 @@ def run_discord_bot():
             response += "\n\nAbsent:\n" + '\n'.join(absent)
             await ctx.author.send(response)
         else:
-            student = await supabase.from_table('Student').select().eq('discordId', str(ctx.author.id)).single().execute()
-            attendance = student['attendance']
+            student = supabase.table('User').select().eq('discordId', str(ctx.author.id)).single().execute()
+            attendance = student.data['attendance']
             response = f"Your attendance count is {attendance}."
             await ctx.author.send(response)
 
@@ -309,58 +318,58 @@ def run_discord_bot():
         else:
             await ctx.respond("You need the Educator role to use this command")
 
-    @bot.slash_command(name='section',
-                       description='```/section [section1] ... [section6]``` - Allows users to assign themselves to a specific section')
-    @commands.has_role("Educator")
-    async def section(ctx: discord.ApplicationContext, section_1: str, section_2: str=None, section_3: str=None,
-                      section_4: str=None, section_5: str=None, section_6: str=None):
-        # Create roles for each section
-        options = [section_1]
-        if section_2:
-            options.append(section_2)
-        if section_3:
-            options.append(section_3)
-        if section_4:
-            options.append(section_4)
-        if section_5:
-            options.append(section_5)
-        if section_6:
-            options.append(section_6)
-
-        msg = ""
-        for i in range(len(options)):
-            await ctx.guild.create_role(name=options[i])
-            msg += f"{options[i]} "
-
-        await ctx.respond(f"Sections {msg}created.")
-
-        # Create reaction role embed
-        embed = discord.Embed(title="React to this message to join your section.", color=0x00FF00)
-
-        for i, option in enumerate(options):
-            embed.add_field(name=f"{chr(127462 + i)} Section {option}", value="\u200b", inline=False)
-
-        channel = discord.utils.get(ctx.guild.channels, name="roles")
-        poll_message = await channel.send(embed=embed)
-
-        # Add reactions to embed message
-        for i in range(len(options)):
-            await poll_message.add_reaction(chr(127462 + i))
-
-        # Wait for reactions from users
-        def check(reaction, user):
-            return user != bot.user and reaction.message.id == poll_message.id and str(reaction.emoji) in [
-                chr(127462 + i) for i in range(len(options))]
-
-        while True:
-            reaction, user = await bot.wait_for('reaction_add', check=check)
-
-            # Assign role to user who reacted
-            for i in range(len(options)):
-                if reaction.emoji == chr(127462 + i):
-                    role = discord.utils.get(ctx.guild.roles, name=options[i])
-                    await user.add_roles(role)
-                    await channel.send(f'{user.mention} has been assigned to Section {role.name}.')
+    # @bot.slash_command(name='section',
+    #                    description='```/section [section1] ... [section6]``` - Allows users to assign themselves to a specific section')
+    # @commands.has_role("Educator")
+    # async def section(ctx: discord.ApplicationContext, section_1: str, section_2: str=None, section_3: str=None,
+    #                   section_4: str=None, section_5: str=None, section_6: str=None):
+    #     # Create roles for each section
+    #     options = [section_1]
+    #     if section_2:
+    #         options.append(section_2)
+    #     if section_3:
+    #         options.append(section_3)
+    #     if section_4:
+    #         options.append(section_4)
+    #     if section_5:
+    #         options.append(section_5)
+    #     if section_6:
+    #         options.append(section_6)
+    #
+    #     msg = ""
+    #     for i in range(len(options)):
+    #         await ctx.guild.create_role(name=options[i])
+    #         msg += f"{options[i]} "
+    #
+    #     await ctx.respond(f"Sections {msg}created.")
+    #
+    #     # Create reaction role embed
+    #     embed = discord.Embed(title="React to this message to join your section.", color=0x00FF00)
+    #
+    #     for i, option in enumerate(options):
+    #         embed.add_field(name=f"{chr(127462 + i)} Section {option}", value="\u200b", inline=False)
+    #
+    #     channel = discord.utils.get(ctx.guild.channels, name="roles")
+    #     poll_message = await channel.send(embed=embed)
+    #
+    #     # Add reactions to embed message
+    #     for i in range(len(options)):
+    #         await poll_message.add_reaction(chr(127462 + i))
+    #
+    #     # Wait for reactions from users
+    #     def check(reaction, user):
+    #         return user != bot.user and reaction.message.id == poll_message.id and str(reaction.emoji) in [
+    #             chr(127462 + i) for i in range(len(options))]
+    #
+    #     while True:
+    #         reaction, user = await bot.wait_for('reaction_add', check=check)
+    #
+    #         # Assign role to user who reacted
+    #         for i in range(len(options)):
+    #             if reaction.emoji == chr(127462 + i):
+    #                 role = discord.utils.get(ctx.guild.roles, name=options[i])
+    #                 await user.add_roles(role)
+    #                 await channel.send(f'{user.mention} has been assigned to Section {role.name}.')
 
     @bot.slash_command(name='private',
                        description='```/private [question]``` - Creates a private question between Student and Educator/TA')

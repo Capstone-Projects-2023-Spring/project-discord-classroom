@@ -306,21 +306,22 @@ def create_quiz(bot):
 
                     url = str(await api.create_questions(question_list))
 
-                    new_quiz = Quiz(title=quiz_dict['title'], points=quiz_dict['points'], start=quiz_dict['start'],
-                                    due=quiz_dict['due'], time=quiz_dict['time'], questions=url,
-                                    sections=quiz_dict['sections'])
-
-                    server = interaction.guild_id
-
-                    await api.create_quiz(new_quiz, server_id=server)
-
                     quizzes_category = None
 
                     for category in interaction.guild.categories:
                         if category.name == "Quizzes":
                             quizzes_category = category
 
-                    new_channel = await interaction.guild.create_text_channel(f"{quiz_dict['title']}", category=quizzes_category)
+                    new_channel = await interaction.guild.create_text_channel(f"{quiz_dict['title']}",
+                                                                              category=quizzes_category)
+
+                    new_quiz = Quiz(title=quiz_dict['title'], points=quiz_dict['points'], start=quiz_dict['start'],
+                                    due=quiz_dict['due'], time=quiz_dict['time'], questions=url,
+                                    classroom=interaction.guild_id, channel=new_channel.id)
+
+                    server = interaction.guild_id
+
+                    await api.create_quiz(new_quiz, server_id=server)
 
                     slides[0].title = "Quiz"
                     await new_channel.send(embed=slides[0])
