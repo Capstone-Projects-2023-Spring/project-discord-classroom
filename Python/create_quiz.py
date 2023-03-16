@@ -10,7 +10,62 @@ import api
 from cr_classes import Quiz
 from cr_classes import Question
 import random
+import time
 
+
+class StartQuiz(discord.ui.View):
+    def __init__(self, questions: List[Question], start, due, time):
+        super().__init__(timeout=None)
+        self.questions = questions
+        self.start = start
+        self.due = due
+        self.time = time
+        print(start, due, questions)
+
+    @discord.ui.button(row=0, style=discord.ButtonStyle.success, label="Start Quiz", disabled=True, custom_id="start")
+    async def start_button_callback(self, button, interaction: discord.Interaction):
+        print(self.questions)
+        questions_as_embed = []
+        for i, question in enumerate(self.questions):
+            embed = discord.Embed(
+                title=f"Question {i + 1}/{len(self.questions)}.\t\t\t{str(self.time)}\t\t\t{str(question.points)} Pts.")
+            embed.add_field(name="Question", value=question.question, inline=False)
+            if question.wrong is not None:
+                options = [question.answer]
+                for w in question.wrong:
+                    options.append(w)
+                options = random.sample(options, len(options))
+                options_string = ""
+                for opt in options:
+                    options_string += f"{opt}\n"
+                embed.add_field(name="Options", value=options_string, inline=False)
+            questions_as_embed.append(embed)
+        current_question = questions_as_embed[0]
+        await interaction.response.send_message(embed=current_question, ephemeral=True)
+
+        num_seconds = self.time * 60
+        start_time = time.time()
+
+        # Update Timer
+        while time.time() - start_time < num_seconds:
+            time_remaining = int(num_seconds - (time.time() - start_time))
+            minutes, seconds = divmod(time_remaining, 60)
+            time_format = '{:02d}:{:02d}'.format(minutes, seconds)
+            current_question.title = f"Question {questions_as_embed.index(current_question) + 1}/{len(self.questions)}.\t\t\t{str(time_format)}\t\t\t{str(self.questions[questions_as_embed.index(current_question)].points)} Pts."
+            await interaction.edit_original_response(embed=current_question)
+            await asyncio.sleep(1)
+
+        print("Time is up!")
+
+    @discord.ui.button(row=0, style=discord.ButtonStyle.secondary, emoji='🔃', custom_id="refresh")
+    async def refresh_button_callback(self, button, interaction):
+        start = self.get_item("start")
+        if datetime.datetime.strptime(self.start, '%Y-%m-%d') <= datetime.datetime.now() < datetime.datetime.strptime(
+                self.due, '%Y-%m-%d'):
+            start.disabled = False
+        else:
+            start.disabled = True
+        await interaction.response.edit_message(view=self)
 
 def create_quiz(bot):
     class QuizModal(discord.ui.Modal):
@@ -160,44 +215,6 @@ def create_quiz(bot):
                     await interaction.response.edit_message(embed=current_slide)
                     await self.quiz_view.update_buttons(interaction)
 
-            class StartQuiz(discord.ui.View):
-                def __init__(self, questions: List[Question], start, due):
-                    super().__init__(timeout=None)
-                    self.questions = questions
-                    self.start = start
-                    self.due = due
-                    print(start, due, questions)
-
-                @discord.ui.button(row=0, style=discord.ButtonStyle.success, label="Start Quiz", disabled=True, custom_id="start")
-                async def start_button_callback(self, button, interaction):
-                    print(self.questions)
-                    questions_as_embed = []
-                    for i, question in enumerate(self.questions):
-                        embed = discord.Embed(title=f"Question {i}.")
-                        embed.add_field(name="Points", value=str(question.points), inline=False)
-                        embed.add_field(name="Question", value=question.question, inline=False)
-                        if question.wrong is not None:
-                            options = [question.answer]
-                            for w in question.wrong:
-                                options.append(w)
-                            options = random.sample(options, len(options))
-                            options_string = ""
-                            for opt in options:
-                                options_string += f"{opt}\n"
-                            embed.add_field(name="Options", value=options_string, inline=False)
-                        questions_as_embed.append(embed)
-                    print(questions_as_embed)
-                    await interaction.response.send_message(embed=questions_as_embed[0], ephemeral=True)
-
-                @discord.ui.button(row=0, style=discord.ButtonStyle.secondary, emoji='🔃', custom_id="refresh")
-                async def refresh_button_callback(self, button, interaction):
-                    start = self.get_item("start")
-                    if datetime.datetime.strptime(self.start,'%Y-%m-%d') <= datetime.datetime.now() < datetime.datetime.strptime(self.due, '%Y-%m-%d'):
-                        start.disabled = False
-                    else:
-                        start.disabled = True
-                    await interaction.response.edit_message(view=self)
-
             class QuizView(discord.ui.View):
                 def __init__(self):
                     super().__init__(timeout=None)
@@ -346,9 +363,9 @@ def create_quiz(bot):
                     await api.create_quiz(new_quiz, server_id=server)
 
                     slides[0].title = "Quiz"
-                    await new_channel.send(embed=slides[0], view=StartQuiz(question_list, quiz_dict['start'], quiz_dict['due']))
+                    await new_channel.send(embed=slides[0], view=StartQuiz(question_list, quiz_dict['start'], quiz_dict['due'], new_quiz.time))
                     student_role = discord.utils.get(interaction.guild.roles, name="Student")
-                    await new_channel.send(f"{student_role.mention} Type '/start' to take the Quiz")
+                    # await new_channel.send(f"{student_role.mention} Type '/start' to take the Quiz")
 
                     await interaction.followup.send("Created the Quiz!")
 

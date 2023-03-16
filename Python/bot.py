@@ -10,7 +10,7 @@ import io
 import datetime
 from PyPDF2 import PdfReader
 import api
-import create_commands
+import create_quiz
 
 if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:
@@ -34,6 +34,7 @@ def run_discord_bot():
     @bot.event
     async def on_ready():
         print(f'{bot.user} is now running!')
+        bot.add_view(create_quiz.StartQuiz())
 
     @bot.event
     async def on_guild_join(guild):
