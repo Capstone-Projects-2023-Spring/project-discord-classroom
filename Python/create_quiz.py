@@ -12,59 +12,240 @@ from cr_classes import Question
 import random
 import time
 
+class InputModal(discord.ui.Modal):
+    def __init__(self, embed: discord.Embed, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.embed = embed
+        answer = discord.ui.InputText(label="Answer", style=discord.InputTextStyle.long,
+                                        placeholder="Type answer here...")
+        self.add_item(answer)
+
+    async def callback(self, interaction: discord.Interaction):
+        self.embed.set_field_at(index=1, name="Answer", value=f"```{self.children[0].value}```", inline=False)
+        await interaction.response.edit_message(embed=self.embed)
+
+
+class TakeQuiz(discord.ui.View):
+    def __init__(self, embed_ques: List[discord.Embed]):
+        super().__init__(timeout=None)
+        self.eq = embed_ques
+        self.this_question = embed_ques[0]
+        right_button = self.get_item('right')
+        last_button = self.get_item('last')
+        if len(embed_ques) > 1:
+            right_button.disabled = False
+            last_button.disabled = False
+        if self.this_question.fields[1].name == "Options":
+            num_of_options = len(self.this_question.fields[1].value.split("\n")) - 1
+            self.get_item("A").disabled = False
+            self.get_item("B").disabled = False
+            if num_of_options >= 3:
+                self.get_item("C").disabled = False
+            if num_of_options >= 4:
+                self.get_item("D").disabled = False
+            if num_of_options >= 5:
+                self.get_item("E").disabled = False
+
+    async def update_arrows(self, interaction: discord.Interaction):
+        first = self.get_item("first")
+        left = self.get_item("left")
+        right = self.get_item("right")
+        last = self.get_item("last")
+
+        if self.this_question != self.eq[0]:
+            first.disabled = False
+            left.disabled = False
+        else:
+            first.disabled = True
+            left.disabled = True
+
+        if self.this_question != self.eq[len(self.eq)-1]:
+            right.disabled = False
+            last.disabled = False
+        else:
+            right.disabled = True
+            last.disabled = True
+
+        if self.this_question.fields[1].name == "Options":
+            self.get_item("input").disabled = True
+            num_of_options = len(self.this_question.fields[1].value.split("\n")) - 1
+            self.get_item("A").disabled = False
+            self.get_item("B").disabled = False
+            if num_of_options >= 3:
+                self.get_item("C").disabled = False
+            if num_of_options >= 4:
+                self.get_item("D").disabled = False
+            if num_of_options >= 5:
+                self.get_item("E").disabled = False
+        elif self.this_question.fields[1].name == "Answer":
+            self.get_item("A").disabled = True
+            self.get_item("B").disabled = True
+            self.get_item("C").disabled = True
+            self.get_item("D").disabled = True
+            self.get_item("E").disabled = True
+            self.get_item("input").disabled = False
+
+        await self.update_letters(interaction)
+        await interaction.followup.edit_message(view=self, message_id=interaction.message.id)
+
+    async def update_letters(self, interaction: discord.Interaction, letter: str = None):
+
+        self.get_item("A").style = discord.ButtonStyle.secondary
+        self.get_item("B").style = discord.ButtonStyle.secondary
+        self.get_item("C").style = discord.ButtonStyle.secondary
+        self.get_item("D").style = discord.ButtonStyle.secondary
+        self.get_item("E").style = discord.ButtonStyle.secondary
+
+        if letter is not None:
+            letter_clicked = self.get_item(letter)
+            letter_clicked.style = discord.ButtonStyle.success
+
+        await interaction.followup.edit_message(view=self, message_id=interaction.message.id)
+
+
+    @discord.ui.button(row=0, style=discord.ButtonStyle.secondary, label="<<", disabled=True,
+                       custom_id="first")
+    async def first_button_callback(self, button, interaction):
+        self.this_question = self.eq[0]
+        await interaction.response.edit_message(embed=self.this_question)
+        await self.update_arrows(interaction)
+
+    @discord.ui.button(row=0, style=discord.ButtonStyle.secondary, label="<", disabled=True,
+                       custom_id="left")
+    async def left_button_callback(self, button, interaction):
+        self.this_question = self.eq[self.eq.index(self.this_question) - 1]
+        await interaction.response.edit_message(embed=self.this_question)
+        await self.update_arrows(interaction)
+
+    @discord.ui.button(row=0, style=discord.ButtonStyle.secondary, label=">", disabled=True,
+                       custom_id="right")
+    async def right_button_callback(self, button, interaction):
+        self.this_question = self.eq[self.eq.index(self.this_question) + 1]
+        await interaction.response.edit_message(embed=self.this_question)
+        await self.update_arrows(interaction)
+
+    @discord.ui.button(row=0, style=discord.ButtonStyle.secondary, label=">>", disabled=True,
+                       custom_id="last")
+    async def last_button_callback(self, button, interaction):
+        self.this_question = self.eq[len(self.eq) - 1]
+        await interaction.response.edit_message(embed=self.this_question)
+        await self.update_arrows(interaction)
+
+    @discord.ui.button(row=1, style=discord.ButtonStyle.secondary, emoji="🇦", disabled=True, custom_id="A")
+    async def a_button_callback(self, button, interaction: discord.Interaction):
+        options = self.this_question.fields[1]
+        answer = options.value.split("\n")[0].split("🇦 ")[1]
+        self.this_question.set_field_at(index=2, name="Answer", value=f"```{answer}```", inline=False)
+        await interaction.response.edit_message(embed=self.this_question)
+        await self.update_letters(interaction, "A")
+
+    @discord.ui.button(row=1, style=discord.ButtonStyle.secondary, emoji="🇧", disabled=True, custom_id="B")
+    async def b_button_callback(self, button, interaction: discord.Interaction):
+        options = self.this_question.fields[1]
+        answer = options.value.split("\n")[1].split("🇧 ")[1]
+        self.this_question.set_field_at(index=2, name="Answer", value=f"```{answer}```", inline=False)
+        await interaction.response.edit_message(embed=self.this_question)
+        await self.update_letters(interaction, "B")
+
+    @discord.ui.button(row=1, style=discord.ButtonStyle.secondary, emoji="🇨", disabled=True, custom_id="C")
+    async def c_button_callback(self, button, interaction: discord.Interaction):
+        options = self.this_question.fields[1]
+        answer = options.value.split("\n")[2].split("🇨 ")[1]
+        self.this_question.set_field_at(index=2, name="Answer", value=f"```{answer}```", inline=False)
+        await interaction.response.edit_message(embed=self.this_question)
+        await self.update_letters(interaction, "C")
+
+    @discord.ui.button(row=1, style=discord.ButtonStyle.secondary, emoji="🇩", disabled=True, custom_id="D")
+    async def d_button_callback(self, button, interaction: discord.Interaction):
+        options = self.this_question.fields[1]
+        answer = options.value.split("\n")[3].split("🇩 ")[1]
+        self.this_question.set_field_at(index=2, name="Answer", value=f"```{answer}```", inline=False)
+        await interaction.response.edit_message(embed=self.this_question)
+        await self.update_letters(interaction, "D")
+
+    @discord.ui.button(row=1, style=discord.ButtonStyle.secondary, emoji="🇪", disabled=True, custom_id="E")
+    async def e_button_callback(self, button, interaction: discord.Interaction):
+        options = self.this_question.fields[1]
+        answer = options.value.split("\n")[4].split("🇪 ")[1]
+        self.this_question.set_field_at(index=2, name="Answer", value=f"```{answer.strip()}```", inline=False)
+        await interaction.response.edit_message(embed=self.this_question)
+        await self.update_letters(interaction, "E")
+
+    @discord.ui.button(row=2, style=discord.ButtonStyle.secondary, emoji="⌨", label="Type Answer", disabled=True, custom_id="input")
+    async def input_button_callback(self, button, interaction: discord.Interaction):
+        await interaction.response.send_modal(InputModal(self.this_question, title="Type Answer"))
 
 class StartQuiz(discord.ui.View):
-    def __init__(self, questions: List[Question], start, due, time):
+    def __init__(self):
         super().__init__(timeout=None)
-        self.questions = questions
-        self.start = start
-        self.due = due
-        self.time = time
-        print(start, due, questions)
+        self.took_quiz = []
 
     @discord.ui.button(row=0, style=discord.ButtonStyle.success, label="Start Quiz", disabled=True, custom_id="start")
     async def start_button_callback(self, button, interaction: discord.Interaction):
-        print(self.questions)
+        if interaction.user in self.took_quiz:
+            return await interaction.response.send_message("You already took this quiz", ephemeral=True)
+        student_role = discord.utils.get(interaction.guild.roles, name="Student")
+        if student_role not in interaction.user.roles:
+            return await interaction.response.send_message("Only students can take quizzes", ephemeral=True)
+        self.took_quiz.append(interaction.user)
+        quiz = await api.get_quiz(str(interaction.channel_id))
+        print(quiz)
+        quiz_time = quiz['quiz']['timeLimit']
+        quiz_id = quiz['quiz']['id']
+        due = quiz['quiz']['dueDate']
+        start_button = self.get_item("start")
+        if datetime.datetime.strptime(due, '%Y-%m-%d') < datetime.datetime.now():
+            self.remove_item(start_button)
+            embed = interaction.message.embeds[0]
+            embed.add_field(name="", value="```diff\nQuiz is no longer available```", inline=False)
+            return await interaction.response.edit_message(embed=embed, view=self)
+        question_json = await api.get_question(quiz_id)
+        print(question_json)
         questions_as_embed = []
-        for i, question in enumerate(self.questions):
+        for i, question in enumerate(question_json):
             embed = discord.Embed(
-                title=f"Question {i + 1}/{len(self.questions)}.\t\t\t{str(self.time)}\t\t\t{str(question.points)} Pts.")
-            embed.add_field(name="Question", value=question.question, inline=False)
-            if question.wrong is not None:
-                options = [question.answer]
-                for w in question.wrong:
+                title=f"Question {i + 1}/{len(question_json)}.\t\t\tNo Time Limit\t\t\t{str(question['points'])} Pts.")
+            embed.add_field(name="Question", value=question['question'], inline=False)
+            print("Wrong:", question['wrong'])
+            if question['wrong'][0] != "None":
+                options = [question['answer']]
+                for w in question['wrong']:
                     options.append(w)
                 options = random.sample(options, len(options))
                 options_string = ""
-                for opt in options:
-                    options_string += f"{opt}\n"
+                for j, opt in enumerate(options):
+                    print(opt)
+                    options_string += f"{chr(0x1f1e6 + j)} {opt}\n"
                 embed.add_field(name="Options", value=options_string, inline=False)
+            embed.add_field(name="Answer", value="``` ```", inline=False)
             questions_as_embed.append(embed)
         current_question = questions_as_embed[0]
-        await interaction.response.send_message(embed=current_question, ephemeral=True)
+        await interaction.response.send_message(embed=current_question, ephemeral=True, view=TakeQuiz(questions_as_embed))
 
-        num_seconds = self.time * 60
-        start_time = time.time()
+        if quiz_time > 0:
+            num_seconds = quiz_time * 60
+            start_time = time.time()
 
-        # Update Timer
-        while time.time() - start_time < num_seconds:
-            time_remaining = int(num_seconds - (time.time() - start_time))
-            minutes, seconds = divmod(time_remaining, 60)
-            time_format = '{:02d}:{:02d}'.format(minutes, seconds)
-            current_question.title = f"Question {questions_as_embed.index(current_question) + 1}/{len(self.questions)}.\t\t\t{str(time_format)}\t\t\t{str(self.questions[questions_as_embed.index(current_question)].points)} Pts."
-            await interaction.edit_original_response(embed=current_question)
-            await asyncio.sleep(1)
+            # Update Timer
+            while time.time() - start_time < num_seconds:
+                time_remaining = int(num_seconds - (time.time() - start_time))
+                minutes, seconds = divmod(time_remaining, 60)
+                time_format = '{:02d}:{:02d}'.format(minutes, seconds)
+                current_question.title = f"Question {questions_as_embed.index(current_question) + 1}/{len(question_json)}.\t\t\t{str(time_format)}\t\t\t{str(question_json[questions_as_embed.index(current_question)]['points'])} Pts."
+                await interaction.edit_original_response(embed=current_question)
+                await asyncio.sleep(1)
 
-        print("Time is up!")
+            print("Time is up!")
 
     @discord.ui.button(row=0, style=discord.ButtonStyle.secondary, emoji='🔃', custom_id="refresh")
     async def refresh_button_callback(self, button, interaction):
-        start = self.get_item("start")
-        if datetime.datetime.strptime(self.start, '%Y-%m-%d') <= datetime.datetime.now() < datetime.datetime.strptime(
-                self.due, '%Y-%m-%d'):
-            start.disabled = False
-        else:
-            start.disabled = True
+        quiz = await api.get_quiz(interaction.channel_id)
+        start = quiz['quiz']['startDate']
+        start_button = self.get_item("start")
+        if datetime.datetime.strptime(start, '%Y-%m-%d') <= datetime.datetime.now():
+            start_button.disabled = False
+            refresh_button = self.get_item("refresh")
+            self.remove_item(refresh_button)
         await interaction.response.edit_message(view=self)
 
 def create_quiz(bot):
@@ -157,6 +338,8 @@ def create_quiz(bot):
                     else:
                         add_e.add_field(name="Answer", value="None")
                     if self.children[2].value != "":
+                        if len(self.children[2].value.split(", ")) > 4:
+                            return await interaction.response.send_message("Max wrong options is four", delete_after=5)
                         add_e.add_field(name="Wrong Options", value=self.children[2].value)
                     else:
                         add_e.add_field(name="Wrong Options", value="None")
@@ -225,6 +408,7 @@ def create_quiz(bot):
                     done = self.get_item("done")
                     trash = self.get_item("trash")
                     first = self.get_item("first")
+                    last = self.get_item("last")
 
                     if len(slides) > 1:
                         done.disabled = False
@@ -242,8 +426,10 @@ def create_quiz(bot):
                     if current_slide != slides[len(slides) - 1]:
                         # Turns off right arrow if current embed is the last embed
                         right.disabled = False
+                        last.disabled = False
                     else:
                         right.disabled = True
+                        last.disabled = True
 
                     if current_slide != slides[0]:
                         trash.disabled = False
@@ -336,7 +522,7 @@ def create_quiz(bot):
                     for i, question in enumerate(slides):
                         if i > 0:
                             fields = question.fields
-                            wrong = fields[2].value.split(",")
+                            wrong = fields[2].value.split(", ")
                             question_dict = Question(question=fields[0].value, answer=fields[1].value,
                                                      wrong=wrong, points=float(fields[3].value))
                             question_list.append(question_dict)
@@ -363,7 +549,7 @@ def create_quiz(bot):
                     await api.create_quiz(new_quiz, server_id=server)
 
                     slides[0].title = "Quiz"
-                    await new_channel.send(embed=slides[0], view=StartQuiz(question_list, quiz_dict['start'], quiz_dict['due'], new_quiz.time))
+                    await new_channel.send(embed=slides[0], view=StartQuiz())
                     student_role = discord.utils.get(interaction.guild.roles, name="Student")
                     # await new_channel.send(f"{student_role.mention} Type '/start' to take the Quiz")
 

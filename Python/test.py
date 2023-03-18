@@ -2,6 +2,6 @@ import api
 import asyncio
 
 async def test():
-    await api.get_quiz(str(1085416795789340803))
+    await api.get_question(26)
 
 asyncio.run(test())
