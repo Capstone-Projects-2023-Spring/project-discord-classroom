@@ -16,8 +16,7 @@ class InputModal(discord.ui.Modal):
     def __init__(self, embed: discord.Embed, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.embed = embed
-        answer = discord.ui.InputText(label="Answer", style=discord.InputTextStyle.long,
-                                        placeholder="Type answer here...")
+        answer = discord.ui.InputText(label="Answer", style=discord.InputTextStyle.long, placeholder="Type answer here...")
         self.add_item(answer)
 
     async def callback(self, interaction: discord.Interaction):
@@ -26,12 +25,17 @@ class InputModal(discord.ui.Modal):
 
 
 class TakeQuiz(discord.ui.View):
-    def __init__(self, embed_ques: List[discord.Embed]):
+    def __init__(self, embed_ques: List[discord.Embed], title: str, answers: List[str]):
         super().__init__(timeout=None)
         self.eq = embed_ques
         self.this_question = embed_ques[0]
+        self.quiz_title = title
+        self.answers = answers
         right_button = self.get_item('right')
         last_button = self.get_item('last')
+        self.has_answer = []
+        for q in embed_ques:
+            self.has_answer.append(False)
         if len(embed_ques) > 1:
             right_button.disabled = False
             last_button.disabled = False
@@ -100,7 +104,16 @@ class TakeQuiz(discord.ui.View):
             letter_clicked = self.get_item(letter)
             letter_clicked.style = discord.ButtonStyle.success
 
+        await self.update_submit(interaction)
         await interaction.followup.edit_message(view=self, message_id=interaction.message.id)
+
+    async def update_submit(self, interaction: discord.Interaction):
+
+        if all(self.has_answer):
+            submit_button = self.get_item("submit")
+            submit_button.disabled = False
+            await interaction.followup.edit_message(view=self, message_id=interaction.message.id)
+
 
 
     @discord.ui.button(row=0, style=discord.ButtonStyle.secondary, label="<<", disabled=True,
@@ -136,6 +149,7 @@ class TakeQuiz(discord.ui.View):
         options = self.this_question.fields[1]
         answer = options.value.split("\n")[0].split("🇦 ")[1]
         self.this_question.set_field_at(index=2, name="Answer", value=f"```{answer}```", inline=False)
+        self.has_answer[self.eq.index(self.this_question)] = True
         await interaction.response.edit_message(embed=self.this_question)
         await self.update_letters(interaction, "A")
 
@@ -144,6 +158,7 @@ class TakeQuiz(discord.ui.View):
         options = self.this_question.fields[1]
         answer = options.value.split("\n")[1].split("🇧 ")[1]
         self.this_question.set_field_at(index=2, name="Answer", value=f"```{answer}```", inline=False)
+        self.has_answer[self.eq.index(self.this_question)] = True
         await interaction.response.edit_message(embed=self.this_question)
         await self.update_letters(interaction, "B")
 
@@ -152,6 +167,7 @@ class TakeQuiz(discord.ui.View):
         options = self.this_question.fields[1]
         answer = options.value.split("\n")[2].split("🇨 ")[1]
         self.this_question.set_field_at(index=2, name="Answer", value=f"```{answer}```", inline=False)
+        self.has_answer[self.eq.index(self.this_question)] = True
         await interaction.response.edit_message(embed=self.this_question)
         await self.update_letters(interaction, "C")
 
@@ -160,6 +176,8 @@ class TakeQuiz(discord.ui.View):
         options = self.this_question.fields[1]
         answer = options.value.split("\n")[3].split("🇩 ")[1]
         self.this_question.set_field_at(index=2, name="Answer", value=f"```{answer}```", inline=False)
+        self.has_answer[self.eq.index(self.this_question)] = True
+        print(self.has_answer)
         await interaction.response.edit_message(embed=self.this_question)
         await self.update_letters(interaction, "D")
 
@@ -168,12 +186,47 @@ class TakeQuiz(discord.ui.View):
         options = self.this_question.fields[1]
         answer = options.value.split("\n")[4].split("🇪 ")[1]
         self.this_question.set_field_at(index=2, name="Answer", value=f"```{answer.strip()}```", inline=False)
+        self.has_answer[self.eq.index(self.this_question)] = True
         await interaction.response.edit_message(embed=self.this_question)
         await self.update_letters(interaction, "E")
 
     @discord.ui.button(row=2, style=discord.ButtonStyle.secondary, emoji="⌨", label="Type Answer", disabled=True, custom_id="input")
     async def input_button_callback(self, button, interaction: discord.Interaction):
-        await interaction.response.send_modal(InputModal(self.this_question, title="Type Answer"))
+        response = await interaction.response.send_modal(InputModal(self.this_question, title="Type Answer"))
+        self.has_answer[self.eq.index(self.this_question)] = True
+        await self.update_submit(interaction)
+
+    @discord.ui.button(row=3, style=discord.ButtonStyle.success, emoji="✅", label="Submit Quiz", disabled=True, custom_id="submit")
+    async def submit_button_callback(self, button, interaction: discord.Interaction):
+        submissions_category = None
+
+        for category in interaction.guild.categories:
+            if category.name == "Submissions":
+                submissions_category = category
+
+        new_channel = await interaction.guild.create_text_channel(f"{self.quiz_title}-{interaction.user.display_name}-{interaction.user.id}", category=submissions_category)
+
+        message = ""
+        questions = []
+        student_answers = []
+
+        for eq in self.eq:
+            for field in eq.fields:
+                if field.name == "Question":
+                    questions.append(field.value)
+                if field.name == "Answer":
+                    student_answers.append(field.value.split("```")[1])
+
+        message += f"**Quiz - {self.quiz_title}**\nStudent: {interaction.user.display_name}\n\n"
+
+        for i, ques in enumerate(questions):
+            if student_answers[i].lower().strip() == self.answers[i].lower().strip():
+                message += f"Question {i+1}.\n\n{ques}\nStudent's Answer: ✅```{student_answers[i]}```\nCorrect Answer: ```{self.answers[i]}```\n\n"
+            else:
+                message += f"Question {i+1}.\n\n{ques}\nStudent's Answer: ❌```{student_answers[i]}```\nCorrect Answer: ```{self.answers[i]}```\n\n"
+
+        await new_channel.send(message)
+
 
 class StartQuiz(discord.ui.View):
     def __init__(self):
@@ -197,12 +250,14 @@ class StartQuiz(discord.ui.View):
         if datetime.datetime.strptime(due, '%Y-%m-%d') < datetime.datetime.now():
             self.remove_item(start_button)
             embed = interaction.message.embeds[0]
-            embed.add_field(name="", value="```diff\nQuiz is no longer available```", inline=False)
+            embed.add_field(name="", value="```diff\n- Quiz is no longer available```", inline=False)
             return await interaction.response.edit_message(embed=embed, view=self)
         question_json = await api.get_question(quiz_id)
         print(question_json)
+        answers = []
         questions_as_embed = []
         for i, question in enumerate(question_json):
+            answers.append(question['answer'])
             embed = discord.Embed(
                 title=f"Question {i + 1}/{len(question_json)}.\t\t\tNo Time Limit\t\t\t{str(question['points'])} Pts.")
             embed.add_field(name="Question", value=question['question'], inline=False)
@@ -220,7 +275,7 @@ class StartQuiz(discord.ui.View):
             embed.add_field(name="Answer", value="``` ```", inline=False)
             questions_as_embed.append(embed)
         current_question = questions_as_embed[0]
-        await interaction.response.send_message(embed=current_question, ephemeral=True, view=TakeQuiz(questions_as_embed))
+        await interaction.response.send_message(embed=current_question, ephemeral=True, view=TakeQuiz(questions_as_embed, quiz['quiz']['title'], answers))
 
         if quiz_time > 0:
             num_seconds = quiz_time * 60
@@ -231,7 +286,7 @@ class StartQuiz(discord.ui.View):
                 time_remaining = int(num_seconds - (time.time() - start_time))
                 minutes, seconds = divmod(time_remaining, 60)
                 time_format = '{:02d}:{:02d}'.format(minutes, seconds)
-                current_question.title = f"Question {questions_as_embed.index(current_question) + 1}/{len(question_json)}.\t\t\t{str(time_format)}\t\t\t{str(question_json[questions_as_embed.index(current_question)]['points'])} Pts."
+                current_question.title = f"Question {questions_as_embed.index(current_question) + 1}/{len(question_json)}.\t\t\t⏳ {str(time_format)}\t\t\t{str(question_json[questions_as_embed.index(current_question)]['points'])} Pts."
                 await interaction.edit_original_response(embed=current_question)
                 await asyncio.sleep(1)
 
