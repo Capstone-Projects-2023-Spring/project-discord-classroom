@@ -196,15 +196,15 @@ class TakeQuiz(discord.ui.View):
         self.has_answer[self.eq.index(self.this_question)] = True
         await self.update_submit(interaction)
 
-    @discord.ui.button(row=3, style=discord.ButtonStyle.success, emoji="✅", label="Submit Quiz", disabled=True, custom_id="submit")
-    async def submit_button_callback(self, button, interaction: discord.Interaction):
+    async def submit_quiz(self, interaction: discord.Interaction, from_timer: bool):
         submissions_category = None
 
         for category in interaction.guild.categories:
             if category.name == "Submissions":
                 submissions_category = category
 
-        new_channel = await interaction.guild.create_text_channel(f"{self.quiz_title}-{interaction.user.display_name}-{interaction.user.id}", category=submissions_category)
+        new_channel = await interaction.guild.create_text_channel(
+            f"📝 {self.quiz_title}-{interaction.user.display_name}-{interaction.user.id}", category=submissions_category)
 
         message = ""
         questions = []
@@ -221,11 +221,18 @@ class TakeQuiz(discord.ui.View):
 
         for i, ques in enumerate(questions):
             if student_answers[i].lower().strip() == self.answers[i].lower().strip():
-                message += f"Question {i+1}.\n\n{ques}\nStudent's Answer: ✅```{student_answers[i]}```\nCorrect Answer: ```{self.answers[i]}```\n\n"
+                message += f"Question {i + 1}.\n\n{ques}\nStudent's Answer: ✅```{student_answers[i]}```\nCorrect Answer: ```{self.answers[i]}```\n\n"
             else:
-                message += f"Question {i+1}.\n\n{ques}\nStudent's Answer: ❌```{student_answers[i]}```\nCorrect Answer: ```{self.answers[i]}```\n\n"
-
+                message += f"Question {i + 1}.\n\n{ques}\nStudent's Answer: ❌```{student_answers[i]}```\nCorrect Answer: ```{self.answers[i]}```\n\n"
+        if from_timer:
+            await interaction.followup.edit_message(message_id=interaction.message.id, content="Time's Up - Quiz Submitted", embed=None, view=None)
+        else:
+            await interaction.response.edit_message(content="Quiz Submitted", embed=None, view=None)
         await new_channel.send(message)
+
+    @discord.ui.button(row=3, style=discord.ButtonStyle.success, emoji="✅", label="Submit Quiz", disabled=True, custom_id="submit")
+    async def submit_button_callback(self, button, interaction: discord.Interaction):
+        await self.submit_quiz(interaction, False)
 
 
 class StartQuiz(discord.ui.View):
@@ -259,7 +266,7 @@ class StartQuiz(discord.ui.View):
         for i, question in enumerate(question_json):
             answers.append(question['answer'])
             embed = discord.Embed(
-                title=f"Question {i + 1}/{len(question_json)}.\t\t\tNo Time Limit\t\t\t{str(question['points'])} Pts.")
+                title=f"Question {i + 1}/{len(question_json)}.\t\t\t\t{str(question['points'])} Pts.")
             embed.add_field(name="Question", value=question['question'], inline=False)
             print("Wrong:", question['wrong'])
             if question['wrong'][0] != "None":
@@ -275,7 +282,8 @@ class StartQuiz(discord.ui.View):
             embed.add_field(name="Answer", value="``` ```", inline=False)
             questions_as_embed.append(embed)
         current_question = questions_as_embed[0]
-        await interaction.response.send_message(embed=current_question, ephemeral=True, view=TakeQuiz(questions_as_embed, quiz['quiz']['title'], answers))
+        take_quiz = TakeQuiz(questions_as_embed, quiz['quiz']['title'], answers)
+        await interaction.response.send_message(embed=current_question, ephemeral=True, view=take_quiz)
 
         if quiz_time > 0:
             num_seconds = quiz_time * 60
@@ -286,11 +294,11 @@ class StartQuiz(discord.ui.View):
                 time_remaining = int(num_seconds - (time.time() - start_time))
                 minutes, seconds = divmod(time_remaining, 60)
                 time_format = '{:02d}:{:02d}'.format(minutes, seconds)
-                current_question.title = f"Question {questions_as_embed.index(current_question) + 1}/{len(question_json)}.\t\t\t⏳ {str(time_format)}\t\t\t{str(question_json[questions_as_embed.index(current_question)]['points'])} Pts."
-                await interaction.edit_original_response(embed=current_question)
+                await interaction.edit_original_response(content=f"⏳ {str(time_format)}")
                 await asyncio.sleep(1)
 
-            print("Time is up!")
+
+            await take_quiz.submit_quiz(interaction, True)
 
     @discord.ui.button(row=0, style=discord.ButtonStyle.secondary, emoji='🔃', custom_id="refresh")
     async def refresh_button_callback(self, button, interaction):
@@ -312,7 +320,7 @@ def create_quiz(bot):
             self.bot = bot
 
             title = discord.ui.InputText(label="Title", style=discord.InputTextStyle.short,
-                                         placeholder="ex: 'Parts of the Cell'", value="Test")
+                                         placeholder="ex: 'Parts of the Cell'", value="Test", max_length=32)
             points = discord.ui.InputText(label="Points", style=discord.InputTextStyle.short,
                                           placeholder="ex: '50'", value=20, required=False)
             start_date = discord.ui.InputText(label="Start Date", style=discord.InputTextStyle.short,
@@ -567,7 +575,7 @@ def create_quiz(bot):
 
                 @discord.ui.button(label="Done", row=2, style=discord.ButtonStyle.success, emoji="✅", disabled=True,
                                    custom_id="done")
-                async def done_button_callback(self, button, interaction):
+                async def done_button_callback(self, button, interaction: discord.Interaction):
                     fields = slides[0].fields
                     quiz_dict = {'title': fields[0].value, 'points': float(fields[1].value), 'start': fields[2].value,
                                  'due': fields[3].value, 'time': fields[4].value}
@@ -608,7 +616,7 @@ def create_quiz(bot):
                     student_role = discord.utils.get(interaction.guild.roles, name="Student")
                     # await new_channel.send(f"{student_role.mention} Type '/start' to take the Quiz")
 
-                    await interaction.followup.send("Created the Quiz!")
+                    await interaction.followup.edit_message(message_id=interaction.message.id, content="Created the Quiz!", embed=None, view=None)
 
                 @discord.ui.button(label="Edit", row=2, style=discord.ButtonStyle.primary, emoji="✂",
                                    custom_id="edit")
