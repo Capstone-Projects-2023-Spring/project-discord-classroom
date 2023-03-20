@@ -420,6 +420,28 @@ def run_discord_bot():
     async def upload_file(ctx):
         await ctx.respond('https://singular-jalebi-124a92.netlify.app/')
 
+
+    #assignment update
+    @bot.slash_command(
+        name = 'update',
+        description = '```/update upcoming tasks``` - Updates the Upcoming Tasks Category with the assignments/quizzes uploaded',
+        options = [
+            create_option(
+                name = "start_date",
+                description = "Start date (YYYY-MM-DD) of the range to filter the database",
+                option_type = 3,
+                required = True
+            ),
+            create_option(
+                name = "end_date",
+                description = "End date (YYYY-MM-DD) of the range to filter the database",
+                option_type = 3,
+                required = True
+            )
+        ]
+        )
+
+
        
 
     # TESTING COMMANDS-------------------------------------------------------------------------------
