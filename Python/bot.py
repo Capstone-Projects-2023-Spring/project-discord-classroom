@@ -425,16 +425,16 @@ def run_discord_bot():
 
     #assignment update
     async def get_dates(start_date: str, due_date: str):
-        query = f"SELECT name, start_date, due_date FROM your_table WHERE start_date >= '{start_date}' AND due_date <= '{due_date}'"
+        query = f"SELECT name, start_date, due_date FROM ASSIGNMENT WHERE start_date >= '{start_date}' AND due_date <= '{due_date}'"
         response = await supabase.raw(query)
         return response['data'] 
     
     @bot.slash_command(
         name = 'update',
         description = "Checks dates in database and updates the category with the upcoming assignments")
-    async def update_upcoming(ctx, 
-                              start_date: Option(str, "Start date in the format YYYY-MM-DD"),
-                              end_date: Option(str, "End date in the format YYYY-MM-DD")):
+    async def update_upcoming(ctx: discord.ApplicationContext, 
+                              start_date: str (description = "Start date in the format YYYY-MM-DD"),
+                              end_date: str (description = "End date in the format YYYY-MM-DD")):
         category = discord.utils.get(ctx.guild.categories, name = 'Upcoming')
 
         date_data = await get_dates(start_date, end_date)
