@@ -249,6 +249,7 @@ def run_discord_bot():
             embed = discord.Embed(title="Attendance", description=f'{student_role.mention} React to this message to check into today\'s attendance')
             message = await ctx.send(embed=embed)
             await message.add_reaction('✅')
+            
             timeLeft = time * 60
             while timeLeft >= 0:
                 embed.title = f"Attendance - {int(timeLeft)}s"
@@ -288,12 +289,20 @@ def run_discord_bot():
 
             response += "\n\nAbsent:\n" + '\n'.join(absent)
             await ctx.author.send(response)
+
+            # Update the 'total attendance' in the Supabase table
+            classroom_table = supabase.table('Classroom')
+            classroom_id = await api.get_classroom_id(guild_id)
+            _, error = await classroom_table.update({'total_attendance': supabase.sql('total_attendance + 1')}).single().where('class_id', '=', classroom_id).execute()
+            if error:
+                print(f"Error updating total attendance: {error}")
+
         else:
             student = supabase.table('User').select().eq('discordId', str(ctx.author.id)).single().execute()
             attendance = student.data['attendance']
             response = f"Your attendance count is {attendance}."
             await ctx.author.send(response)
-
+        
 
     @bot.slash_command(name='ta',
                        description='```/ta [user]``` - Gives/Removes the user the Assistant role')
