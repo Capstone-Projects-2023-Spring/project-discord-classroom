@@ -266,6 +266,7 @@ def run_discord_bot():
                 if r.emoji == '✅':
                     async for user in r.users():
                         users.append(user)
+                        await increment_attendance(str(user.id))
             attended = []
             for user in users:
                 if not user.bot:
