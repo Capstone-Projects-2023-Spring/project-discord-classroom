@@ -66,6 +66,7 @@ def run_discord_bot():
         everyone = guild.default_role
         await everyone.edit(permissions=everyone_perms)
 
+        general = await guild.create_category("Upcoming")
         general = await guild.create_category("General")
         await guild.create_text_channel("General", category=general)
         await guild.create_text_channel("Announcements", category=general)
@@ -444,6 +445,33 @@ def run_discord_bot():
         await ctx.respond(f"TutorGPT: {reply}")
 
         # TODO: When student responds, their answers are checked for correctness
+
+
+    #assignment update
+    async def get_dates(start_date: str, due_date: str):
+        query = f"SELECT name, start_date, due_date FROM ASSIGNMENT WHERE start_date >= '{start_date}' AND due_date <= '{due_date}'"
+        response = await supabase.raw(query)
+        return response['data'] 
+    
+    @bot.slash_command(
+        name = 'update',
+        description = "Checks dates in database and updates the category with the upcoming assignments")
+    async def update_upcoming(ctx: discord.ApplicationContext, 
+                              start_date: str (description = "Start date in the format YYYY-MM-DD"),
+                              end_date: str (description = "End date in the format YYYY-MM-DD")):
+        category = discord.utils.get(ctx.guild.categories, name = 'Upcoming')
+
+        date_data = await get_dates(start_date, end_date)
+
+        for item in date_data:
+            channel_name = str(item['name'])
+
+            new_channel = await ctx.guild.create_voice_channel(
+                name = channel_name,
+                catrgory = category
+            )
+
+            await ctx.respond(f"Added new assignment to upcoming: {new_channel.name}")
 
     # TESTING COMMANDS-------------------------------------------------------------------------------
     # @bot.command()
