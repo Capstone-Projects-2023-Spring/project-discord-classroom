@@ -230,6 +230,19 @@ def run_discord_bot():
         message = await ctx.send(embed=embed)
         for i in range(len(options)):
             await message.add_reaction(chr(0x1f1e6 + i))
+        
+        show_poll_results(embed, options, message)
+
+    def show_poll_results(emb, options, message):
+        if emb.title != 'Poll':
+            raise ValueError('Message does not contain a poll embed')
+        poll_data = {}
+        for option in options:
+            poll_data["option"] = option
+        for reaction in message.reactions:
+            poll_data[reaction.emoji] = reaction.count - 1
+            
+
 
     async def increment_attendance(discord_id:str):
         student = supabase.table('User').select().eq('discord_id', discord_id).single().execute()
