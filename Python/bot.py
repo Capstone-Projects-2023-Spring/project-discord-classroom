@@ -11,6 +11,7 @@ import datetime
 from PyPDF2 import PdfReader
 import api
 import create_quiz
+import openai
 
 if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:
@@ -26,8 +27,14 @@ def run_discord_bot():
     PREFIX = configData["Prefix"]
     SB_URL = configData["SupaUrl"]
     SB_KEY = configData["SupaKey"]
+    GPT_KEY = configData["GPTKey"]
 
     supabase: Client = create_client(SB_URL, SB_KEY)
+
+    openai.api_key = GPT_KEY
+    messages = [
+        {"role": "system", "content": "You are TutorGPT, a friendly and helpful AI that assists students with learning and understanding their school work."}
+    ]
 
     bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
@@ -416,10 +423,28 @@ def run_discord_bot():
         modal = create_quiz.create_quiz(bot=bot)
         await ctx.send_modal(modal)
 
-    @bot.slash_command(name='upload_file',
-                       description='```/upload file`` - User can follow link to upload file')
+    @bot.slash_command(name='upload_file', description='```/upload file`` - User can follow link to upload file')
     async def upload_file(ctx):
         await ctx.respond('https://singular-jalebi-124a92.netlify.app/')
+
+    tutor = bot.create_group("tutor", "AI tutor for students")
+
+    @tutor.command(name='quiz', description='```/tutor quiz [subject] [grade]```')
+    async def quiz(ctx: discord.ApplicationContext, subject: str, grade: str):
+        nonlocal messages
+
+        await ctx.defer()
+
+        messages.append(
+            {"role": "user", "content": f"Give me {grade} grade quiz on {subject} with 5 questions in less than 150 words, hiding the answers"}
+        )
+        chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages, max_tokens=100)
+
+        reply = chat.choices[0].message.content
+
+        await ctx.respond(f"TutorGPT: {reply}")
+
+        # TODO: When student responds, their answers are checked for correctness
 
 
     #assignment update
