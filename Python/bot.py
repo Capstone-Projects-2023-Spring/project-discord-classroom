@@ -12,6 +12,7 @@ from PyPDF2 import PdfReader
 import api
 import create_commands
 
+
 if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:
         configData = json.load(f)
@@ -58,6 +59,7 @@ def run_discord_bot():
         everyone = guild.default_role
         await everyone.edit(permissions=everyone_perms)
 
+        general = await guild.create_category("Upcoming")
         general = await guild.create_category("General")
         await guild.create_text_channel("General", category=general)
         await guild.create_text_channel("Announcements", category=general)
@@ -422,27 +424,30 @@ def run_discord_bot():
 
 
     #assignment update
+    async def get_dates(start_date: str, due_date: str):
+        query = f"SELECT name, start_date, due_date FROM your_table WHERE start_date >= '{start_date}' AND due_date <= '{due_date}'"
+        response = await supabase.raw(query)
+        return response['data'] 
+    
     @bot.slash_command(
         name = 'update',
-        description = '```/update upcoming tasks``` - Updates the Upcoming Tasks Category with the assignments/quizzes uploaded',
-        options = [
-            create_option(
-                name = "start_date",
-                description = "Start date (YYYY-MM-DD) of the range to filter the database",
-                option_type = 3,
-                required = True
-            ),
-            create_option(
-                name = "end_date",
-                description = "End date (YYYY-MM-DD) of the range to filter the database",
-                option_type = 3,
-                required = True
+        description = "Checks dates in database and updates the category with the upcoming assignments")
+    async def update_upcoming(ctx, 
+                              start_date: Option(str, "Start date in the format YYYY-MM-DD"),
+                              end_date: Option(str, "End date in the format YYYY-MM-DD")):
+        category = discord.utils.get(ctx.guild.categories, name = 'Upcoming')
+
+        date_data = await get_dates(start_date, end_date)
+
+        for item in date_data:
+            channel_name = str(item['name'])
+
+            new_channel = await ctx.guild.create_voice_channel(
+                name = channel_name,
+                catrgory = category
             )
-        ]
-        )
 
-
-       
+            await ctx.respond(f"Added new assignment to upcoming: {new_channel.name}")
 
     # TESTING COMMANDS-------------------------------------------------------------------------------
     # @bot.command()
