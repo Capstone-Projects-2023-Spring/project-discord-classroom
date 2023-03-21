@@ -10,8 +10,7 @@ import io
 import datetime
 from PyPDF2 import PdfReader
 import api
-import create_commands
-
+import create_quiz
 
 if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:
@@ -35,6 +34,7 @@ def run_discord_bot():
     @bot.event
     async def on_ready():
         print(f'{bot.user} is now running!')
+        bot.add_view(create_quiz.StartQuiz())
 
     @bot.event
     async def on_guild_join(guild):
@@ -175,8 +175,7 @@ def run_discord_bot():
                 await ctx.send("Invalid file format, only PDF files are accepted.")
 
     @bot.slash_command(name ='discussion',
-                       description='Creates a new text channel with a prompt for discussion',
-                       help='!poll [channel name] [prompt]')
+                       description='Creates a new text channel with a prompt for discussion')
     async def discussion_create(ctx: discord.ApplicationContext, channel_name: str, prompt: str):
         # Verify existence of 'Discussion' category, or create it if it does not exist
         if discord.utils.get(ctx.guild.categories, name='Discussion'):
@@ -414,7 +413,7 @@ def run_discord_bot():
                     description='```/create quiz [questions.json]``` - Creates a Quiz for students to take')
     async def quiz(ctx, questions: discord.Attachment = None):
 
-        modal = create_commands.create_quiz(bot=bot)
+        modal = create_quiz.create_quiz(bot=bot)
         await ctx.send_modal(modal)
 
     @bot.slash_command(name='upload_file',
