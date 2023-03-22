@@ -54,78 +54,70 @@ title: Database Design
 erDiagram
     CLASSROOM {
         int id PK
+        string serverId
         string name
-    }
-    SECTION {
-        int id PK
-        string name
-        int totalAttendance
-        int totalGrade
-    }
-    EDUCATOR {
-        int id PK
-        string name
-        int section_id FK
-    }
-    STUDENT {
-        int id PK
-        string name
-        int section_id FK
         int attendance
     }
-    TASK {
-        int id
-        int section_id FK
-        int task_type
-        int task_type_id FK
+    CLASSROOM_USER {
+        int id PK
+        int classroomId FK
+        int userId FK
+        string role
+    }
+    USER {
+        int id PK
+        string name
+        string discordId
+        int attendance
+    }
+    CLASSROOM_TASK {
+        int id PK
+        int classroomId FK
+        string taskType
+        int taskTypeId FK
     }
     ASSIGNMENT {
         int id PK
         string name
-        int maxScore
+        string channelId
+        int points
         dateFormat startDate
         dateFormat dueDate
     }
     QUIZ {
         int id PK
         string name
-        int maxScore
+        string channelId
+        int points
         dateFormat startDate
         dateFormat dueDate
         int timeLimit
-    }
-    QUESTION {
-        int id PK
-        int quiz_id FK
-        string prompt
-        string answer
-        string wrong1
-        string wrong2
-        string wrong3
+        string questionsUrl
     }
     DISCUSSION {
        int id PK
        int name
-       int maxScore
+       string channelId
+       int points
        dateFormat startDate
        dateFormat dueDate 
     }
     GRADE {
         int id PK
-        int task_id FK
-        int student_id FK
-        int maxScore
+        int taskId FK
+        int studentId FK
+        int graderId FK
         int score
+
     }
-    CLASSROOM ||--|{ SECTION : contains
-    SECTION ||--|{ STUDENT : contains
-    TASK }|--|| ASSIGNMENT : is
-    TASK }|--|| QUIZ : is
-    TASK }|--|| DISCUSSION : is
-    QUIZ ||--|{ QUESTION : contains
-    STUDENT ||--o{ GRADE : has
-    SECTION }|--|| EDUCATOR : has
-    GRADE || -- || TASK : contains
+    CLASSROOM ||--|{ CLASSROOM_USER : has
+    CLASSROOM ||--|{ CLASSROOM_TASK : contains
+    CLASSROOM_TASK || -- || GRADE : contains
+    CLASSROOM_USER }|--|| USER : has
+    CLASSROOM_TASK }|--|| ASSIGNMENT : is
+    CLASSROOM_TASK }|--|| QUIZ : is
+    CLASSROOM_TASK }|--|| DISCUSSION : is
+    USER ||--o{ GRADE : has
 ```
 
 Each time the bot is added to a Discord server a new row is added to the CLASSROOM table. This table holds discord server name and the total attendance and grade used to calculate student's grades and attendance scores. Each CLASSROOM contains one or more EDUCATORS and one or more STUDENTS. The STUDENT table holds the student's username, the classroom they belong to, their grade, and their attendance score. Their total grade will equal their grade divided by the CLASSROOM totalGrade. Next we have the ASSIGNMENT, QUIZ, and DISCUSSION tables. The ASSIGNMENT table keeps track of the assignments the EDUCATOR creates which includes the name of the assignment, when to make it available, and when its due. The QUIZ table keeps track of EDUCATOR created quizzes which holds the max score of the quiz, the start/due date, and an optional time limit for the quiz. Each QUIZ is made up of QUESTIONS which contain a prompt, a correct answer, and optional wrong answers depending on the type of question. (If no wrong answers then its a open-ended question or fill-in-the-blank, if one wrong answer could be a True/False, and if all wrong answers are given then its multiple choice). The DISCUSSION table is used to keep track of the Discussions within the Discord server. These will only include max scores and start/due dates. Finally the GRADES table holds all of the grades for the students.
