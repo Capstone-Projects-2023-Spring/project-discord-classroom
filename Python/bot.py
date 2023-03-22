@@ -66,7 +66,7 @@ def run_discord_bot():
         everyone = guild.default_role
         await everyone.edit(permissions=everyone_perms)
 
-        general = await guild.create_category("Upcoming")
+        upcoming = await guild.create_category("Upcoming")
         general = await guild.create_category("General")
         await guild.create_text_channel("General", category=general)
         await guild.create_text_channel("Announcements", category=general)
@@ -242,6 +242,7 @@ def run_discord_bot():
     @commands.has_any_role("Educator", "Assistant")
     async def attendance(ctx: discord.ApplicationContext, time: float = 5):
         user_roles = [role.name for role in ctx.author.roles]
+        guild_id = ctx.guild_id
         if  'Educator' in user_roles or 'Assistant' in user_roles:
             await ctx.respond("Now taking Attendance...")
             date = datetime.datetime.now().strftime("%m - %d - %y %I:%M %p")
@@ -467,8 +468,8 @@ def run_discord_bot():
         name = 'update',
         description = "Checks dates in database and updates the category with the upcoming assignments")
     async def update_upcoming(ctx: discord.ApplicationContext, 
-                              start_date: str (description = "Start date in the format YYYY-MM-DD"),
-                              end_date: str (description = "End date in the format YYYY-MM-DD")):
+                              start_date: discord.Option(str, description= "End date in the format YYYY-MM-DD"),
+                              end_date: discord.Option(str, description= "End date in the format YYYY-MM-DD")):
         category = discord.utils.get(ctx.guild.categories, name = 'Upcoming')
 
         date_data = await get_dates(start_date, end_date)
@@ -478,7 +479,7 @@ def run_discord_bot():
 
             new_channel = await ctx.guild.create_voice_channel(
                 name = channel_name,
-                catrgory = category
+                category = category
             )
 
             await ctx.respond(f"Added new assignment to upcoming: {new_channel.name}")
