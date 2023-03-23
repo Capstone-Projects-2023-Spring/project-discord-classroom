@@ -135,6 +135,11 @@ async def get_grades(student_id: int = 0):
         all.append(combined)
     return all
 
+@app.get("/member/id")
+async def get_member_id(discord_id: str):
+    response = supabase.table('User').select('id').eq('discordId', discord_id).execute()
+    return response.data[0]
+
 # ---------------------------POST Methods-------------------------------
 
 @app.post("/quizzes/")
@@ -211,12 +216,12 @@ async def create_student(id: str, name:str, server: str):
 # --------------------------- PUT Methods-------------------------------
 
 @app.put("/member")
-async def update_member_nick(before, after): # TODO: Specify 'Member' as pydantic field type
-    response = supabase.table('User').update({'name': after.nick}).eq('discordId', str(after.id)).execute()
-    return {'message': 'Member nickname updated'} # TODO: Update return message
+async def update_member_nick(nick: str, id: str):
+    response = supabase.table('User').update({'name': nick}).eq('discordId', id).execute()
+    return {'message': 'Nickname updated'}
 
 @app.put("/member")
-async def update_member_role(before, after): # TODO: Specify 'Member' as pydantic field type
-    response = supabase.table('Classroom_User').update({'role': after.role}).eq('discordId', str(after.role)).execute()
-    return {'message': 'Member role updated'} # TODO: Update return message
-    
+async def update_member_role(role: str, id: str): # TODO: Specify 'Member' as pydantic field type
+    response = supabase.table('Classroom_User').update({'role': role}).eq('discordId', id).execute()
+    return response
+    return {'message': 'Role updated'}
