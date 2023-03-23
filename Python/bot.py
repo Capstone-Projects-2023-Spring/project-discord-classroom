@@ -428,8 +428,7 @@ def run_discord_bot():
                 else:
                     message += f"{command.description}\n\n"
 
-        await ctx.author.send(message)
-
+            await ctx.author.send(message)
         await ctx.respond("Check Direct Messages for available commands")
 
     create = bot.create_group("create", "create school work")
