@@ -136,6 +136,11 @@ async def get_grades(student_id: int = 0):
         all.append(combined)
     return all
 
+@app.get("/member/id")
+async def get_member_id(discord_id: str):
+    response = supabase.table('User').select('id').eq('discordId', discord_id).execute()
+    return response.data[0]
+
 @app.get("/quiz/")
 async def get_quiz(channel_id: str = 0):
     if channel_id == 0:
@@ -233,3 +238,14 @@ async def create_student(id: str, name:str, server: str):
     supabase.table('Classroom_User').insert(list).execute()
     return {'message': 'Educator created'}
 
+# --------------------------- PUT Methods-------------------------------
+
+@app.put("/member")
+async def update_member_nick(nick: str, id: str):
+    response = supabase.table('User').update({'name': nick}).eq('discordId', id).execute()
+    return {'message': 'Nickname updated'}
+
+@app.put("/member")
+async def update_member_role(role: str, id: int, classroom_id: int):
+    response = supabase.table('Classroom_User').update({'role': role}).eq('id', id).eq('classroomId', classroom_id).execute()
+    return {'message': 'Role updated'}

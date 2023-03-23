@@ -116,14 +116,16 @@ def run_discord_bot():
 
     @bot.event
     async def on_member_update(before, after):
-        # Here we should update the Database User's Role
+        # Update member nickname in database
         if before.nick != after.nick:
-            try:
-                response = supabase.table('User').update({'name': after.nick}).eq('discordId', str(after.id)).execute()
-                print(f"Nickname updated for {after.name}")
-                
-            except Exception:
-                print("Unable to update user")
+            await update_member_nick(after.nick, str(after.id))
+
+        # Update member role in database
+        if before.role != after.role:
+            id = await get_member_id(after.discord_id).get('id')
+            server_id = str(after.guild.id)
+            classroom_id = await get_classroom_id(server_id)
+            await update_member_role(after.role, id, classroom_id)
             
     @bot.event
     async def on_guild_channel_create(channel):
