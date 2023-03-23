@@ -105,7 +105,10 @@ def run_discord_bot():
 
     @bot.event
     async def on_member_update(before, after):
-        await update_member(before, after)
+        if before.nick != after.nick:
+            await update_member_nick(before, after)
+        if before.role !+ after.role:
+            await update_member_role(before, after)
             
     @bot.event
     async def on_guild_channel_create(channel):
