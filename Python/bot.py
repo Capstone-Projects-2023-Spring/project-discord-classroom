@@ -412,14 +412,21 @@ def run_discord_bot():
             await ctx.respond("Only Students can ask private questions")
 
     @bot.slash_command(name='help', description='```/help``` sends command information to the user')
-    async def help(ctx):
-        message = "**Available Commands:**\n\n"
-        for command in bot.application_commands:
-            if command.name == "create":
-                for create in command.walk_commands():
-                    message += f"{create.description}\n\n"
-            else:
-                message += f"{command.description}\n\n"
+    async def help(ctx, command_name: str = None):
+        if command_name:
+            command = bot.get_application_command(command_name)
+            if not command:
+                await ctx.respond(f"There exists no command named '{command_name}'.")
+                return
+            await ctx.respond(f"**{command_name}:**\n{command.description}")
+        else:
+            message = "**Available Commands:**\n\n"
+            for command in bot.application_commands:
+                if command.name == "create":
+                    for create in command.walk_commands():
+                        message += f"{create.description}\n\n"
+                else:
+                    message += f"{command.description}\n\n"
 
         await ctx.author.send(message)
 
