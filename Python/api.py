@@ -215,7 +215,7 @@ async def update_member(name: before, name: after):
     if before.nick != after.nick:
         response = supabase.table('User').update({'name': after.nick}).eq('discordId', str(after.id)).execute()
 
-    if before.role != after.role
+    if before.role != after.role:
         response = supabase.table.('User').update({'role': after.role}).eq('discordId', str(after.role)).execute()
 
     return {'message': 'Member updated'} # TODO: Update return message
