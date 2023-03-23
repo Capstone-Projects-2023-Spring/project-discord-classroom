@@ -11,6 +11,7 @@ from cr_classes import Question
 import hashlib
 import pickle
 import asyncio
+import requests
 
 app = FastAPI(
     title="ClassroomBotAPI",
@@ -140,6 +141,29 @@ async def get_member_id(discord_id: str):
     response = supabase.table('User').select('id').eq('discordId', discord_id).execute()
     return response.data[0]
 
+@app.get("/quiz/")
+async def get_quiz(channel_id: str = 0):
+    if channel_id == 0:
+        return JSONResponse(status_code=404, content={"message": "Channel ID not given"})
+    response = supabase.table("Quiz").select('*').eq('channelId', channel_id).execute()
+    print(response)
+    return {'quiz': response.data[0]}
+
+@app.get("/questions/")
+async def get_question(quiz_id: int = 0):
+    if quiz_id == 0:
+        return JSONResponse(status_code=404, content={"message": "Quiz ID not given"})
+    response = supabase.table("Quiz").select('questions').eq('id', quiz_id).execute()
+    url = response.data[0]['questions']
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        data = response.json()
+        return data
+    else:
+        print('Failed to download JSON data.')
+        return {'message', "Error retrieving question"}
+
 # ---------------------------POST Methods-------------------------------
 
 @app.post("/quizzes/")
@@ -179,7 +203,8 @@ async def create_questions(questions: List[Question]):
 
     try:
         res = supabase.storage().from_('questions').upload(f"{hex_dig}.json", f".\\{hex_dig}.json", {"upsert": 'true'})
-        url = str(res.url)
+        public_url = supabase.storage().from_('questions').get_public_url(f"{hex_dig}.json")
+        url = public_url
     except StorageException:
         print("StorageException")
         url = public_url

@@ -10,7 +10,10 @@ import io
 import datetime
 from PyPDF2 import PdfReader
 import api
-import create_commands
+import create_quiz
+import openai
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
 
 if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:
@@ -26,14 +29,21 @@ def run_discord_bot():
     PREFIX = configData["Prefix"]
     SB_URL = configData["SupaUrl"]
     SB_KEY = configData["SupaKey"]
+    GPT_KEY = configData["GPTKey"]
 
     supabase: Client = create_client(SB_URL, SB_KEY)
+
+    openai.api_key = GPT_KEY
+    messages = [
+        {"role": "system", "content": "You are TutorGPT, a friendly and helpful AI that assists students with learning and understanding their school work."}
+    ]
 
     bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
     @bot.event
     async def on_ready():
         print(f'{bot.user} is now running!')
+        bot.add_view(create_quiz.StartQuiz())
 
     @bot.event
     async def on_guild_join(guild):
@@ -58,6 +68,7 @@ def run_discord_bot():
         everyone = guild.default_role
         await everyone.edit(permissions=everyone_perms)
 
+        upcoming = await guild.create_category("Upcoming")
         general = await guild.create_category("General")
         await guild.create_text_channel("General", category=general)
         await guild.create_text_channel("Announcements", category=general)
@@ -175,8 +186,7 @@ def run_discord_bot():
                 await ctx.send("Invalid file format, only PDF files are accepted.")
 
     @bot.slash_command(name ='discussion',
-                       description='Creates a new text channel with a prompt for discussion',
-                       help='!poll [channel name] [prompt]')
+                       description='Creates a new text channel with a prompt for discussion')
     async def discussion_create(ctx: discord.ApplicationContext, channel_name: str, prompt: str):
         # Verify existence of 'Discussion' category, or create it if it does not exist
         if discord.utils.get(ctx.guild.categories, name='Discussion'):
@@ -236,6 +246,7 @@ def run_discord_bot():
     @commands.has_any_role("Educator", "Assistant")
     async def attendance(ctx: discord.ApplicationContext, time: float = 5):
         user_roles = [role.name for role in ctx.author.roles]
+        guild_id = ctx.guild_id
         if  'Educator' in user_roles or 'Assistant' in user_roles:
             await ctx.respond("Now taking Attendance...")
             date = datetime.datetime.now().strftime("%m - %d - %y %I:%M %p")
@@ -243,6 +254,7 @@ def run_discord_bot():
             embed = discord.Embed(title="Attendance", description=f'{student_role.mention} React to this message to check into today\'s attendance')
             message = await ctx.send(embed=embed)
             await message.add_reaction('✅')
+            
             timeLeft = time * 60
             while timeLeft >= 0:
                 embed.title = f"Attendance - {int(timeLeft)}s"
@@ -259,6 +271,7 @@ def run_discord_bot():
                 if r.emoji == '✅':
                     async for user in r.users():
                         users.append(user)
+                        await increment_attendance(str(user.id))
             attended = []
             for user in users:
                 if not user.bot:
@@ -282,12 +295,20 @@ def run_discord_bot():
 
             response += "\n\nAbsent:\n" + '\n'.join(absent)
             await ctx.author.send(response)
+
+            # Update the 'total attendance' in the Supabase table
+            classroom_table = supabase.table('Classroom')
+            classroom_id = await api.get_classroom_id(guild_id)
+            _, error = await classroom_table.update({'total_attendance': supabase.sql('total_attendance + 1')}).single().where('class_id', '=', classroom_id).execute()
+            if error:
+                print(f"Error updating total attendance: {error}")
+
         else:
             student = supabase.table('User').select().eq('discordId', str(ctx.author.id)).single().execute()
             attendance = student.data['attendance']
             response = f"Your attendance count is {attendance}."
             await ctx.author.send(response)
-
+        
 
     @bot.slash_command(name='ta',
                        description='```/ta [user]``` - Gives/Removes the user the Assistant role')
@@ -395,18 +416,24 @@ def run_discord_bot():
             await ctx.respond("Only Students can ask private questions")
 
     @bot.slash_command(name='help', description='```/help``` sends command information to the user')
-    async def help(ctx):
-        message = "**Available Commands:**\n\n"
-        for command in bot.application_commands:
-            if command.name == "create":
-                for create in command.walk_commands():
-                    message += f"{create.description}\n\n"
-            else:
-                message += f"{command.description}\n\n"
+    async def help(ctx, command_name: str = None):
+        if command_name:
+            command = bot.get_application_command(command_name)
+            if not command:
+                await ctx.respond(f"There exists no command named '{command_name}'.")
+                return
+            await ctx.respond(f"**{command_name}:**\n{command.description}")
+        else:
+            message = "**Available Commands:**\n\n"
+            for command in bot.application_commands:
+                if command.name == "create":
+                    for create in command.walk_commands():
+                        message += f"{create.description}\n\n"
+                else:
+                    message += f"{command.description}\n\n"
 
-        await ctx.author.send(message)
-
-        await ctx.respond("Check Direct Messages for available commands")
+            await ctx.author.send(message)
+            await ctx.respond("Check Direct Messages for available commands")
 
     create = bot.create_group("create", "create school work")
 
@@ -414,15 +441,107 @@ def run_discord_bot():
                     description='```/create quiz [questions.json]``` - Creates a Quiz for students to take')
     async def quiz(ctx, questions: discord.Attachment = None):
 
-        modal = create_commands.create_quiz(bot=bot)
+        modal = create_quiz.create_quiz(bot=bot)
         await ctx.send_modal(modal)
 
-    @bot.slash_command(name='upload_file',
-                       description='```/upload file`` - User can follow link to upload file')
+    @bot.slash_command(name='upload_file', description='```/upload file`` - User can follow link to upload file')
     async def upload_file(ctx):
         await ctx.respond('https://singular-jalebi-124a92.netlify.app/')
 
-       
+    tutor = bot.create_group("tutor", "AI tutor for students")
+
+    @tutor.command(name='quiz', description='```/tutor quiz [subject] [grade]```')
+    async def quiz(ctx: discord.ApplicationContext, subject: str, grade: str):
+        nonlocal messages
+
+        await ctx.defer()
+
+        messages.append(
+            {"role": "user", "content": f"Give me {grade} grade quiz on {subject} with 5 questions in less than 150 words, hiding the answers"}
+        )
+        chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages, max_tokens=100)
+
+        reply = chat.choices[0].message.content
+
+        await ctx.respond(f"TutorGPT: {reply}")
+
+        # TODO: When student responds, their answers are checked for correctness
+
+
+    #assignment update
+    #goes through supabase and get data of specific dates
+    async def get_dates(start_date: str, due_date: str):
+        query = f"SELECT name, dueDate FROM ASSIGNMENT WHERE dueDate >= '{start_date}' AND dueDate <= '{due_date}'"
+        response = await supabase.raw(query)
+        return response['data'] 
+    
+    #clears specific category of all channels
+    async def clear_upcoming(category):
+        for channel in category.channels:
+            await channel.delete()
+    
+    #function to repace all voice channel icons with memo eoji
+    async def add_memo_icon(category):
+        guild = discord.utils.get(guild.categories, name = category)
+        
+         # Create a new image for the memo icon with the memo emoji
+        memo_emoji = chr(0x1F4DD)
+        memo_icon = Image.new('RGBA', (128, 128), (255, 255, 255, 0))
+        draw = ImageDraw.Draw(memo_icon)
+        draw.text((0, 0), memo_emoji, fill=(255, 255, 255, 255))
+
+        # Iterate over the voice channels in the category
+        for channel in category.voice_channels:
+            # Update channel permissions to deny all voice permissions
+            await channel.set_permissions(guild.student_role, connect=False, speak=False, stream=False, view_channel=True)
+           
+            # Load the original channel icon image
+            icon_bytes = await channel.icon.read()
+            icon_image = Image.open(BytesIO(icon_bytes))
+
+            # Add the memo icon to the original image
+            icon_image.alpha_composite(memo_icon)
+
+            # Convert the image to bytes and update the channel icon
+            buffer = BytesIO()
+            icon_image.save(buffer, format='PNG')
+            buffer.seek(0)
+            await channel.edit(icon=buffer) 
+    
+    #update slash command
+    @bot.slash_command(
+        name = 'update',
+        description = "Checks dates in database and updates the category with the upcoming assignments")
+    async def update_upcoming(ctx: discord.ApplicationContext, 
+                              start_date: discord.Option(str, description= "End date in the format YYYY-MM-DD"),
+                              end_date: discord.Option(str, description= "End date in the format YYYY-MM-DD")):
+        category = discord.utils.get(ctx.guild.categories, name = 'Upcoming')
+
+        #clears the current category so that it does not get bloated
+        await clear_upcoming(category)
+
+        #makes channel with the dates used
+        new_channel = await ctx.guild.create_voice_channel(
+            name = f"for {start_date} through {end_date}",
+            category = category
+        )
+        
+        #runs the get data function
+        date_data = await get_dates(start_date, end_date)
+
+        #iterates through all dates collected
+        for item in date_data:
+            channel_name = str(item['name'])
+
+            new_channel = await ctx.guild.create_voice_channel(
+                name = channel_name,
+                category = category
+            )
+
+            await ctx.respond(f"Added new assignment to upcoming: {new_channel.name}")
+        
+        #adds the icon for the channels
+        await add_memo_icon(category)
 
     # TESTING COMMANDS-------------------------------------------------------------------------------
     # @bot.command()
