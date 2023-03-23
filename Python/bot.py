@@ -110,7 +110,7 @@ def run_discord_bot():
             await update_member_nick(after.nick, str(after.id))
 
         # Update member role in database
-        if before.role !+ after.role:
+        if before.role != after.role:
             id = await get_member_id(after.discord_id).get('id')
             server_id = str(after.guild.id)
             classroom_id = await get_classroom_id(server_id)
