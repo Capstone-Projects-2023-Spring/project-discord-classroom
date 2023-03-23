@@ -12,6 +12,8 @@ from PyPDF2 import PdfReader
 import api
 import create_quiz
 import openai
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
 
 if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:
@@ -459,11 +461,46 @@ def run_discord_bot():
 
 
     #assignment update
+    #goes through supabase and get data of specific dates
     async def get_dates(start_date: str, due_date: str):
-        query = f"SELECT name, start_date, due_date FROM ASSIGNMENT WHERE start_date >= '{start_date}' AND due_date <= '{due_date}'"
+        query = f"SELECT name, dueDate FROM ASSIGNMENT WHERE dueDate >= '{start_date}' AND dueDate <= '{due_date}'"
         response = await supabase.raw(query)
         return response['data'] 
     
+    #clears specific category of all channels
+    async def clear_upcoming(category):
+        for channel in category.channels:
+            await channel.delete()
+    
+    #function to repace all voice channel icons with memo eoji
+    async def add_memo_icon(category):
+        guild = discord.utils.get(guild.categories, name = category)
+        
+         # Create a new image for the memo icon with the memo emoji
+        memo_emoji = chr(0x1F4DD)
+        memo_icon = Image.new('RGBA', (128, 128), (255, 255, 255, 0))
+        draw = ImageDraw.Draw(memo_icon)
+        draw.text((0, 0), memo_emoji, fill=(255, 255, 255, 255))
+
+        # Iterate over the voice channels in the category
+        for channel in category.voice_channels:
+            # Update channel permissions to deny all voice permissions
+            await channel.set_permissions(guild.student_role, connect=False, speak=False, stream=False, view_channel=True)
+           
+            # Load the original channel icon image
+            icon_bytes = await channel.icon.read()
+            icon_image = Image.open(BytesIO(icon_bytes))
+
+            # Add the memo icon to the original image
+            icon_image.alpha_composite(memo_icon)
+
+            # Convert the image to bytes and update the channel icon
+            buffer = BytesIO()
+            icon_image.save(buffer, format='PNG')
+            buffer.seek(0)
+            await channel.edit(icon=buffer) 
+    
+    #update slash command
     @bot.slash_command(
         name = 'update',
         description = "Checks dates in database and updates the category with the upcoming assignments")
@@ -472,8 +509,19 @@ def run_discord_bot():
                               end_date: discord.Option(str, description= "End date in the format YYYY-MM-DD")):
         category = discord.utils.get(ctx.guild.categories, name = 'Upcoming')
 
+        #clears the current category so that it does not get bloated
+        await clear_upcoming(category)
+
+        #makes channel with the dates used
+        new_channel = await ctx.guild.create_voice_channel(
+            name = f"for {start_date} through {end_date}",
+            category = category
+        )
+        
+        #runs the get data function
         date_data = await get_dates(start_date, end_date)
 
+        #iterates through all dates collected
         for item in date_data:
             channel_name = str(item['name'])
 
@@ -483,6 +531,9 @@ def run_discord_bot():
             )
 
             await ctx.respond(f"Added new assignment to upcoming: {new_channel.name}")
+        
+        #adds the icon for the channels
+        await add_memo_icon(category)
 
     # TESTING COMMANDS-------------------------------------------------------------------------------
     # @bot.command()
