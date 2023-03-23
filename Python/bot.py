@@ -462,19 +462,22 @@ def run_discord_bot():
 
     #assignment update
     #goes through supabase and get data of specific dates
-    async def get_dates(start_date: str, due_date: str):
-        query = f"SELECT name, dueDate FROM ASSIGNMENT WHERE dueDate >= '{start_date}' AND dueDate <= '{due_date}'"
-        response = await supabase.raw(query)
-        return response['data'] 
+    async def get_dates(due_date: str):
+        # query = f"SELECT name, dueDate FROM ASSIGNMENT WHERE dueDate >= '{start_date}' AND dueDate <= '{due_date}'"
+        query = supabase.table("Assignment").select('*').lte('dueDate', due_date).execute()
+        print(query)
+        return query.data
+        # response = await supabase.raw(query)
+        # return response['data']
     
     #clears specific category of all channels
-    async def clear_upcoming(category):
+    async def clear_upcoming(category: discord.CategoryChannel):
         for channel in category.channels:
             await channel.delete()
     
     #function to repace all voice channel icons with memo eoji
-    async def add_memo_icon(category):
-        guild = discord.utils.get(guild.categories, name = category)
+    async def add_memo_icon(ctx : discord.ApplicationContext, category):
+        guild = discord.utils.get(ctx.guild.categories, name = category)
         
          # Create a new image for the memo icon with the memo emoji
         memo_emoji = chr(0x1F4DD)
@@ -504,22 +507,24 @@ def run_discord_bot():
     @bot.slash_command(
         name = 'update',
         description = "Checks dates in database and updates the category with the upcoming assignments")
-    async def update_upcoming(ctx: discord.ApplicationContext, 
-                              start_date: discord.Option(str, description= "End date in the format YYYY-MM-DD"),
+    async def update_upcoming(ctx: discord.ApplicationContext,
                               end_date: discord.Option(str, description= "End date in the format YYYY-MM-DD")):
-        category = discord.utils.get(ctx.guild.categories, name = 'Upcoming')
+
+        category = discord.utils.get(ctx.guild.categories, name='Upcoming')
 
         #clears the current category so that it does not get bloated
         await clear_upcoming(category)
 
+        print("Upcoming channel cleared")
+
         #makes channel with the dates used
-        new_channel = await ctx.guild.create_voice_channel(
-            name = f"for {start_date} through {end_date}",
-            category = category
-        )
+        # new_channel = await ctx.guild.create_voice_channel(
+        #     name = f"for {start_date} through {end_date}",
+        #     category = category
+        # )
         
         #runs the get data function
-        date_data = await get_dates(start_date, end_date)
+        date_data = await get_dates(end_date)
 
         #iterates through all dates collected
         for item in date_data:
@@ -533,7 +538,7 @@ def run_discord_bot():
             await ctx.respond(f"Added new assignment to upcoming: {new_channel.name}")
         
         #adds the icon for the channels
-        await add_memo_icon(category)
+        await add_memo_icon(ctx, category)
 
     # TESTING COMMANDS-------------------------------------------------------------------------------
     # @bot.command()
