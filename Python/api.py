@@ -221,7 +221,6 @@ async def update_member_nick(nick: str, id: str):
     return {'message': 'Nickname updated'}
 
 @app.put("/member")
-async def update_member_role(role: str, id: str): # TODO: Specify 'Member' as pydantic field type
-    response = supabase.table('Classroom_User').update({'role': role}).eq('discordId', id).execute()
-    return response
+async def update_member_role(role: str, id: int, classroom_id: int):
+    response = supabase.table('Classroom_User').update({'role': role}).eq('id', id).eq('classroomId', classroom_id).execute()
     return {'message': 'Role updated'}
