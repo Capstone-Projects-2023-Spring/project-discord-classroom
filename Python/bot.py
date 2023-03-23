@@ -105,10 +105,16 @@ def run_discord_bot():
 
     @bot.event
     async def on_member_update(before, after):
+        # Update member nickname in database
         if before.nick != after.nick:
-            await update_member_nick(before, after)
+            await update_member_nick(after.nick, str(after.id))
+
+        # Update member role in database
         if before.role !+ after.role:
-            await update_member_role(before, after)
+            id = await get_member_id(after.discord_id).get('id')
+            server_id = str(after.guild.id)
+            classroom_id = await get_classroom_id(server_id)
+            await update_member_role(after.role, id, classroom_id)
             
     @bot.event
     async def on_guild_channel_create(channel):
