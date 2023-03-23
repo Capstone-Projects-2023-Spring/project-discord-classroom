@@ -211,7 +211,7 @@ async def create_student(id: str, name:str, server: str):
 # --------------------------- PUT Methods-------------------------------
 
 @app.put("/member")
-async def update_member(before: name, after: name):
+async def update_member(before, after): # TODO: Specify 'Member' as pydantic field type
     if before.nick != after.nick:
         response = supabase.table('User').update({'name': after.nick}).eq('discordId', str(after.id)).execute()
 
