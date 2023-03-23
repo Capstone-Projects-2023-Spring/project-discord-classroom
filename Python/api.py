@@ -211,11 +211,11 @@ async def create_student(id: str, name:str, server: str):
 # --------------------------- PUT Methods-------------------------------
 
 @app.put("/member")
-async def update_member(name: before, name: after):
+async def update_member(before: name, after: name):
     if before.nick != after.nick:
         response = supabase.table('User').update({'name': after.nick}).eq('discordId', str(after.id)).execute()
 
     if before.role != after.role:
-        response = supabase.table.('User').update({'role': after.role}).eq('discordId', str(after.role)).execute()
+        response = supabase.table('Classroom_User').update({'role': after.role}).eq('discordId', str(after.role)).execute()
 
     return {'message': 'Member updated'} # TODO: Update return message
