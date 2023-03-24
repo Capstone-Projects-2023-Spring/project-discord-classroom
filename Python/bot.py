@@ -247,7 +247,7 @@ def run_discord_bot():
     async def attendance(ctx: discord.ApplicationContext, time: float = 5):
         user_roles = [role.name for role in ctx.author.roles]
         guild_id = ctx.guild_id
-        if  'Educator' in user_roles or 'Assistant' in user_roles:
+        if 'Educator' in user_roles or 'Assistant' in user_roles:
             await ctx.respond("Now taking Attendance...")
             date = datetime.datetime.now().strftime("%m - %d - %y %I:%M %p")
             student_role = discord.utils.get(ctx.guild.roles, name="Student")
@@ -298,7 +298,7 @@ def run_discord_bot():
 
             # Update the 'total attendance' in the Supabase table
             classroom_table = supabase.table('Classroom')
-            classroom_id = await api.get_classroom_id(guild_id)
+            classroom_id = await api.get_classroom_id(str(guild_id))
             _, error = await classroom_table.update({'total_attendance': supabase.sql('total_attendance + 1')}).single().where('class_id', '=', classroom_id).execute()
             if error:
                 print(f"Error updating total attendance: {error}")
@@ -399,21 +399,76 @@ def run_discord_bot():
     async def private(ctx: discord.ApplicationContext, question: str):
         student_role = discord.utils.get(ctx.guild.roles, name="Student")
         if student_role in ctx.author.roles:
-            user = ctx.author.mention
-            u = ctx.author.nick
-            response = user
+            user_mention = ctx.author.mention
+            student_id = str(ctx.author.id)
             q = discord.utils.get(ctx.guild.categories, name="Questions")
             if q is None:
                 q = await ctx.guild.create_category("Questions")
-            if u is None:
-                u = ctx.author
-            private_channel = await ctx.guild.create_text_channel(f"Private-{u}", category=q)
+
+            channels = q.channels
+
+            for channel in channels:
+                if channel.name == f"private-{student_id}":
+                    await ctx.respond(f"{user_mention} You already have a private question open.", delete_after=3)
+                    return
+
+            private_role = await ctx.guild.create_role(name=f"{student_id}")
+
+            await ctx.author.add_roles(private_role)
+
+            all_roles = ctx.guild.roles
+
+            ow = {}
+
+            for role in all_roles:
+                ow[role] = discord.PermissionOverwrite(read_messages=False)
+
+            overwrites = {
+                ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                private_role: discord.PermissionOverwrite(read_messages=True),
+                discord.utils.get(ctx.guild.roles, name="Educator"): discord.PermissionOverwrite(read_messages=True),
+                discord.utils.get(ctx.guild.roles, name="Assistant"): discord.PermissionOverwrite(read_messages=True)
+            }
+
+            ow.update(overwrites)
+
+            private_channel = await ctx.guild.create_text_channel(f"Private-{student_id}", category=q, overwrites=ow)
 
             await ctx.respond("Private question created", delete_after=3)
 
-            await private_channel.send(f"{user} asked: {question}")
+            await private_channel.send(f"{user_mention} asked: {question}")
         else:
             await ctx.respond("Only Students can ask private questions")
+
+    @bot.slash_command(name='close', description='```/close``` deletes a private question channel')
+    async def close(ctx: discord.ApplicationContext):
+        channel_name = ctx.channel.name
+        category = ctx.channel.category.name
+        if category == "Questions" and 'private' in channel_name:
+            embed = discord.Embed(title="Close this question?", color=0x00FF00)
+            embed.add_field(name="Are you sure you want to close this question?", value="✅ Yes\n❌ No")
+            interaction: discord.Interaction = await ctx.respond(embed=embed)
+            message: discord.Message = await interaction.original_response()
+            await message.add_reaction("✅")
+            await message.add_reaction("❌")
+
+            def check(reaction, user):
+                return user == ctx.author and reaction.message.id == message.id and str(reaction.emoji) in ["✅", "❌"]
+
+            while True:
+                reaction, user = await bot.wait_for('reaction_add', check=check)
+
+                # Assign role to user who reacted
+                if reaction.emoji == "✅":
+                    student_id = ctx.channel.name.split("-")[1]
+                    created_role = discord.utils.get(ctx.guild.roles, name=f"{student_id}")
+                    await created_role.delete()
+                    await ctx.channel.delete(reason=f"Closed by {ctx.author.display_name}")
+                if reaction.emoji == "❌":
+                    await message.delete()
+        else:
+            await ctx.respond("You cannot close this channel", delete_after=3)
+
 
     @bot.slash_command(name='help', description='```/help``` sends command information to the user')
     async def help(ctx, command_name: str = None):
