@@ -224,7 +224,7 @@ def run_discord_bot():
 
         # Create the poll embed
         embed = discord.Embed(title=topic, description=' '.join(
-            [f'{chr(0x1f1e6 + i)} ⬛  {option}\n' for i, option in enumerate(options)]))
+            [f'{chr(0x1f1e6 + i)} {option}\n' for i, option in enumerate(options)]))
 
         await ctx.respond("Poll Created")
 
