@@ -235,7 +235,36 @@ def run_discord_bot():
         for i in range(len(options)):
             await message.add_reaction(chr(0x1f1e6 + i))
         
-        show_poll_results(embed, options, message)
+        
+        #show_poll_results(embed, options, message)
+
+        def check(reaction, user):
+            return user != bot.user and reaction.message.id == message.id and str(reaction.emoji) in [
+                chr(127462 + i) for i in range(len(options))]
+        while True:
+            reaction, user = await bot.wait_for('reaction_add', check=check)
+
+            # nro = number of reacton options (i.e., A, B, C would be 3)
+            nro = len(options) 
+            print(f"total number of options: {nro}")
+            # nur = number of user reacions (i.e., if 3 people reaction, it would be 3)
+            nur = await reaction.users().flatten()
+            num_users = len(nur) - 1
+            print(f"{num_users} users reacted to the message")
+            for i in range(len(options)):
+                if reaction.emoji == chr(127462 + i): 
+                    # 1. Have nro & nur variables ready / figure them out if needed
+                    #       - nur should include the new reaction
+                    # 2. For each reaction option
+                    #       - calculate numUserReactionsForOption (e.g., 1 person reacted to A)
+                    totalUsers = await reaction.users().flatten()
+                    numReactionsForOption = len(totalUsers) - 1
+                    print(f"option{i + 1} reaction total: {numReactionsForOption}")  
+                    #       - calculate numUserReactionsForOption / nur percentage (e.g., 1/3 = 33%)
+                    reactionPercentage = (numReactionsForOption / num_users) * 100
+                    print(f"option{i + 1}%: {reactionPercentage}")
+                    #       - for now, just print the percentage?
+                    #       - update the code block with the correct number of emojis for the percentge
 
     def show_poll_results(emb, options, message):
         if emb.title != 'Poll':
