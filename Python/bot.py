@@ -224,9 +224,25 @@ def run_discord_bot():
         if option8:
             options.append(option8)
 
+        #gets the member count excluding bots
+        member_count = 0
+        for guild in bot.guilds:
+            for member in guild.members:
+                if not member.bot:
+                    member_count += 1
+    
+        # Print the total number of members in the server
+        print(f'Total members in server: {member_count}')
+
+        #box area created for reactions
+        boxes = []
+        for i in range(member_count):
+            boxes.append("⬛")
+        boxes = ''.join(boxes)
+
         # Create the poll embed
         embed = discord.Embed(title=topic, description=' '.join(
-            [f'{chr(0x1f1e6 + i)} {option}\n' for i, option in enumerate(options)]))
+            [f'{chr(0x1f1e6 + i)} {option}\n {boxes}\n' for i, option in enumerate(options)]))
 
         await ctx.respond("Poll Created")
 
@@ -238,6 +254,7 @@ def run_discord_bot():
         
         #show_poll_results(embed, options, message)
 
+        num_users = 0
         def check(reaction, user):
             return user != bot.user and reaction.message.id == message.id and str(reaction.emoji) in [
                 chr(127462 + i) for i in range(len(options))]
@@ -247,9 +264,7 @@ def run_discord_bot():
             # nro = number of reacton options (i.e., A, B, C would be 3)
             nro = len(options) 
             print(f"total number of options: {nro}")
-            # nur = number of user reacions (i.e., if 3 people reaction, it would be 3)
-            nur = await reaction.users().flatten()
-            num_users = len(nur) - 1
+            num_users += 1
             print(f"{num_users} users reacted to the message")
             for i in range(len(options)):
                 if reaction.emoji == chr(127462 + i): 
@@ -263,7 +278,7 @@ def run_discord_bot():
                     #       - calculate numUserReactionsForOption / nur percentage (e.g., 1/3 = 33%)
                     reactionPercentage = (numReactionsForOption / num_users) * 100
                     print(f"option{i + 1}%: {reactionPercentage}")
-                    #       - for now, just print the percentage?
+                    
                     #       - update the code block with the correct number of emojis for the percentge
 
     def show_poll_results(emb, options, message):
