@@ -461,47 +461,33 @@ def run_discord_bot():
 
 
     #assignment update
-    #goes through supabase and get data of specific dates
-    async def get_dates(due_date: str):
+    #goes through supabase assignments and get data of specific dates
+    async def get_dates_assignments(due_date: str):
         # query = f"SELECT name, dueDate FROM ASSIGNMENT WHERE dueDate >= '{start_date}' AND dueDate <= '{due_date}'"
         query = supabase.table("Assignment").select('*').lte('dueDate', due_date).execute()
-        print(query)
+        #print(query)
         return query.data
-        # response = await supabase.raw(query)
-        # return response['data']
+     
+
+    #gets quizz data from supabase
+    async def get_dates_quiz(due_date:str):
+        query = supabase.table("Quiz").select('*').lte('dueDate', due_date).execute()
+        return query.data
     
     #clears specific category of all channels
     async def clear_upcoming(category: discord.CategoryChannel):
         for channel in category.channels:
             await channel.delete()
     
-    #function to repace all voice channel icons with memo eoji
-    async def add_memo_icon(ctx : discord.ApplicationContext, category):
+    #function to lock, but keep visible
+    async def lock_but_keep_vis(ctx : discord.ApplicationContext, category):
         guild = discord.utils.get(ctx.guild.categories, name = category)
         
-         # Create a new image for the memo icon with the memo emoji
-        memo_emoji = chr(0x1F4DD)
-        memo_icon = Image.new('RGBA', (128, 128), (255, 255, 255, 0))
-        draw = ImageDraw.Draw(memo_icon)
-        draw.text((0, 0), memo_emoji, fill=(255, 255, 255, 255))
-
         # Iterate over the voice channels in the category
         for channel in category.voice_channels:
             # Update channel permissions to deny all voice permissions
-            await channel.set_permissions(guild.student_role, connect=False, speak=False, stream=False, view_channel=True)
+            await channel.set_permissions(guild.default_role, connect=False, speak=False, stream=False, view_channel=True)
            
-            # Load the original channel icon image
-            icon_bytes = await channel.icon.read()
-            icon_image = Image.open(BytesIO(icon_bytes))
-
-            # Add the memo icon to the original image
-            icon_image.alpha_composite(memo_icon)
-
-            # Convert the image to bytes and update the channel icon
-            buffer = BytesIO()
-            icon_image.save(buffer, format='PNG')
-            buffer.seek(0)
-            await channel.edit(icon=buffer) 
     
     #update slash command
     @bot.slash_command(
@@ -517,28 +503,37 @@ def run_discord_bot():
 
         print("Upcoming channel cleared")
 
-        #makes channel with the dates used
-        # new_channel = await ctx.guild.create_voice_channel(
-        #     name = f"for {start_date} through {end_date}",
-        #     category = category
-        # )
-        
-        #runs the get data function
-        date_data = await get_dates(end_date)
+    
+        #runs the get assignment data function
+        assignment_date_data = await get_dates_assignments(end_date)
 
-        #iterates through all dates collected
-        for item in date_data:
+        #runs the get date data for quizzes
+        quiz_date_data = await get_dates_quiz(end_date)
+
+         #iterates through all dates collected for quizzes
+        for item in quiz_date_data:
             channel_name = str(item['name'])
 
             new_channel = await ctx.guild.create_voice_channel(
-                name = channel_name,
+                name = f"📝| {channel_name}",
+                category = category
+            )
+
+            await ctx.respond(f"Added new quiz to upcoming: {new_channel.name}")
+        
+        #iterates through all dates collected for assignments
+        for item in assignment_date_data:
+            channel_name = str(item['name'])
+
+            new_channel = await ctx.guild.create_voice_channel(
+                name = f"📖| {channel_name}",
                 category = category
             )
 
             await ctx.respond(f"Added new assignment to upcoming: {new_channel.name}")
         
         #adds the icon for the channels
-        await add_memo_icon(ctx, category)
+        await lock_but_keep_vis(ctx, category)
 
     # TESTING COMMANDS-------------------------------------------------------------------------------
     # @bot.command()
