@@ -6,7 +6,7 @@ import json
 import os
 from pydantic import BaseModel
 from typing import List
-from cr_classes import Quiz
+from cr_classes import Quiz, Assignment
 from cr_classes import Question
 import hashlib
 import pickle
@@ -164,6 +164,14 @@ async def get_question(quiz_id: int = 0):
         print('Failed to download JSON data.')
         return {'message', "Error retrieving question"}
 
+@app.get("/Assignment/")
+async def get_assignment(channel_id: str = 0):
+    if channel_id == 0:
+        return JSONResponse(status_code=404, content={"message": "Channel ID not given"})
+    response = supabase.table("Assignment").select('*').eq('channelId', channel_id).execute()
+    print("response", response)
+    return {'Assignment': response.data[0]}
+
 # ---------------------------POST Methods-------------------------------
 
 @app.post("/quizzes/")
@@ -237,6 +245,20 @@ async def create_student(id: str, name:str, server: str):
     list = {'classroomId': classroom_id, 'userId': user_id, 'role': "Student"}
     supabase.table('Classroom_User').insert(list).execute()
     return {'message': 'Educator created'}
+
+@app.post("/Assignments/")
+async def create_assignment(assignment: Assignment, server_id: str):
+    list = {'name': assignment.name, 'startDate': assignment.start, 'dueDate': assignment.due, 'channelId': assignment.channel, 'points': assignment.points}
+
+    res = supabase.table("Assignment").insert(list).execute()
+
+    response = await get_classroom_id(server_id)
+    classroom_id = response['id']
+    assignment_id = res.data[0]['id']
+    list = {'classroomId': classroom_id, 'taskTypeId': assignment_id, 'taskType': "Assignment"}
+    supabase.table("Classroom_Task").insert(list).execute()
+
+    return {"message": "assignment created successfully"}
 
 # --------------------------- PUT Methods-------------------------------
 
