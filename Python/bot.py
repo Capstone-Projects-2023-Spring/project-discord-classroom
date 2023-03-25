@@ -10,10 +10,11 @@ import io
 import datetime
 from PyPDF2 import PdfReader
 import api
-import create_quiz
+import create_quiz, create_assignment
 import openai
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
+from cr_classes import Assignment
 
 if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:
@@ -597,6 +598,43 @@ def run_discord_bot():
         
         #adds the icon for the channels
         await lock_but_keep_vis(ctx, category)
+
+
+    @bot.slash_command(name='assignment',
+                        description='```/assignment [start_date] [due_date] [points] (pdf)``` - Creates assignments for students')
+    async def assignment(ctx: discord.ApplicationContext, name: str, startdate: str, duedate: str, points: int, file: discord.Attachment = None):
+        
+        category = discord.utils.get(ctx.guild.categories, name='Assignments')
+        if category is None:
+            category = await ctx.guild.create_category('Assignments')
+
+        assignment_channel = discord.utils.get(category.channels, name=name)
+        if assignment_channel is None:
+            assignment_channel = await ctx.guild.create_text_channel(name=name, category=category)
+
+
+        to_send = ("**```diff\n+ Assignment Name "+ name +"```**", "\n**```diff\n+ Points "+ str(points)+"```**",
+        "\n**```diff\n+ Start Date: "+ startdate+"```**" +"\n**```diff\n- Due Date: "+ duedate+"```**")
+        full_message = "".join(to_send)
+        await assignment_channel.send(full_message)
+
+    
+        if file:
+            file_data = await file.read()
+            await assignment_channel.send(file=discord.File(io.BytesIO(file_data), filename=file.filename))
+            await ctx.respond("Assignment created successfully!")
+
+        else:
+            modal = create_assignment.assignment_modal(title=name, chan = assignment_channel)
+            await ctx.send_modal(modal)
+            
+
+        assignment_dict = {'name': name, 'start': startdate, 'due':duedate, 'points': points}
+        new_assignment = Assignment(name=assignment_dict['name'], start=assignment_dict['start'],
+                                    due=assignment_dict['due'], points=assignment_dict['points'],
+                                    classroom=ctx.guild_id, channel=assignment_channel.id)
+
+        await api.create_assignment(new_assignment, server_id=ctx.guild_id)
 
     # TESTING COMMANDS-------------------------------------------------------------------------------
     # @bot.command()

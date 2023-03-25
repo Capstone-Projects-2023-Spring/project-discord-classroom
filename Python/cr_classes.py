@@ -19,3 +19,11 @@ class Question(BaseModel):
     answer: str
     wrong: List[str]
     points: float
+
+class Assignment(BaseModel):
+    name: str
+    start: str
+    due: str
+    points: int
+    classroom: str
+    channel: str
