@@ -243,32 +243,21 @@ def run_discord_bot():
         for i in range(len(options)):
             await message.add_reaction(chr(0x1f1e6 + i))
 
-        num_total_reactions = 0
+        num_total_reactions = [0]
 
-        # check that the reaction is from a user, not a bot
-        def check(reaction, user):
-            return user != bot.user and reaction.message.id == message.id and str(reaction.emoji) in [
-                chr(127462 + i) for i in range(len(options))]
-        while True:
-            reaction, user = await bot.wait_for('reaction_add', check=check)
-            reactionPercentage = 0
-
-            # nro = number of reacton options (i.e., A, B, C would be 3)
-            nro = len(options)
-            print(f"total number of options: {nro}")
-
-            num_total_reactions += 1
-            print(f"{num_total_reactions} users reacted to the message")
+        async def update_poll_data(change_to_reactions, num_total_reactions, reaction):
+            num_total_reactions[0] += change_to_reactions
+            print(f"{num_total_reactions[0]} users reacted to the message")
 
             new_description_for_option_idx = [None] * len(options)
             for i in range(len(options)):
                 # If the reaction emoji corresponds to options[i],
-                #   increment num_reactions_for_option_idx[i]
+                # update num_reactions_for_option_idx[i]
                 if reaction.emoji == chr(127462 + i):
-                    num_reactions_for_option_idx[i] += 1
+                    num_reactions_for_option_idx[i] += change_to_reactions
 
                 print(f"option{i + 1} reaction total: {num_reactions_for_option_idx[i]}")  
-                reactionPercentage = (num_reactions_for_option_idx[i] / num_total_reactions) * 100
+                reactionPercentage = round((num_reactions_for_option_idx[i] / num_total_reactions[0]) * 100) if num_total_reactions[0] > 0 else 0
                 print(f"option{i + 1}%: {reactionPercentage}")
 
                 boxesForOption = boxes.copy()
@@ -280,9 +269,22 @@ def run_discord_bot():
 
             embed.description = ' '.join(new_description_for_option_idx)
             await message.edit(embed=embed)
-                    
-            
-                    
+
+        # check that the reaction is from a user, not a bot
+        def check(reaction, user):
+            return user != bot.user and reaction.message.id == message.id and str(reaction.emoji) in [
+                chr(127462 + i) for i in range(len(options))]
+        
+        async def on_reaction_add(reaction, user):
+            if check(reaction, user):
+                await update_poll_data(1, num_total_reactions, reaction)
+
+        async def on_reaction_remove(reaction, user):
+            await update_poll_data(-1, num_total_reactions, reaction)
+
+        #bot waits for reaction event from user
+        bot.add_listener(on_reaction_add, 'on_reaction_add')
+        bot.add_listener(on_reaction_remove, 'on_reaction_remove')
 
     async def increment_attendance(discord_id:str):
         student = supabase.table('User').select().eq('discord_id', discord_id).single().execute()
