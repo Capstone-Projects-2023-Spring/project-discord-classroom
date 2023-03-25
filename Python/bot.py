@@ -118,14 +118,14 @@ def run_discord_bot():
     async def on_member_update(before, after):
         # Update member nickname in database
         if before.nick != after.nick:
-            await update_member_nick(after.nick, str(after.id))
+            await api.update_member_nick(after.nick, str(after.id))
 
         # Update member role in database
         if before.role != after.role:
-            id = await get_member_id(after.discord_id).get('id')
+            id = await api.get_member_id(after.discord_id).get('id')
             server_id = str(after.guild.id)
-            classroom_id = await get_classroom_id(server_id)
-            await update_member_role(after.role, id, classroom_id)
+            classroom_id = await api.get_classroom_id(server_id)
+            await api.update_member_role(after.role, id, classroom_id)
             
     @bot.event
     async def on_guild_channel_create(channel):
@@ -512,15 +512,41 @@ def run_discord_bot():
         await ctx.defer()
 
         messages.append(
-            {"role": "user", "content": f"Give me {grade} grade quiz on {subject} with 5 questions in less than 150 words, hiding the answers"}
+            {"role": "user", "content": f"Give me a {grade} grade quiz on {subject} with 5 questions in less than 150 words, hiding the answers"}
         )
-        chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages, max_tokens=100)
+        chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages, max_tokens=150)
 
         reply = chat.choices[0].message.content
 
-        await ctx.respond(f"TutorGPT: {reply}")
+        user = ctx.author
 
-        # TODO: When student responds, their answers are checked for correctness
+        await ctx.respond("Check DMs", delete_after=3)
+        await user.send(f"TutorGPT: {reply}")
+
+        print(reply)
+
+        messages.append({"role": "assistant", "content": reply})
+
+        def check(message):
+            return message.author == user and message.channel == user.dm_channel
+
+        response = await bot.wait_for('message', check=check)
+
+        content = response.content
+        content += "\nNow show me the answers without repeating the questions."
+
+        print(content)
+
+        messages.append(
+            {"role": "user", "content": content}
+        )
+
+        chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages, max_tokens=150)
+        reply = chat.choices[0].message.content
+
+        await user.send(f"TutorGPT: {reply}")
+
+        messages.append({"role": "assistant", "content": reply})
 
 
     #assignment update
