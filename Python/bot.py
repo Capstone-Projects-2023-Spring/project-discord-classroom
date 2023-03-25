@@ -224,25 +224,17 @@ def run_discord_bot():
         if option8:
             options.append(option8)
 
-        #gets the member count excluding bots
-        member_count = 0
-        for guild in bot.guilds:
-            for member in guild.members:
-                if not member.bot:
-                    member_count += 1
-    
-        # Print the total number of members in the server
-        print(f'Total members in server: {member_count}')
+        num_reactions_for_option_idx = [0] * len(options)
 
         #box area created for reactions
         boxes = []
-        for i in range(member_count):
+        for i in range(10):
             boxes.append("⬛")
-        boxes = ''.join(boxes)
+        boxesStr = ''.join(boxes)
 
         # Create the poll embed
         embed = discord.Embed(title=topic, description=' '.join(
-            [f'{chr(0x1f1e6 + i)} {option}\n {boxes}\n' for i, option in enumerate(options)]))
+            [f'{chr(0x1f1e6 + i)} {option}\n `{boxesStr}` {0} (0%)\n' for i, option in enumerate(options)]))
 
         await ctx.respond("Poll Created")
 
@@ -250,47 +242,47 @@ def run_discord_bot():
         message = await ctx.send(embed=embed)
         for i in range(len(options)):
             await message.add_reaction(chr(0x1f1e6 + i))
-        
-        
-        #show_poll_results(embed, options, message)
 
-        num_users = 0
+        num_total_reactions = 0
+
+        # check that the reaction is from a user, not a bot
         def check(reaction, user):
             return user != bot.user and reaction.message.id == message.id and str(reaction.emoji) in [
                 chr(127462 + i) for i in range(len(options))]
         while True:
             reaction, user = await bot.wait_for('reaction_add', check=check)
+            reactionPercentage = 0
 
             # nro = number of reacton options (i.e., A, B, C would be 3)
-            nro = len(options) 
+            nro = len(options)
             print(f"total number of options: {nro}")
-            num_users += 1
-            print(f"{num_users} users reacted to the message")
+
+            num_total_reactions += 1
+            print(f"{num_total_reactions} users reacted to the message")
+
+            new_description_for_option_idx = [None] * len(options)
             for i in range(len(options)):
-                if reaction.emoji == chr(127462 + i): 
-                    # 1. Have nro & nur variables ready / figure them out if needed
-                    #       - nur should include the new reaction
-                    # 2. For each reaction option
-                    #       - calculate numUserReactionsForOption (e.g., 1 person reacted to A)
-                    totalUsers = await reaction.users().flatten()
-                    numReactionsForOption = len(totalUsers) - 1
-                    print(f"option{i + 1} reaction total: {numReactionsForOption}")  
-                    #       - calculate numUserReactionsForOption / nur percentage (e.g., 1/3 = 33%)
-                    reactionPercentage = (numReactionsForOption / num_users) * 100
-                    print(f"option{i + 1}%: {reactionPercentage}")
+                # If the reaction emoji corresponds to options[i],
+                #   increment num_reactions_for_option_idx[i]
+                if reaction.emoji == chr(127462 + i):
+                    num_reactions_for_option_idx[i] += 1
+
+                print(f"option{i + 1} reaction total: {num_reactions_for_option_idx[i]}")  
+                reactionPercentage = (num_reactions_for_option_idx[i] / num_total_reactions) * 100
+                print(f"option{i + 1}%: {reactionPercentage}")
+
+                boxesForOption = boxes.copy()
+                for j in range(round(reactionPercentage / 10)):
+                    boxesForOption[j] = "👍"
+                boxesForOptionStr = ''.join(boxesForOption)
+                
+                new_description_for_option_idx[i] = f'{chr(0x1f1e6 + i)} {options[i]}\n `{boxesForOptionStr}` {num_reactions_for_option_idx[i]} ({reactionPercentage}%)\n'
+
+            embed.description = ' '.join(new_description_for_option_idx)
+            await message.edit(embed=embed)
                     
-                    #       - update the code block with the correct number of emojis for the percentge
-
-    def show_poll_results(emb, options, message):
-        if emb.title != 'Poll':
-            raise ValueError('Message does not contain a poll embed')
-        poll_data = {}
-        for option in options:
-            poll_data["option"] = option
-        for reaction in message.reactions:
-            poll_data[reaction.emoji] = reaction.count - 1
             
-
+                    
 
     async def increment_attendance(discord_id:str):
         student = supabase.table('User').select().eq('discord_id', discord_id).single().execute()
