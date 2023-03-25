@@ -12,6 +12,8 @@ from PyPDF2 import PdfReader
 import api
 import create_quiz
 import openai
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
 
 if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:
@@ -66,6 +68,7 @@ def run_discord_bot():
         everyone = guild.default_role
         await everyone.edit(permissions=everyone_perms)
 
+        upcoming = await guild.create_category("Upcoming")
         general = await guild.create_category("General")
         await guild.create_text_channel("General", category=general)
         await guild.create_text_channel("Announcements", category=general)
@@ -113,14 +116,16 @@ def run_discord_bot():
 
     @bot.event
     async def on_member_update(before, after):
-        # Here we should update the Database User's Role
+        # Update member nickname in database
         if before.nick != after.nick:
-            try:
-                response = supabase.table('User').update({'name': after.nick}).eq('discordId', str(after.id)).execute()
-                print(f"Nickname updated for {after.name}")
-                
-            except Exception:
-                print("Unable to update user")
+            await update_member_nick(after.nick, str(after.id))
+
+        # Update member role in database
+        if before.role != after.role:
+            id = await get_member_id(after.discord_id).get('id')
+            server_id = str(after.guild.id)
+            classroom_id = await get_classroom_id(server_id)
+            await update_member_role(after.role, id, classroom_id)
             
     @bot.event
     async def on_guild_channel_create(channel):
@@ -241,13 +246,15 @@ def run_discord_bot():
     @commands.has_any_role("Educator", "Assistant")
     async def attendance(ctx: discord.ApplicationContext, time: float = 5):
         user_roles = [role.name for role in ctx.author.roles]
-        if  'Educator' in user_roles or 'Assistant' in user_roles:
+        guild_id = ctx.guild_id
+        if 'Educator' in user_roles or 'Assistant' in user_roles:
             await ctx.respond("Now taking Attendance...")
             date = datetime.datetime.now().strftime("%m - %d - %y %I:%M %p")
             student_role = discord.utils.get(ctx.guild.roles, name="Student")
             embed = discord.Embed(title="Attendance", description=f'{student_role.mention} React to this message to check into today\'s attendance')
             message = await ctx.send(embed=embed)
             await message.add_reaction('✅')
+            
             timeLeft = time * 60
             while timeLeft >= 0:
                 embed.title = f"Attendance - {int(timeLeft)}s"
@@ -264,6 +271,7 @@ def run_discord_bot():
                 if r.emoji == '✅':
                     async for user in r.users():
                         users.append(user)
+                        await increment_attendance(str(user.id))
             attended = []
             for user in users:
                 if not user.bot:
@@ -287,12 +295,20 @@ def run_discord_bot():
 
             response += "\n\nAbsent:\n" + '\n'.join(absent)
             await ctx.author.send(response)
+
+            # Update the 'total attendance' in the Supabase table
+            classroom_table = supabase.table('Classroom')
+            classroom_id = await api.get_classroom_id(str(guild_id))
+            _, error = await classroom_table.update({'total_attendance': supabase.sql('total_attendance + 1')}).single().where('class_id', '=', classroom_id).execute()
+            if error:
+                print(f"Error updating total attendance: {error}")
+
         else:
             student = supabase.table('User').select().eq('discordId', str(ctx.author.id)).single().execute()
             attendance = student.data['attendance']
             response = f"Your attendance count is {attendance}."
             await ctx.author.send(response)
-
+        
 
     @bot.slash_command(name='ta',
                        description='```/ta [user]``` - Gives/Removes the user the Assistant role')
@@ -383,35 +399,96 @@ def run_discord_bot():
     async def private(ctx: discord.ApplicationContext, question: str):
         student_role = discord.utils.get(ctx.guild.roles, name="Student")
         if student_role in ctx.author.roles:
-            user = ctx.author.mention
-            u = ctx.author.nick
-            response = user
+            user_mention = ctx.author.mention
+            student_id = str(ctx.author.id)
             q = discord.utils.get(ctx.guild.categories, name="Questions")
             if q is None:
                 q = await ctx.guild.create_category("Questions")
-            if u is None:
-                u = ctx.author
-            private_channel = await ctx.guild.create_text_channel(f"Private-{u}", category=q)
+
+            channels = q.channels
+
+            for channel in channels:
+                if channel.name == f"private-{student_id}":
+                    await ctx.respond(f"{user_mention} You already have a private question open.", delete_after=3)
+                    return
+
+            private_role = await ctx.guild.create_role(name=f"{student_id}")
+
+            await ctx.author.add_roles(private_role)
+
+            all_roles = ctx.guild.roles
+
+            ow = {}
+
+            for role in all_roles:
+                ow[role] = discord.PermissionOverwrite(read_messages=False)
+
+            overwrites = {
+                ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                private_role: discord.PermissionOverwrite(read_messages=True),
+                discord.utils.get(ctx.guild.roles, name="Educator"): discord.PermissionOverwrite(read_messages=True),
+                discord.utils.get(ctx.guild.roles, name="Assistant"): discord.PermissionOverwrite(read_messages=True)
+            }
+
+            ow.update(overwrites)
+
+            private_channel = await ctx.guild.create_text_channel(f"Private-{student_id}", category=q, overwrites=ow)
 
             await ctx.respond("Private question created", delete_after=3)
 
-            await private_channel.send(f"{user} asked: {question}")
+            await private_channel.send(f"{user_mention} asked: {question}")
         else:
             await ctx.respond("Only Students can ask private questions")
 
+    @bot.slash_command(name='close', description='```/close``` deletes a private question channel')
+    async def close(ctx: discord.ApplicationContext):
+        channel_name = ctx.channel.name
+        category = ctx.channel.category.name
+        if category == "Questions" and 'private' in channel_name:
+            embed = discord.Embed(title="Close this question?", color=0x00FF00)
+            embed.add_field(name="Are you sure you want to close this question?", value="✅ Yes\n❌ No")
+            interaction: discord.Interaction = await ctx.respond(embed=embed)
+            message: discord.Message = await interaction.original_response()
+            await message.add_reaction("✅")
+            await message.add_reaction("❌")
+
+            def check(reaction, user):
+                return user == ctx.author and reaction.message.id == message.id and str(reaction.emoji) in ["✅", "❌"]
+
+            while True:
+                reaction, user = await bot.wait_for('reaction_add', check=check)
+
+                # Assign role to user who reacted
+                if reaction.emoji == "✅":
+                    student_id = ctx.channel.name.split("-")[1]
+                    created_role = discord.utils.get(ctx.guild.roles, name=f"{student_id}")
+                    await created_role.delete()
+                    await ctx.channel.delete(reason=f"Closed by {ctx.author.display_name}")
+                if reaction.emoji == "❌":
+                    await message.delete()
+        else:
+            await ctx.respond("You cannot close this channel", delete_after=3)
+
+
     @bot.slash_command(name='help', description='```/help``` sends command information to the user')
-    async def help(ctx):
-        message = "**Available Commands:**\n\n"
-        for command in bot.application_commands:
-            if command.name == "create":
-                for create in command.walk_commands():
-                    message += f"{create.description}\n\n"
-            else:
-                message += f"{command.description}\n\n"
+    async def help(ctx, command_name: str = None):
+        if command_name:
+            command = bot.get_application_command(command_name)
+            if not command:
+                await ctx.respond(f"There exists no command named '{command_name}'.")
+                return
+            await ctx.respond(f"**{command_name}:**\n{command.description}")
+        else:
+            message = "**Available Commands:**\n\n"
+            for command in bot.application_commands:
+                if command.name == "create":
+                    for create in command.walk_commands():
+                        message += f"{create.description}\n\n"
+                else:
+                    message += f"{command.description}\n\n"
 
-        await ctx.author.send(message)
-
-        await ctx.respond("Check Direct Messages for available commands")
+            await ctx.author.send(message)
+            await ctx.respond("Check Direct Messages for available commands")
 
     create = bot.create_group("create", "create school work")
 
@@ -444,6 +521,82 @@ def run_discord_bot():
         await ctx.respond(f"TutorGPT: {reply}")
 
         # TODO: When student responds, their answers are checked for correctness
+
+
+    #assignment update
+    #goes through supabase assignments and get data of specific dates
+    async def get_dates_assignments(due_date: str):
+        # query = f"SELECT name, dueDate FROM ASSIGNMENT WHERE dueDate >= '{start_date}' AND dueDate <= '{due_date}'"
+        query = supabase.table("Assignment").select('*').lte('dueDate', due_date).execute()
+        #print(query)
+        return query.data
+     
+
+    #gets quizz data from supabase
+    async def get_dates_quiz(due_date:str):
+        query = supabase.table("Quiz").select('*').lte('dueDate', due_date).execute()
+        return query.data
+    
+    #clears specific category of all channels
+    async def clear_upcoming(category: discord.CategoryChannel):
+        for channel in category.channels:
+            await channel.delete()
+    
+    #function to lock, but keep visible
+    async def lock_but_keep_vis(ctx : discord.ApplicationContext, category):
+        guild = discord.utils.get(ctx.guild.categories, name = category)
+        
+        # Iterate over the voice channels in the category
+        for channel in category.voice_channels:
+            # Update channel permissions to deny all voice permissions
+            await channel.set_permissions(guild.default_role, connect=False, speak=False, stream=False, view_channel=True)
+           
+    
+    #update slash command
+    @bot.slash_command(
+        name = 'update',
+        description = "Checks dates in database and updates the category with the upcoming assignments")
+    async def update_upcoming(ctx: discord.ApplicationContext,
+                              end_date: discord.Option(str, description= "End date in the format YYYY-MM-DD")):
+
+        category = discord.utils.get(ctx.guild.categories, name='Upcoming')
+
+        #clears the current category so that it does not get bloated
+        await clear_upcoming(category)
+
+        print("Upcoming channel cleared")
+
+    
+        #runs the get assignment data function
+        assignment_date_data = await get_dates_assignments(end_date)
+
+        #runs the get date data for quizzes
+        quiz_date_data = await get_dates_quiz(end_date)
+
+         #iterates through all dates collected for quizzes
+        for item in quiz_date_data:
+            channel_name = str(item['name'])
+
+            new_channel = await ctx.guild.create_voice_channel(
+                name = f"📝| {channel_name}",
+                category = category
+            )
+
+            await ctx.respond(f"Added new quiz to upcoming: {new_channel.name}")
+        
+        #iterates through all dates collected for assignments
+        for item in assignment_date_data:
+            channel_name = str(item['name'])
+
+            new_channel = await ctx.guild.create_voice_channel(
+                name = f"📖| {channel_name}",
+                category = category
+            )
+
+            await ctx.respond(f"Added new assignment to upcoming: {new_channel.name}")
+        
+        #adds the icon for the channels
+        await lock_but_keep_vis(ctx, category)
 
     # TESTING COMMANDS-------------------------------------------------------------------------------
     # @bot.command()

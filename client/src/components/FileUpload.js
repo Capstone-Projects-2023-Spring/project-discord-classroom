@@ -20,7 +20,7 @@ const FileUpload = () => {
     formData.append('file', file);
     formData.append('secretId', secretId);
     try {
-      await axios.post('http://localhost:5000/upload', formData, {
+      await axios.post('/upload', formData, {
         headers: {
           'Content-type': 'multipart/form-data'
         }

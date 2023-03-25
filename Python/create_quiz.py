@@ -607,7 +607,7 @@ def create_quiz(bot):
                                     due=quiz_dict['due'], time=quiz_dict['time'], questions=url,
                                     classroom=interaction.guild_id, channel=new_channel.id)
 
-                    server = interaction.guild_id
+                    server = str(interaction.guild_id)
 
                     await api.create_quiz(new_quiz, server_id=server)
 
