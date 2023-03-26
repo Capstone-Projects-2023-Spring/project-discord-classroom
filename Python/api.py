@@ -216,13 +216,7 @@ async def create_questions(questions: List[Question]):
 
     public_url = supabase.storage().from_('questions').get_public_url(f"{hex_dig}.json")
 
-    print("public_url:", public_url)
-
     response = requests.get(public_url)
-
-    print(response)
-    print(response.status_code)
-    print('json_string:', json_string)
 
     if response.status_code == 400:
         res = supabase.storage().from_('questions').upload(f"{hex_dig}.json", json_string.encode())
