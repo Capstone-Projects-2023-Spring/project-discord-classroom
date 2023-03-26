@@ -1,5 +1,5 @@
 import discord
-from cr_classes import Assignment
+from create_classes import Assignment
 
 class assignment_modal(discord.ui.Modal):
     def __init__(self, *args, chan, **kwargs) -> None:
