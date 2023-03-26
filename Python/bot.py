@@ -12,9 +12,7 @@ from PyPDF2 import PdfReader
 import api
 import create_quiz, create_assignment
 import openai
-from io import BytesIO
-from PIL import Image, ImageDraw, ImageFont
-from cr_classes import Assignment
+from create_classes import Assignment
 
 if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:

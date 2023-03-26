@@ -7,10 +7,11 @@ from discord.ext import commands
 from typing import Optional, List
 import datetime
 import api
-from cr_classes import Quiz
-from cr_classes import Question
+from create_classes import Quiz
+from create_classes import Question
 import random
 import time
+
 
 class InputModal(discord.ui.Modal):
     def __init__(self, embed: discord.Embed, *args, **kwargs) -> None:

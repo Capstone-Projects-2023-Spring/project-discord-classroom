@@ -6,8 +6,8 @@ import json
 import os
 from pydantic import BaseModel
 from typing import List
-from cr_classes import Quiz, Assignment
-from cr_classes import Question
+from create_classes import Quiz, Assignment
+from create_classes import Question
 import hashlib
 import pickle
 import asyncio
@@ -207,16 +207,23 @@ async def create_questions(questions: List[Question]):
 
     outfile.close()
 
+    with open(f'{hex_dig}.json', 'r') as f:
+        data = json.load(f)
+
+    f.close()
+
+    json_string: str = json.dumps(data)
+
     public_url = supabase.storage().from_('questions').get_public_url(f"{hex_dig}.json")
 
-    try:
-        res = supabase.storage().from_('questions').upload(f"{hex_dig}.json", f".\\{hex_dig}.json", {"upsert": 'true'})
+    response = requests.get(public_url)
+
+    if response.status_code == 400:
+        res = supabase.storage().from_('questions').upload(f"{hex_dig}.json", json_string.encode())
         public_url = supabase.storage().from_('questions').get_public_url(f"{hex_dig}.json")
-        url = public_url
-    except StorageException:
-        print("StorageException")
-        url = public_url
-    return url
+        os.remove(f'{hex_dig}.json')
+
+    return public_url
 
 @app.post("/classroom/")
 async def create_classroom(id: str, name: str):
