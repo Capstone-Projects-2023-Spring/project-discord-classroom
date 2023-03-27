@@ -19,10 +19,18 @@ class Question(BaseModel):
     wrong: List[str]
     points: float
 
+
 class Assignment(BaseModel):
-    name: str
+    title: str
     start: str
     due: str
     points: int
     classroom: str
     channel: str
+
+
+class Grade(BaseModel):
+    graderId: int
+    taskId: int
+    studentId: int
+    score: int

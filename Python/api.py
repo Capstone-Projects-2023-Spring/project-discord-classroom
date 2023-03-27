@@ -6,7 +6,7 @@ import json
 import os
 from pydantic import BaseModel
 from typing import List
-from create_classes import Quiz, Assignment
+from create_classes import Quiz, Assignment, Grade
 from create_classes import Question
 import hashlib
 import pickle
@@ -58,11 +58,8 @@ class Section(BaseModel):
     totalAttendance: int
     totalGrade: int
 
-class Grade(BaseModel):
-    type: str
-    name: str
-    score: int
-    maxScore: int
+
+
 
 class Message(BaseModel):
     message: str
@@ -131,9 +128,12 @@ async def get_grades(student_id: int = 0):
         taskId = info['taskId']
         r1 = supabase.table('Classroom_Task').select('id', 'taskType', 'taskTypeId').eq('id', taskId).execute()
         r2 = supabase.table(r1.data[0]['taskType']).select('*').eq('id', r1.data[0]['taskTypeId']).execute()
-        combined = {'type': r1.data[0]['taskType'], 'name': r2.data[0]['name'], 'score': info['score'],
+        
+        combined = {'type': r1.data[0]['taskType'], 'title': r2.data[0]['title'], 'score': info['score'],
                     'points': r2.data[0]['points']}
         all.append(combined)
+
+
     return all
 
 @app.get("/member/id")
@@ -255,7 +255,7 @@ async def create_student(id: str, name:str, server: str):
 
 @app.post("/Assignments/")
 async def create_assignment(assignment: Assignment, server_id: str):
-    list = {'name': assignment.name, 'startDate': assignment.start, 'dueDate': assignment.due, 'channelId': assignment.channel, 'points': assignment.points}
+    list = {'title': assignment.title, 'startDate': assignment.start, 'dueDate': assignment.due, 'channelId': assignment.channel, 'points': assignment.points}
 
     res = supabase.table("Assignment").insert(list).execute()
 
@@ -266,6 +266,14 @@ async def create_assignment(assignment: Assignment, server_id: str):
     supabase.table("Classroom_Task").insert(list).execute()
 
     return {"message": "assignment created successfully"}
+
+@app.post("/Grade/")
+async def update_grade(grade: Grade):
+    list = {'graderId': grade.graderId, 'taskId': grade.taskId, 'studentId': grade.studentId, 'score': grade.score}
+
+    res = supabase.table("Grade").insert(list).execute()
+
+    return {"message": "grade updated successfully"}
 
 # --------------------------- PUT Methods-------------------------------
 
