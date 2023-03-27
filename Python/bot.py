@@ -12,7 +12,7 @@ from PyPDF2 import PdfReader
 import api
 import create_quiz, create_assignment
 import openai
-from create_classes import Assignment
+from create_classes import Assignment, Grade
 
 if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:
@@ -677,18 +677,18 @@ def run_discord_bot():
 
     @bot.slash_command(name='assignment',
                         description='```/assignment [start_date] [due_date] [points] (pdf)``` - Creates assignments for students')
-    async def assignment(ctx: discord.ApplicationContext, name: str, startdate: str, duedate: str, points: int, file: discord.Attachment = None):
+    async def assignment(ctx: discord.ApplicationContext, title: str, startdate: str, duedate: str, points: int, file: discord.Attachment = None):
         
         category = discord.utils.get(ctx.guild.categories, name='Assignments')
         if category is None:
             category = await ctx.guild.create_category('Assignments')
 
-        assignment_channel = discord.utils.get(category.channels, name=name)
+        assignment_channel = discord.utils.get(category.channels, name=title)
         if assignment_channel is None:
-            assignment_channel = await ctx.guild.create_text_channel(name=name, category=category)
+            assignment_channel = await ctx.guild.create_text_channel(name=title, category=category)
 
 
-        to_send = ("**```diff\n+ Assignment Name "+ name +"```**", "\n**```diff\n+ Points "+ str(points)+"```**",
+        to_send = ("**```diff\n+ Assignment Name "+ title +"```**", "\n**```diff\n+ Points "+ str(points)+"```**",
         "\n**```diff\n+ Start Date: "+ startdate+"```**" +"\n**```diff\n- Due Date: "+ duedate+"```**")
         full_message = "".join(to_send)
         await assignment_channel.send(full_message)
@@ -700,16 +700,90 @@ def run_discord_bot():
             await ctx.respond("Assignment created successfully!")
 
         else:
-            modal = create_assignment.assignment_modal(title=name, chan = assignment_channel)
+            modal = create_assignment.assignment_modal(title=title, chan = assignment_channel)
             await ctx.send_modal(modal)
             
 
-        assignment_dict = {'name': name, 'start': startdate, 'due':duedate, 'points': points}
-        new_assignment = Assignment(name=assignment_dict['name'], start=assignment_dict['start'],
+        assignment_dict = {'title': title, 'start': startdate, 'due':duedate, 'points': points}
+        new_assignment = Assignment(title=assignment_dict['title'], start=assignment_dict['start'],
                                     due=assignment_dict['due'], points=assignment_dict['points'],
                                     classroom=ctx.guild_id, channel=assignment_channel.id)
 
         await api.create_assignment(new_assignment, server_id=ctx.guild_id)
+    
+    @bot.slash_command(name='grade',
+                        description='```/grade [discord_id] [task_id] [score]``` - post grades for a student')
+    async def grade(ctx: discord.ApplicationContext, discord_id: str, task_id: int, score: int):
+        if ctx.author.id != ctx.guild.owner_id:
+            await ctx.send("Error")
+            return
+        studentId_dict = await api.get_member_id(discord_id)
+        studentId = studentId_dict["id"]
+
+
+        grade_dict = {'graderId': studentId, 'taskId': task_id, 'studentId': studentId, 'score': score}
+        new_grade = Grade(graderId=grade_dict['graderId'], taskId=grade_dict['taskId'],
+                         studentId=grade_dict['studentId'], score=grade_dict['score'] )
+        
+        #post grade update
+        await api.update_grade(new_grade)
+
+
+        #send grade updated to the student
+        student_grade = await api.get_grades(studentId)
+
+        student = bot.get_user(int(discord_id))
+        if student is None:
+            # Handle the case where the student is not found
+            await ctx.channel.send("Could not find the student's Discord user.")
+        else:
+            # Send the grades to the student's "grades" channel
+            channel_name = student.name + "-grades"
+            channel = discord.utils.get(ctx.guild.text_channels, name=channel_name)
+            if channel is None:
+                # Create a new text channel for the student
+                overwrites = {
+                    ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                    student: discord.PermissionOverwrite(read_messages=True)
+                }
+                channel = await ctx.guild.create_text_channel(channel_name, overwrites=overwrites)
+
+
+            quiz_scores = []
+            assignment_scores = []
+            quiz_weight = 0.15 #quiz weight
+            assignment_weight = 0.20 
+            quiz_weighted_score = 0
+            assignment_weighted_score = 0
+            # Loop through the list of grades and separate quiz scores and assignment scores
+            for grade in student_grade:
+                if grade['type'] == 'Quiz':
+                    quiz_scores.append(grade['score'])
+                elif grade['type'] == 'Assignment':
+                    assignment_scores.append(grade['score'])
+            if len(quiz_scores) >= 1:
+            # Calculate the weighted average of quiz scores
+                quiz_weighted_avg = sum(quiz_scores) / sum([g['points'] for g in student_grade if g['type'] == 'Quiz'])
+                quiz_weighted_score = quiz_weighted_avg * quiz_weight
+            if len(assignment_scores) >= 1:
+            # Calculate the weighted average of assignment scores
+                assignment_weighted_avg = sum(assignment_scores) / sum([g['points'] for g in student_grade if g['type'] == 'Assignment'])
+                assignment_weighted_score = assignment_weighted_avg * assignment_weight
+
+            # Calculate the overall grade
+            overall_grade = (quiz_weighted_score + assignment_weighted_score) / (quiz_weight + assignment_weight)
+            overall_grade = format(overall_grade, '.2f')
+
+            grade_string = ""
+            for grade in student_grade:
+                grade_string += f"{grade['type']} - {grade['title']}: {grade['score']}/{grade['points']}\n"
+
+            grade_string+=f"overall grade - {overall_grade}"
+            # Send the grades to the student's new channel
+            await channel.send(f"Here are your grades, recalculated:\n{grade_string}")
+            await ctx.respond("posted grade!")
+
+        
 
     # TESTING COMMANDS-------------------------------------------------------------------------------
     # @bot.command()
