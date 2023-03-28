@@ -10,7 +10,7 @@ import io
 import datetime
 from PyPDF2 import PdfReader
 import api
-import create_quiz, create_assignment
+import create_quiz, create_assignment, create_discussion
 import openai
 from create_classes import Assignment, Grade
 
@@ -184,30 +184,13 @@ def run_discord_bot():
             else:
                 await ctx.send("Invalid file format, only PDF files are accepted.")
 
-    @bot.slash_command(name ='discussion',
-                       description='Creates a new text channel with a prompt for discussion')
-    async def discussion_create(ctx: discord.ApplicationContext, channel_name: str, prompt: str):
-        # Verify existence of 'Discussion' category, or create it if it does not exist
-        if discord.utils.get(ctx.guild.categories, name='Discussion'):
-            category = discord.utils.get(ctx.guild.categories, name='Discussion')
-        else:
-            category = await ctx.guild.create_category('Discussion')
-
-        # Create new channel for discussion
-        channel = await ctx.guild.create_text_channel(name=channel_name, category=category)
-        
-        # Send discussion prompt to new channel
-        embed = discord.Embed(title=channel_name, description=prompt)
-        await channel.send(embed=embed)
-        await ctx.respond('Discussion channel created.')
-
-        return channel
-
     @bot.slash_command(name='poll',
                        description='```/poll [topic] [option1] [option2] ... [option8]``` - Creates a poll for users (8 max options)')
     async def poll(ctx: discord.ApplicationContext, topic: str, option1: str, option2: str, option3: str = None,
                    option4: str = None, option5: str = None, option6: str = None, option7: str = None,
                    option8: str = None):
+
+        await ctx.defer()
 
         options = [option1, option2]
         if option3:
@@ -261,7 +244,10 @@ def run_discord_bot():
 
                 boxesForOption = boxes.copy()
                 for j in range(round(reactionPercentage / 10)):
-                    boxesForOption[j] = "👍"
+                    if i < 7:
+                        boxesForOption[j] = f"{chr(0x1F7E5+i)}"
+                    else:
+                        boxesForOption[j] = f"{chr(0x2B1C)}"
                 boxesForOptionStr = ''.join(boxesForOption)
                 
                 new_description_for_option_idx[i] = f'{chr(0x1f1e6 + i)} {options[i]}\n `{boxesForOptionStr}` {num_reactions_for_option_idx[i]} ({reactionPercentage}%)\n'
@@ -545,8 +531,19 @@ def run_discord_bot():
     @create.command(name='quiz',
                     description='```/create quiz [questions.json]``` - Creates a Quiz for students to take')
     async def quiz(ctx, questions: discord.Attachment = None):
-
         modal = create_quiz.create_quiz(bot=bot)
+        await ctx.send_modal(modal)
+
+    @create.command(name='discussion',
+                       description='Creates a new text channel with a prompt for discussion')
+    async def discussion(ctx: discord.ApplicationContext):
+        modal = create_discussion.create_discussion(bot=bot)
+        await ctx.send_modal(modal)
+
+    @create.command(name='assignment',
+                       description='```/assignment [start_date] [due_date] [points] (pdf)``` - Creates assignments for students')
+    async def assignment(ctx: discord.ApplicationContext, file: discord.Attachment = None):
+        modal = create_assignment.create_assignment(bot=bot, file=file)
         await ctx.send_modal(modal)
 
     @bot.slash_command(name='upload_file', description='```/upload file`` - User can follow link to upload file')
@@ -573,8 +570,6 @@ def run_discord_bot():
         await ctx.respond("Check DMs", delete_after=3)
         await user.send(f"TutorGPT: {reply}")
 
-        print(reply)
-
         messages.append({"role": "assistant", "content": reply})
 
         def check(message):
@@ -584,8 +579,6 @@ def run_discord_bot():
 
         content = response.content
         content += "\nNow show me the answers without repeating the questions."
-
-        print(content)
 
         messages.append(
             {"role": "user", "content": content}
@@ -598,20 +591,38 @@ def run_discord_bot():
 
         messages.append({"role": "assistant", "content": reply})
 
+    async def get_dates_assignments(server_id : str, due_date: str):
+        response = supabase.table("Assignment").select('*').lte('dueDate', due_date).execute()
+        all_assignments = response.data
+        classroom_assignments = []
+        for assignment in all_assignments:
+            channel = bot.get_channel(int(assignment['channelId']))
+            if channel is not None:
+                if str(channel.guild.id) == str(server_id):
+                    classroom_assignments.append(assignment)
+        return classroom_assignments
 
-    #assignment update
-    #goes through supabase assignments and get data of specific dates
-    async def get_dates_assignments(due_date: str):
-        # query = f"SELECT name, dueDate FROM ASSIGNMENT WHERE dueDate >= '{start_date}' AND dueDate <= '{due_date}'"
-        query = supabase.table("Assignment").select('*').lte('dueDate', due_date).execute()
-        #print(query)
-        return query.data
-     
+    async def get_dates_quiz(server_id : str, due_date:str):
+        response = supabase.table("Quiz").select('*').lte('dueDate', due_date).execute()
+        all_quizzes = response.data
+        classroom_quizzes = []
+        for quiz in all_quizzes:
+            channel = bot.get_channel(int(quiz['channelId']))
+            if channel is not None:
+                if str(channel.guild.id) == str(server_id):
+                    classroom_quizzes.append(quiz)
+        return classroom_quizzes
 
-    #gets quizz data from supabase
-    async def get_dates_quiz(due_date:str):
-        query = supabase.table("Quiz").select('*').lte('dueDate', due_date).execute()
-        return query.data
+    async def get_dates_discussion(server_id: str, due_date: str):
+        response = supabase.table("Discussion").select('*').lte('dueDate', due_date).execute()
+        all_discussions = response.data
+        classroom_discussions = []
+        for disc in all_discussions:
+            channel = bot.get_channel(int(disc['channelId']))
+            if channel is not None:
+                if str(channel.guild.id) == str(server_id):
+                    classroom_discussions.append(disc)
+        return classroom_discussions
     
     #clears specific category of all channels
     async def clear_upcoming(category: discord.CategoryChannel):
@@ -620,96 +631,75 @@ def run_discord_bot():
     
     #function to lock, but keep visible
     async def lock_but_keep_vis(ctx : discord.ApplicationContext, category):
-        guild = discord.utils.get(ctx.guild.categories, name = category)
-        
-        # Iterate over the voice channels in the category
-        for channel in category.voice_channels:
-            # Update channel permissions to deny all voice permissions
-            await channel.set_permissions(guild.default_role, connect=False, speak=False, stream=False, view_channel=True)
+        student_role = discord.utils.get(ctx.guild.roles, name="Student")
+        assistant_role = discord.utils.get(ctx.guild.roles, name="Assistant")
+        educator_role = discord.utils.get(ctx.guild.roles, name="Assistant")
+
+        await category.set_permissions(ctx.guild.default_role, connect=False, view_channel=True)
+        await category.set_permissions(student_role, connect=False, view_channel=True)
+        await category.set_permissions(assistant_role, connect=False, view_channel=True)
+        await category.set_permissions(educator_role, connect=False, view_channel=True)
+        await category.set_permissions(ctx.guild.owner, connect=False, view_channel=True)
+
            
     
     #update slash command
     @bot.slash_command(
-        name = 'update',
-        description = "Checks dates in database and updates the category with the upcoming assignments")
+        name = 'upcoming',
+        description = "Updates the 'Upcoming' category to show all schoolwork due before the end date")
     async def update_upcoming(ctx: discord.ApplicationContext,
-                              end_date: discord.Option(str, description= "End date in the format YYYY-MM-DD")):
+                              end_date: discord.Option(str, description= "End date in the format YYYY-MM-DD") = (datetime.date.today() + datetime.timedelta(days=7)).strftime('%Y-%m-%d')):
+
+        await ctx.defer()
 
         category = discord.utils.get(ctx.guild.categories, name='Upcoming')
+        if category is None:
+            category = await ctx.guild.create_category("Upcoming")
 
         #clears the current category so that it does not get bloated
         await clear_upcoming(category)
 
-        print("Upcoming channel cleared")
-
-    
         #runs the get assignment data function
-        assignment_date_data = await get_dates_assignments(end_date)
+        assignment_date_data = await get_dates_assignments(str(ctx.guild_id), end_date)
 
         #runs the get date data for quizzes
-        quiz_date_data = await get_dates_quiz(end_date)
+        quiz_date_data = await get_dates_quiz(str(ctx.guild_id), end_date)
+
+        discussion_date_data = await get_dates_discussion(str(ctx.guild_id), end_date)
 
          #iterates through all dates collected for quizzes
         for item in quiz_date_data:
-            channel_name = str(item['name'])
+            channel_name = str(item['title'])
+            points = str(item['points'])
 
-            new_channel = await ctx.guild.create_voice_channel(
-                name = f"📝| {channel_name}",
+            await ctx.guild.create_voice_channel(
+                name = f"❓| {points} Pts. | {channel_name}",
                 category = category
             )
-
-            await ctx.respond(f"Added new quiz to upcoming: {new_channel.name}")
         
         #iterates through all dates collected for assignments
         for item in assignment_date_data:
-            channel_name = str(item['name'])
+            channel_name = str(item['title'])
+            points = str(item['points'])
 
-            new_channel = await ctx.guild.create_voice_channel(
-                name = f"📖| {channel_name}",
+            await ctx.guild.create_voice_channel(
+                name = f"📝| {points} Pts. | {channel_name}",
                 category = category
             )
 
-            await ctx.respond(f"Added new assignment to upcoming: {new_channel.name}")
+        for item in discussion_date_data:
+            channel_name = str(item['title'])
+            points = str(item['points'])
+
+            await ctx.guild.create_voice_channel(
+                name=f"💬| {points} Pts. | {channel_name}",
+                category=category
+            )
         
         #adds the icon for the channels
         await lock_but_keep_vis(ctx, category)
 
-
-    @bot.slash_command(name='assignment',
-                        description='```/assignment [start_date] [due_date] [points] (pdf)``` - Creates assignments for students')
-    async def assignment(ctx: discord.ApplicationContext, title: str, startdate: str, duedate: str, points: int, file: discord.Attachment = None):
-        
-        category = discord.utils.get(ctx.guild.categories, name='Assignments')
-        if category is None:
-            category = await ctx.guild.create_category('Assignments')
-
-        assignment_channel = discord.utils.get(category.channels, name=title)
-        if assignment_channel is None:
-            assignment_channel = await ctx.guild.create_text_channel(name=title, category=category)
-
-
-        to_send = ("**```diff\n+ Assignment Name "+ title +"```**", "\n**```diff\n+ Points "+ str(points)+"```**",
-        "\n**```diff\n+ Start Date: "+ startdate+"```**" +"\n**```diff\n- Due Date: "+ duedate+"```**")
-        full_message = "".join(to_send)
-        await assignment_channel.send(full_message)
-
-    
-        if file:
-            file_data = await file.read()
-            await assignment_channel.send(file=discord.File(io.BytesIO(file_data), filename=file.filename))
-            await ctx.respond("Assignment created successfully!")
-
-        else:
-            modal = create_assignment.assignment_modal(title=title, chan = assignment_channel)
-            await ctx.send_modal(modal)
-            
-
-        assignment_dict = {'title': title, 'start': startdate, 'due':duedate, 'points': points}
-        new_assignment = Assignment(title=assignment_dict['title'], start=assignment_dict['start'],
-                                    due=assignment_dict['due'], points=assignment_dict['points'],
-                                    classroom=ctx.guild_id, channel=assignment_channel.id)
-
-        await api.create_assignment(new_assignment, server_id=ctx.guild_id)
+        await ctx.respond(f"Upcoming category updated")
     
     @bot.slash_command(name='grade',
                         description='```/grade [discord_id] [task_id] [score]``` - post grades for a student')
