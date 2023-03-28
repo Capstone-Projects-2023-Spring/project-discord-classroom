@@ -48,6 +48,13 @@ class TakeQuiz(discord.ui.View):
                 self.get_item("D").disabled = False
             if num_of_options >= 5:
                 self.get_item("E").disabled = False
+        elif self.this_question.fields[1].name == "Answer":
+            self.get_item("A").disabled = True
+            self.get_item("B").disabled = True
+            self.get_item("C").disabled = True
+            self.get_item("D").disabled = True
+            self.get_item("E").disabled = True
+            self.get_item("input").disabled = False
 
     async def update_arrows(self, interaction: discord.Interaction):
         first = self.get_item("first")
