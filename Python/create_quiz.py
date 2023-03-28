@@ -319,13 +319,13 @@ def create_quiz(bot):
             self.bot = bot
 
             title = discord.ui.InputText(label="Title", style=discord.InputTextStyle.short,
-                                         placeholder="ex: 'Parts of the Cell'", value="Test", max_length=32)
+                                         placeholder="ex: 'Parts of the Cell'", max_length=32)
             points = discord.ui.InputText(label="Points", style=discord.InputTextStyle.short,
-                                          placeholder="ex: '50'", value=20, required=False)
+                                          placeholder="ex: '50'", required=False)
             start_date = discord.ui.InputText(label="Start Date", style=discord.InputTextStyle.short,
-                                              placeholder="ex: '2023-05-25'", value="2023-03-01")
+                                              placeholder="ex: '2023-05-25'", value=f"{datetime.date.today().strftime('%Y-%m-%d')}")
             due_date = discord.ui.InputText(label="Due Date", style=discord.InputTextStyle.short,
-                                            placeholder="ex: '2023-05-30'", value="2023-06-08")
+                                            placeholder="ex: '2023-05-30'", value=f"{(datetime.date.today() + datetime.timedelta(days=7)).strftime('%Y-%m-%d')}")
             time_limit = discord.ui.InputText(label="Time Limit (minutes)", placeholder="ex: '30' for 30 minutes or '0' for no time limit",
                                               style=discord.InputTextStyle.short, value="0")
             self.add_item(title)
@@ -375,14 +375,13 @@ def create_quiz(bot):
                     super().__init__(*args, **kwargs)
                     self.quiz_view = quiz_view
                     question = discord.ui.InputText(label="Question", style=discord.InputTextStyle.short,
-                                                    placeholder="ex: 'Who was the first U.S. President?'",
-                                                    value="2+2")
+                                                    placeholder="ex: 'Who was the first U.S. President?'")
                     answer = discord.ui.InputText(label="Answer", style=discord.InputTextStyle.short,
                                                   placeholder="ex: 'George Washington'",
-                                                  required=False, value="4")
+                                                  required=False)
                     wrong = discord.ui.InputText(label="Wrong Options", style=discord.InputTextStyle.short,
                                                  placeholder="ex: 'Ben Franklin, Thomas Jefferson, John Adams'",
-                                                 required=False, value="5, 6, 7")
+                                                 required=False)
                     self.add_item(question)
                     self.add_item(answer)
                     self.add_item(wrong)
