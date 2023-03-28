@@ -136,11 +136,6 @@ async def get_grades(student_id: int = 0):
         all.append(combined)
     return all
 
-@app.get("/member/id")
-async def get_member_id(discord_id: str):
-    response = supabase.table('User').select('id').eq('discordId', discord_id).execute()
-    return response.data[0]
-
 @app.get("/quiz/")
 async def get_quiz(channel_id: str = 0):
     if channel_id == 0:
@@ -238,14 +233,34 @@ async def create_student(id: str, name:str, server: str):
     supabase.table('Classroom_User').insert(list).execute()
     return {'message': 'Educator created'}
 
-# --------------------------- PUT Methods-------------------------------
+# /classroom_user
 
-@app.put("/member")
-async def update_member_nick(nick: str, id: str):
+@app.post('/classroom_user')
+async def create_classroom_user(classroom_id:str, user_id: int, name: str, role:str):
+    supabase.table("Classroom_User").insert({"classroomId": classroom_id['id'], 'userId': user_id, 'role': role}).execute()
+    return {'message': 'Classroom user created'}
+    
+@app.put("/classroom_user")
+async def update_classroom_user_role(role: str, user_id: int, classroom_id: int):
+    response = supabase.table('Classroom_User').update({'role': role}).eq('id', user_id).eq('classroomId', classroom_id).execute()
+    return {'message': 'Role updated'}
+
+# /user
+
+@app.put("/user")
+async def create_user(nick: str, discord_id: str):
+    response = supabase.table('User').insert({'discordId': discord_id, 'name': nick, "attendance": 0 }).execute()
+    return {'message': 'User created', 'id': response.data[0]['id']}
+
+@app.get("/user/id")
+async def get_user_id(discord_id: str):
+    response = supabase.table('User').select('id').eq('discordId', discord_id).execute()
+    if response.data:
+        return response.data[0]
+    else:
+        return {'message': 'User not found'}
+
+@app.put("/user/nick")
+async def update_user_nick(nick: str, id: str):
     response = supabase.table('User').update({'name': nick}).eq('discordId', id).execute()
     return {'message': 'Nickname updated'}
-
-@app.put("/member")
-async def update_member_role(role: str, id: int, classroom_id: int):
-    response = supabase.table('Classroom_User').update({'role': role}).eq('id', id).eq('classroomId', classroom_id).execute()
-    return {'message': 'Role updated'}
