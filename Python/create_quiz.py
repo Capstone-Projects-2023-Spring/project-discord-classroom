@@ -1,5 +1,4 @@
 import asyncio
-
 import discord
 import json
 import os
@@ -7,8 +6,7 @@ from discord.ext import commands
 from typing import Optional, List
 import datetime
 import api
-from create_classes import Quiz
-from create_classes import Question
+from create_classes import Quiz, Question
 import random
 import time
 

@@ -6,7 +6,7 @@ import json
 import os
 from pydantic import BaseModel
 from typing import List
-from create_classes import Quiz, Assignment, Grade
+from create_classes import Quiz, Assignment, Grade, Discussion
 from create_classes import Question
 import hashlib
 import pickle
@@ -263,6 +263,20 @@ async def create_assignment(assignment: Assignment, server_id: str):
     classroom_id = response['id']
     assignment_id = res.data[0]['id']
     list = {'classroomId': classroom_id, 'taskTypeId': assignment_id, 'taskType': "Assignment"}
+    supabase.table("Classroom_Task").insert(list).execute()
+
+    return {"message": "assignment created successfully"}
+
+@app.post("/Discussions/")
+async def create_discussion(discussion: Discussion, server_id: str):
+    list = {'title': discussion.title, 'startDate': discussion.start, 'dueDate': discussion.due, 'channelId': discussion.channel, 'points': discussion.points}
+
+    res = supabase.table("Discussion").insert(list).execute()
+
+    response = await get_classroom_id(server_id)
+    classroom_id = response['id']
+    discussion_id = res.data[0]['id']
+    list = {'classroomId': classroom_id, 'taskTypeId': discussion_id, 'taskType': "Discussion"}
     supabase.table("Classroom_Task").insert(list).execute()
 
     return {"message": "assignment created successfully"}

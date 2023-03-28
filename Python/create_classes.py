@@ -20,6 +20,13 @@ class Question(BaseModel):
     points: float
 
 
+class Discussion(BaseModel):
+    title: str
+    start: str
+    due: str
+    points: int
+    channel: str
+
 class Assignment(BaseModel):
     title: str
     start: str
