@@ -10,6 +10,8 @@ import io
 import datetime
 from PyPDF2 import PdfReader
 import api
+import utils
+import create_quiz
 import create_quiz, create_assignment, create_discussion
 import openai
 from create_classes import Assignment, Grade
@@ -104,28 +106,28 @@ def run_discord_bot():
         everyone = guild.default_role
         await everyone.edit(permissions=everyone_perms)
 
+        # Create server categories
         upcoming = await guild.create_category("Upcoming")
         general = await guild.create_category("General")
+        lounge = await guild.create_category("Lounge")
+        await lounge.set_permissions(student_role, view_channel=False)
+        await guild.create_category("Assignments")
+        await guild.create_category("Quizzes")
+        await guild.create_category("Discussions")
+        submissions = await guild.create_category("Submissions")
+        await submissions.set_permissions(student_role, view_channel=False)
+        questions = await guild.create_category("Questions")
+        
         await guild.create_text_channel("General", category=general)
         await guild.create_text_channel("Announcements", category=general)
         await guild.create_text_channel("Syllabus", category=general)
         await guild.create_voice_channel("Lecture", category=general)
         await guild.create_voice_channel("Chill", category=general)
 
-        lounge = await guild.create_category("Lounge")
-        await lounge.set_permissions(student_role, view_channel=False)
         await guild.create_text_channel("Educators-Assistants", category=lounge)
         await guild.create_text_channel("Terminal", category=lounge)
         await guild.create_voice_channel("Educators-Assistants", category=lounge)
-
-        await guild.create_category("Assignments")
-        await guild.create_category("Quizzes")
-        await guild.create_category("Discussions")
-
-        submissions = await guild.create_category("Submissions")
-        await submissions.set_permissions(student_role, view_channel=False)
-
-        questions = await guild.create_category("Questions")
+        
         await guild.create_text_channel("Public", category=questions)
 
         await api.create_classroom(id=guild.id, name=guild.name)
@@ -150,7 +152,7 @@ def run_discord_bot():
         await member.add_roles(role)
         discordNickname = member.display_name
         discordId = member.id
-        await add_member_to_table(guild_id=member.guild.id, role="Student", nickname=discordNickname, did=discordId)
+        await utils.add_member_to_table(guild_id=member.guild.id, role="Student", nickname=discordNickname, did=discordId)
         
     @bot.event 
     async def on_member_remove(member: discord.Member):
