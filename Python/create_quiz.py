@@ -183,7 +183,6 @@ class TakeQuiz(discord.ui.View):
         answer = options.value.split("\n")[3].split("🇩 ")[1]
         self.this_question.set_field_at(index=2, name="Answer", value=f"```{answer}```", inline=False)
         self.has_answer[self.eq.index(self.this_question)] = True
-        print(self.has_answer)
         await interaction.response.edit_message(embed=self.this_question)
         await self.update_letters(interaction, "D")
 
@@ -209,8 +208,13 @@ class TakeQuiz(discord.ui.View):
             if category.name == "Submissions":
                 submissions_category = category
 
+        res = await api.get_user_id(interaction.user.id)
+        user_id = res['id']
+        res = await api.get_quiz(interaction.channel_id)
+        quiz_id = res['quiz']['id']
+
         new_channel = await interaction.guild.create_text_channel(
-            f"📝 {self.quiz_title}-{interaction.user.display_name}-{interaction.user.id}", category=submissions_category)
+            f"❓{self.quiz_title}-{interaction.user.display_name}", category=submissions_category)
 
         message = ""
         questions = []
@@ -234,6 +238,7 @@ class TakeQuiz(discord.ui.View):
             await interaction.followup.edit_message(message_id=interaction.message.id, content="Time's Up - Quiz Submitted", embed=None, view=None)
         else:
             await interaction.response.edit_message(content="Quiz Submitted", embed=None, view=None)
+        await new_channel.send(f"ID: Q-{quiz_id}-{user_id}")
         await new_channel.send(message)
 
     @discord.ui.button(row=3, style=discord.ButtonStyle.success, emoji="✅", label="Submit Quiz", disabled=True, custom_id="submit")
@@ -255,7 +260,6 @@ class StartQuiz(discord.ui.View):
             return await interaction.response.send_message("Only students can take quizzes", ephemeral=True)
         self.took_quiz.append(interaction.user)
         quiz = await api.get_quiz(str(interaction.channel_id))
-        print(quiz)
         quiz_time = quiz['quiz']['timeLimit']
         quiz_id = quiz['quiz']['id']
         due = quiz['quiz']['dueDate']
@@ -266,7 +270,6 @@ class StartQuiz(discord.ui.View):
             embed.add_field(name="", value="```diff\n- Quiz is no longer available```", inline=False)
             return await interaction.response.edit_message(embed=embed, view=self)
         question_json = await api.get_question(quiz_id)
-        print(question_json)
         answers = []
         questions_as_embed = []
         for i, question in enumerate(question_json):
@@ -274,7 +277,6 @@ class StartQuiz(discord.ui.View):
             embed = discord.Embed(
                 title=f"Question {i + 1}/{len(question_json)}.\t\t\t\t{str(question['points'])} Pts.")
             embed.add_field(name="Question", value=question['question'], inline=False)
-            print("Wrong:", question['wrong'])
             if question['wrong'][0] != "None":
                 options = [question['answer']]
                 for w in question['wrong']:
@@ -282,7 +284,6 @@ class StartQuiz(discord.ui.View):
                 options = random.sample(options, len(options))
                 options_string = ""
                 for j, opt in enumerate(options):
-                    print(opt)
                     options_string += f"{chr(0x1f1e6 + j)} {opt}\n"
                 embed.add_field(name="Options", value=options_string, inline=False)
             embed.add_field(name="Answer", value="``` ```", inline=False)
@@ -608,18 +609,17 @@ def create_quiz(bot):
                     new_channel = await interaction.guild.create_text_channel(f"{quiz_dict['title']}",
                                                                               category=quizzes_category)
 
+                    res = await api.get_classroom_id(interaction.guild.id)
+                    classroom_id = res['id']
+
                     new_quiz = Quiz(title=quiz_dict['title'], points=quiz_dict['points'], start=quiz_dict['start'],
                                     due=quiz_dict['due'], time=quiz_dict['time'], questions=url,
-                                    classroom=interaction.guild_id, channel=new_channel.id)
+                                    classroomId=classroom_id, channelId=new_channel.id)
 
-                    server = str(interaction.guild_id)
-
-                    await api.create_quiz(new_quiz, server_id=server)
+                    await api.create_quiz(new_quiz)
 
                     slides[0].title = "Quiz"
                     await new_channel.send(embed=slides[0], view=StartQuiz())
-                    student_role = discord.utils.get(interaction.guild.roles, name="Student")
-                    # await new_channel.send(f"{student_role.mention} Type '/start' to take the Quiz")
 
                     await interaction.followup.edit_message(message_id=interaction.message.id, content="Created the Quiz!", embed=None, view=None)
 

@@ -80,6 +80,14 @@ async def get_classroom_id(server_id: int):
     return JSONResponse(status_code=404, content={"message": "Classroom not found"})
 
 
+@app.get("/user")
+async def get_user_id(discord_id: int):
+    response = supabase.table('User').select('id').eq('discordId', discord_id).execute()
+    if response.data is not []:
+        return {'id': response.data[0]['id']}
+    return JSONResponse(status_code=404, content={"message": "User not found"})
+
+
 @app.get("/educators/", response_model=List[Educator], responses={404: {"model": Message}})
 async def get_educators(classroom_id: int = 0):
     if classroom_id == 0:
@@ -137,11 +145,10 @@ async def get_grades(student_id: int = 0):
     return all
 
 @app.get("/quiz/")
-async def get_quiz(channel_id: str = 0):
+async def get_quiz(channel_id: int = 0):
     if channel_id == 0:
         return JSONResponse(status_code=404, content={"message": "Channel ID not given"})
     response = supabase.table("Quiz").select('*').eq('channelId', channel_id).execute()
-    print(response)
     return {'quiz': response.data[0]}
 
 @app.get("/questions/")
@@ -164,23 +171,15 @@ async def get_assignment(channel_id: str = 0):
     if channel_id == 0:
         return JSONResponse(status_code=404, content={"message": "Channel ID not given"})
     response = supabase.table("Assignment").select('*').eq('channelId', channel_id).execute()
-    print("response", response)
     return {'Assignment': response.data[0]}
 
 # ---------------------------POST Methods-------------------------------
 
 @app.post("/quizzes/")
-async def create_quiz(quiz: Quiz, server_id: str):
-    list = {'title': quiz.title, 'points': quiz.points, 'startDate': quiz.start, 'dueDate': quiz.due, 'timeLimit': quiz.time, 'channelId': quiz.channel, 'questions': quiz.questions}
-    print(list)
+async def create_quiz(quiz: Quiz):
+    list = {'title': quiz.title, 'points': quiz.points, 'startDate': quiz.start, 'dueDate': quiz.due, 'timeLimit': quiz.time,
+            'channelId': quiz.channelId, 'classroomId': quiz.classroomId, 'questions': quiz.questions}
     res = supabase.table("Quiz").insert(list).execute()
-    print(res)
-    response = await get_classroom_id(server_id)
-    classroom_id = response['id']
-
-    quiz_id = res.data[0]['id']
-    list = {'classroomId': classroom_id, 'taskTypeId': quiz_id, 'taskType': "Quiz"}
-    supabase.table("Classroom_Task").insert(list).execute()
 
     return {"message": "Quiz created successfully"}
 
@@ -220,8 +219,13 @@ async def create_questions(questions: List[Question]):
 
     return public_url
 
+@app.delete("/classroom/")
+async def remove_classroom(id: int):
+    supabase.table('Classroom').delete().eq('serverId', id).execute()
+    return {'message': 'Classroom deleted'}
+
 @app.post("/classroom/")
-async def create_classroom(id: str, name: str):
+async def create_classroom(id: int, name: str):
     list = {'serverId': id, 'serverName': name}
     supabase.table('Classroom').insert(list).execute()
     return {'message': 'Classroom created'}
@@ -249,30 +253,20 @@ async def create_student(id: str, name:str, server: str):
     return {'message': 'Educator created'}
 
 @app.post("/Assignments/")
-async def create_assignment(assignment: Assignment, server_id: str):
-    list = {'title': assignment.title, 'startDate': assignment.start, 'dueDate': assignment.due, 'channelId': assignment.channel, 'points': assignment.points}
+async def create_assignment(assignment: Assignment):
+    list = {'title': assignment.title, 'points': assignment.points, 'startDate': assignment.start, 'dueDate': assignment.due,
+            'channelId': assignment.channelId, 'classroomId': assignment.classroomId}
 
     res = supabase.table("Assignment").insert(list).execute()
-
-    response = await get_classroom_id(server_id)
-    classroom_id = response['id']
-    assignment_id = res.data[0]['id']
-    list = {'classroomId': classroom_id, 'taskTypeId': assignment_id, 'taskType': "Assignment"}
-    supabase.table("Classroom_Task").insert(list).execute()
 
     return {"message": "assignment created successfully"}
 
 @app.post("/Discussions/")
-async def create_discussion(discussion: Discussion, server_id: str):
-    list = {'title': discussion.title, 'startDate': discussion.start, 'dueDate': discussion.due, 'channelId': discussion.channel, 'points': discussion.points}
+async def create_discussion(discussion: Discussion):
+    list = {'title': discussion.title, 'points': discussion.points, 'startDate': discussion.start, 'dueDate': discussion.due,
+            'channelId': discussion.channelId, 'classroomId': discussion.classroomId}
 
     res = supabase.table("Discussion").insert(list).execute()
-
-    response = await get_classroom_id(server_id)
-    classroom_id = response['id']
-    discussion_id = res.data[0]['id']
-    list = {'classroomId': classroom_id, 'taskTypeId': discussion_id, 'taskType': "Discussion"}
-    supabase.table("Classroom_Task").insert(list).execute()
 
     return {"message": "assignment created successfully"}
 
@@ -306,6 +300,12 @@ async def update_user_nick(nick: str, discord_id: int):
     response = supabase.table('User').update({'name': nick}).eq('discordId', discord_id).execute()
     return {'message': 'Nickname updated'}
 
+@app.put("/member")
+async def update_member_role(role: str, id: int, classroom_id: int):
+    if role == "Student":
+        response = supabase.table('Classroom_User').update({'role': role, 'attendance': 0}).match({'userId': id, 'classroomId': classroom_id}).execute()
+    else:
+        response = supabase.table('Classroom_User').update({'role': role, 'attendance': None}).match({'userId': id, 'classroomId': classroom_id}).execute()
 # /classroom_user
 
 @app.post('/classroom_user')
