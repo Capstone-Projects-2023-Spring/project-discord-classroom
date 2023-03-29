@@ -10,6 +10,8 @@ import io
 import datetime
 from PyPDF2 import PdfReader
 import api
+import utils
+import create_quiz
 import create_quiz, create_assignment, create_discussion
 import openai
 from create_classes import Assignment, Grade
@@ -67,37 +69,28 @@ def run_discord_bot():
         everyone = guild.default_role
         await everyone.edit(permissions=everyone_perms)
 
+        # Create server categories
         upcoming = await guild.create_category("Upcoming")
         general = await guild.create_category("General")
-        await guild.create_text_channel("General", category=general)
-        await guild.create_text_channel("Announcements", category=general)
-        await guild.create_text_channel("Lounge", category=general)
-        await guild.create_text_channel("Syllabus", category=general)
-        roles = await guild.create_text_channel("Roles", category=general)
-        await roles.set_permissions(everyone, read_messages=True, send_messages=False)
         await guild.create_category("Assignments")
         await guild.create_category("Quizzes")
         await guild.create_category("Discussions")
         await guild.create_category("Submissions")
         questions = await guild.create_category("Questions")
-        await guild.create_text_channel("Public", category=questions)
-        await api.create_classroom(id=guild.id, name=guild.name)
 
-    async def add_member_to_table(guild_id, role, nickname, did):
-        print(guild_id, role, nickname, did)
-        if role == "Student":
-            print("Student")
-            response = supabase.table("User").insert({ "name": nickname, "discordId": did, "attendance": 0 }).execute()
-            user_id = response.data[0]['id']
-            print(user_id)
-            classroom_id = await api.get_classroom_id(guild_id)
-            supabase.table("Classroom_User").insert({ "classroomId": classroom_id['id'], 'userId': user_id, 'role': "Student"}).execute()
-        else:
-            print("Not Student")
-            response = supabase.table("User").insert({"name": nickname, "discordId": did}).execute()
-            user_id = response.data[0]['id']
-            classroom_id = await api.get_classroom_id(guild_id)
-            supabase.table("Classroom_User").insert({"classroomId": classroom_id['id'], 'userId': user_id, 'role': "Educator"}).execute()
+        # Create server channels
+        await guild.create_text_channel("General", category=general)
+        await guild.create_text_channel("Announcements", category=general)
+        await guild.create_text_channel("Lounge", category=general)
+        await guild.create_text_channel("Syllabus", category=general)
+        await guild.create_text_channel("Public", category=questions)
+        roles = await guild.create_text_channel("Roles", category=general)
+        await roles.set_permissions(everyone, read_messages=True, send_messages=False)
+
+
+        # Add classroom and educator to database
+        await api.create_classroom(id=guild.id, name=guild.name)
+        await utils.add_member_to_table(guild_id=guild.id, role='Educator', nickname=guild.owner.nick, did=guild.owner.id)
 
     #Gives new users the Student role
     @bot.event
@@ -106,7 +99,7 @@ def run_discord_bot():
         await member.add_roles(role)
         discordNickname = member.display_name
         discordId = member.id
-        await add_member_to_table(guild_id=member.guild.id, role="Student", nickname=discordNickname, did=discordId)
+        await utils.add_member_to_table(guild_id=member.guild.id, role="Student", nickname=discordNickname, did=discordId)
         
     @bot.event 
     async def on_member_remove(member):
