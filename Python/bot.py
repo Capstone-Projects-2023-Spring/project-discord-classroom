@@ -90,7 +90,7 @@ def run_discord_bot():
 
         # Add classroom and educator to database
         await api.create_classroom(id=guild.id, name=guild.name)
-        await api.add_member_to_table(guild_id=guild.id, role='Educator', nickname=guild.owner.nick, did=guild.owner.id)
+        await utils.add_member_to_table(guild_id=guild.id, role='Educator', nickname=guild.owner.nick, did=guild.owner.id)
 
     #Gives new users the Student role
     @bot.event
@@ -99,7 +99,7 @@ def run_discord_bot():
         await member.add_roles(role)
         discordNickname = member.display_name
         discordId = member.id
-        await add_member_to_table(guild_id=member.guild.id, role="Student", nickname=discordNickname, did=discordId)
+        await utils.add_member_to_table(guild_id=member.guild.id, role="Student", nickname=discordNickname, did=discordId)
         
     @bot.event 
     async def on_member_remove(member):
