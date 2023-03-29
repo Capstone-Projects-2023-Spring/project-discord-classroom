@@ -69,16 +69,18 @@ def create_discussion(bot):
             if discussions_category is None:
                 discussions_category = await interaction.guild.create_category('Discussions')
 
-            new_discussion_channel = await interaction.guild.create_text_channel(f"{self.children[0].value}",
-                                                                      category=discussions_category)
+            new_discussion_channel = await interaction.guild.create_text_channel(f"{self.children[0].value}", category=discussions_category)
 
             await new_discussion_channel.send(embed=e)
 
+            res = await api.get_classroom_id(interaction.guild.id)
+            classroom_id = res['id']
+
             new_discussion = Discussion(title=title, start=str(start_date),
                                         due=str(due_date), points=points,
-                                        channel=new_discussion_channel.id)
+                                        channelId=new_discussion_channel.id, classroomId=classroom_id)
 
-            await api.create_discussion(new_discussion, server_id=str(interaction.guild_id))
+            await api.create_discussion(new_discussion)
 
             await interaction.response.send_message('Discussion channel created.')
 

@@ -88,11 +88,14 @@ def create_assignment(bot, file):
 
             await new_assignment_channel.send(f"{student_role.mention} use the `/submit` command to submit your assignment")
 
+            res = await api.get_classroom_id(interaction.guild.id)
+            classroom_id = res['id']
+
             new_assignment = Assignment(title=title, start=str(start_date),
                                         due=str(due_date), points=points,
-                                        classroom=interaction.guild_id, channel=new_assignment_channel.id)
+                                        classroomId=classroom_id, channelId=new_assignment_channel.id)
 
-            await api.create_assignment(new_assignment, server_id=str(interaction.guild_id))
+            await api.create_assignment(new_assignment)
 
             await interaction.response.send_message('Assignment created successfully')
 

@@ -9,8 +9,8 @@ class Quiz(BaseModel):
     due: str
     time: int
     questions: str
-    classroom: str
-    channel: str
+    classroomId: int
+    channelId: int
 
 
 class Question(BaseModel):
@@ -22,18 +22,19 @@ class Question(BaseModel):
 
 class Discussion(BaseModel):
     title: str
+    points: int
     start: str
     due: str
-    points: int
-    channel: str
+    channelId: int
+    classroomId: int
 
 class Assignment(BaseModel):
     title: str
     start: str
     due: str
     points: int
-    classroom: str
-    channel: str
+    classroomId: int
+    channelId: int
 
 
 class Grade(BaseModel):
