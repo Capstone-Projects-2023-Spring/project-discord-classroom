@@ -12,9 +12,9 @@ from PyPDF2 import PdfReader
 import api
 import utils
 import create_quiz
+import create_quiz, create_assignment, create_discussion
 import openai
-from io import BytesIO
-from PIL import Image, ImageDraw, ImageFont
+from create_classes import Assignment, Grade
 
 if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:
@@ -110,14 +110,14 @@ def run_discord_bot():
     async def on_member_update(before, after):
         # Update member nickname in database
         if before.nick != after.nick:
-            await update_member_nick(after.nick, str(after.id))
+            await api.update_member_nick(after.nick, str(after.id))
 
         # Update member role in database
         if before.role != after.role:
-            id = await get_user_id(after.discord_id).get('id')
+            id = await api.get_member_id(after.discord_id).get('id')
             server_id = str(after.guild.id)
-            classroom_id = await get_classroom_id(server_id)
-            await update_member_role(after.role, id, classroom_id)
+            classroom_id = await api.get_classroom_id(server_id)
+            await api.update_member_role(after.role, id, classroom_id)
             
     @bot.event
     async def on_guild_channel_create(channel):
@@ -177,30 +177,13 @@ def run_discord_bot():
             else:
                 await ctx.send("Invalid file format, only PDF files are accepted.")
 
-    @bot.slash_command(name ='discussion',
-                       description='Creates a new text channel with a prompt for discussion')
-    async def discussion_create(ctx: discord.ApplicationContext, channel_name: str, prompt: str):
-        # Verify existence of 'Discussion' category, or create it if it does not exist
-        if discord.utils.get(ctx.guild.categories, name='Discussion'):
-            category = discord.utils.get(ctx.guild.categories, name='Discussion')
-        else:
-            category = await ctx.guild.create_category('Discussion')
-
-        # Create new channel for discussion
-        channel = await ctx.guild.create_text_channel(name=channel_name, category=category)
-        
-        # Send discussion prompt to new channel
-        embed = discord.Embed(title=channel_name, description=prompt)
-        await channel.send(embed=embed)
-        await ctx.respond('Discussion channel created.')
-
-        return channel
-
     @bot.slash_command(name='poll',
                        description='```/poll [topic] [option1] [option2] ... [option8]``` - Creates a poll for users (8 max options)')
     async def poll(ctx: discord.ApplicationContext, topic: str, option1: str, option2: str, option3: str = None,
                    option4: str = None, option5: str = None, option6: str = None, option7: str = None,
                    option8: str = None):
+
+        await ctx.defer()
 
         options = [option1, option2]
         if option3:
@@ -216,9 +199,17 @@ def run_discord_bot():
         if option8:
             options.append(option8)
 
+        num_reactions_for_option_idx = [0] * len(options)
+
+        #box area created for reactions
+        boxes = []
+        for i in range(10):
+            boxes.append("⬛")
+        boxesStr = ''.join(boxes)
+
         # Create the poll embed
         embed = discord.Embed(title=topic, description=' '.join(
-            [f'{chr(0x1f1e6 + i)} {option}\n' for i, option in enumerate(options)]))
+            [f'{chr(0x1f1e6 + i)} {option}\n `{boxesStr}` {0} (0%)\n' for i, option in enumerate(options)]))
 
         await ctx.respond("Poll Created")
 
@@ -226,6 +217,52 @@ def run_discord_bot():
         message = await ctx.send(embed=embed)
         for i in range(len(options)):
             await message.add_reaction(chr(0x1f1e6 + i))
+
+        num_total_reactions = [0]
+
+        async def update_poll_data(change_to_reactions, num_total_reactions, reaction):
+            num_total_reactions[0] += change_to_reactions
+            print(f"{num_total_reactions[0]} users reacted to the message")
+
+            new_description_for_option_idx = [None] * len(options)
+            for i in range(len(options)):
+                # If the reaction emoji corresponds to options[i],
+                # update num_reactions_for_option_idx[i]
+                if reaction.emoji == chr(127462 + i):
+                    num_reactions_for_option_idx[i] += change_to_reactions
+
+                print(f"option{i + 1} reaction total: {num_reactions_for_option_idx[i]}")  
+                reactionPercentage = round((num_reactions_for_option_idx[i] / num_total_reactions[0]) * 100) if num_total_reactions[0] > 0 else 0
+                print(f"option{i + 1}%: {reactionPercentage}")
+
+                boxesForOption = boxes.copy()
+                for j in range(round(reactionPercentage / 10)):
+                    if i < 7:
+                        boxesForOption[j] = f"{chr(0x1F7E5+i)}"
+                    else:
+                        boxesForOption[j] = f"{chr(0x2B1C)}"
+                boxesForOptionStr = ''.join(boxesForOption)
+                
+                new_description_for_option_idx[i] = f'{chr(0x1f1e6 + i)} {options[i]}\n `{boxesForOptionStr}` {num_reactions_for_option_idx[i]} ({reactionPercentage}%)\n'
+
+            embed.description = ' '.join(new_description_for_option_idx)
+            await message.edit(embed=embed)
+
+        # check that the reaction is from a user, not a bot
+        def check(reaction, user):
+            return user != bot.user and reaction.message.id == message.id and str(reaction.emoji) in [
+                chr(127462 + i) for i in range(len(options))]
+        
+        async def on_reaction_add(reaction, user):
+            if check(reaction, user):
+                await update_poll_data(1, num_total_reactions, reaction)
+
+        async def on_reaction_remove(reaction, user):
+            await update_poll_data(-1, num_total_reactions, reaction)
+
+        #bot waits for reaction event from user
+        bot.add_listener(on_reaction_add, 'on_reaction_add')
+        bot.add_listener(on_reaction_remove, 'on_reaction_remove')
 
     async def increment_attendance(discord_id:str):
         student = supabase.table('User').select().eq('discord_id', discord_id).single().execute()
@@ -239,7 +276,7 @@ def run_discord_bot():
     async def attendance(ctx: discord.ApplicationContext, time: float = 5):
         user_roles = [role.name for role in ctx.author.roles]
         guild_id = ctx.guild_id
-        if  'Educator' in user_roles or 'Assistant' in user_roles:
+        if 'Educator' in user_roles or 'Assistant' in user_roles:
             await ctx.respond("Now taking Attendance...")
             date = datetime.datetime.now().strftime("%m - %d - %y %I:%M %p")
             student_role = discord.utils.get(ctx.guild.roles, name="Student")
@@ -290,7 +327,7 @@ def run_discord_bot():
 
             # Update the 'total attendance' in the Supabase table
             classroom_table = supabase.table('Classroom')
-            classroom_id = await api.get_classroom_id(guild_id)
+            classroom_id = await api.get_classroom_id(str(guild_id))
             _, error = await classroom_table.update({'total_attendance': supabase.sql('total_attendance + 1')}).single().where('class_id', '=', classroom_id).execute()
             if error:
                 print(f"Error updating total attendance: {error}")
@@ -391,21 +428,76 @@ def run_discord_bot():
     async def private(ctx: discord.ApplicationContext, question: str):
         student_role = discord.utils.get(ctx.guild.roles, name="Student")
         if student_role in ctx.author.roles:
-            user = ctx.author.mention
-            u = ctx.author.nick
-            response = user
+            user_mention = ctx.author.mention
+            student_id = str(ctx.author.id)
             q = discord.utils.get(ctx.guild.categories, name="Questions")
             if q is None:
                 q = await ctx.guild.create_category("Questions")
-            if u is None:
-                u = ctx.author
-            private_channel = await ctx.guild.create_text_channel(f"Private-{u}", category=q)
+
+            channels = q.channels
+
+            for channel in channels:
+                if channel.name == f"private-{student_id}":
+                    await ctx.respond(f"{user_mention} You already have a private question open.", delete_after=3)
+                    return
+
+            private_role = await ctx.guild.create_role(name=f"{student_id}")
+
+            await ctx.author.add_roles(private_role)
+
+            all_roles = ctx.guild.roles
+
+            ow = {}
+
+            for role in all_roles:
+                ow[role] = discord.PermissionOverwrite(read_messages=False)
+
+            overwrites = {
+                ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                private_role: discord.PermissionOverwrite(read_messages=True),
+                discord.utils.get(ctx.guild.roles, name="Educator"): discord.PermissionOverwrite(read_messages=True),
+                discord.utils.get(ctx.guild.roles, name="Assistant"): discord.PermissionOverwrite(read_messages=True)
+            }
+
+            ow.update(overwrites)
+
+            private_channel = await ctx.guild.create_text_channel(f"Private-{student_id}", category=q, overwrites=ow)
 
             await ctx.respond("Private question created", delete_after=3)
 
-            await private_channel.send(f"{user} asked: {question}")
+            await private_channel.send(f"{user_mention} asked: {question}")
         else:
             await ctx.respond("Only Students can ask private questions")
+
+    @bot.slash_command(name='close', description='```/close``` deletes a private question channel')
+    async def close(ctx: discord.ApplicationContext):
+        channel_name = ctx.channel.name
+        category = ctx.channel.category.name
+        if category == "Questions" and 'private' in channel_name:
+            embed = discord.Embed(title="Close this question?", color=0x00FF00)
+            embed.add_field(name="Are you sure you want to close this question?", value="✅ Yes\n❌ No")
+            interaction: discord.Interaction = await ctx.respond(embed=embed)
+            message: discord.Message = await interaction.original_response()
+            await message.add_reaction("✅")
+            await message.add_reaction("❌")
+
+            def check(reaction, user):
+                return user == ctx.author and reaction.message.id == message.id and str(reaction.emoji) in ["✅", "❌"]
+
+            while True:
+                reaction, user = await bot.wait_for('reaction_add', check=check)
+
+                # Assign role to user who reacted
+                if reaction.emoji == "✅":
+                    student_id = ctx.channel.name.split("-")[1]
+                    created_role = discord.utils.get(ctx.guild.roles, name=f"{student_id}")
+                    await created_role.delete()
+                    await ctx.channel.delete(reason=f"Closed by {ctx.author.display_name}")
+                if reaction.emoji == "❌":
+                    await message.delete()
+        else:
+            await ctx.respond("You cannot close this channel", delete_after=3)
+
 
     @bot.slash_command(name='help', description='```/help``` sends command information to the user')
     async def help(ctx, command_name: str = None):
@@ -432,8 +524,19 @@ def run_discord_bot():
     @create.command(name='quiz',
                     description='```/create quiz [questions.json]``` - Creates a Quiz for students to take')
     async def quiz(ctx, questions: discord.Attachment = None):
-
         modal = create_quiz.create_quiz(bot=bot)
+        await ctx.send_modal(modal)
+
+    @create.command(name='discussion',
+                       description='Creates a new text channel with a prompt for discussion')
+    async def discussion(ctx: discord.ApplicationContext):
+        modal = create_discussion.create_discussion(bot=bot)
+        await ctx.send_modal(modal)
+
+    @create.command(name='assignment',
+                       description='```/assignment [start_date] [due_date] [points] (pdf)``` - Creates assignments for students')
+    async def assignment(ctx: discord.ApplicationContext, file: discord.Attachment = None):
+        modal = create_assignment.create_assignment(bot=bot, file=file)
         await ctx.send_modal(modal)
 
     @bot.slash_command(name='upload_file', description='```/upload file`` - User can follow link to upload file')
@@ -449,91 +552,221 @@ def run_discord_bot():
         await ctx.defer()
 
         messages.append(
-            {"role": "user", "content": f"Give me {grade} grade quiz on {subject} with 5 questions in less than 150 words, hiding the answers"}
+            {"role": "user", "content": f"Give me a {grade} grade quiz on {subject} with 5 questions in less than 150 words, hiding the answers"}
         )
-        chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages, max_tokens=100)
+        chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages, max_tokens=150)
 
         reply = chat.choices[0].message.content
 
-        await ctx.respond(f"TutorGPT: {reply}")
+        user = ctx.author
 
-        # TODO: When student responds, their answers are checked for correctness
+        await ctx.respond("Check DMs", delete_after=3)
+        await user.send(f"TutorGPT: {reply}")
 
+        messages.append({"role": "assistant", "content": reply})
 
-    #assignment update
-    #goes through supabase and get data of specific dates
-    async def get_dates(start_date: str, due_date: str):
-        query = f"SELECT name, dueDate FROM ASSIGNMENT WHERE dueDate >= '{start_date}' AND dueDate <= '{due_date}'"
-        response = await supabase.raw(query)
-        return response['data'] 
+        def check(message):
+            return message.author == user and message.channel == user.dm_channel
+
+        response = await bot.wait_for('message', check=check)
+
+        content = response.content
+        content += "\nNow show me the answers without repeating the questions."
+
+        messages.append(
+            {"role": "user", "content": content}
+        )
+
+        chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages, max_tokens=150)
+        reply = chat.choices[0].message.content
+
+        await user.send(f"TutorGPT: {reply}")
+
+        messages.append({"role": "assistant", "content": reply})
+
+    async def get_dates_assignments(server_id : str, due_date: str):
+        response = supabase.table("Assignment").select('*').lte('dueDate', due_date).execute()
+        all_assignments = response.data
+        classroom_assignments = []
+        for assignment in all_assignments:
+            channel = bot.get_channel(int(assignment['channelId']))
+            if channel is not None:
+                if str(channel.guild.id) == str(server_id):
+                    classroom_assignments.append(assignment)
+        return classroom_assignments
+
+    async def get_dates_quiz(server_id : str, due_date:str):
+        response = supabase.table("Quiz").select('*').lte('dueDate', due_date).execute()
+        all_quizzes = response.data
+        classroom_quizzes = []
+        for quiz in all_quizzes:
+            channel = bot.get_channel(int(quiz['channelId']))
+            if channel is not None:
+                if str(channel.guild.id) == str(server_id):
+                    classroom_quizzes.append(quiz)
+        return classroom_quizzes
+
+    async def get_dates_discussion(server_id: str, due_date: str):
+        response = supabase.table("Discussion").select('*').lte('dueDate', due_date).execute()
+        all_discussions = response.data
+        classroom_discussions = []
+        for disc in all_discussions:
+            channel = bot.get_channel(int(disc['channelId']))
+            if channel is not None:
+                if str(channel.guild.id) == str(server_id):
+                    classroom_discussions.append(disc)
+        return classroom_discussions
     
     #clears specific category of all channels
-    async def clear_upcoming(category):
+    async def clear_upcoming(category: discord.CategoryChannel):
         for channel in category.channels:
             await channel.delete()
     
-    #function to repace all voice channel icons with memo eoji
-    async def add_memo_icon(category):
-        guild = discord.utils.get(guild.categories, name = category)
-        
-         # Create a new image for the memo icon with the memo emoji
-        memo_emoji = chr(0x1F4DD)
-        memo_icon = Image.new('RGBA', (128, 128), (255, 255, 255, 0))
-        draw = ImageDraw.Draw(memo_icon)
-        draw.text((0, 0), memo_emoji, fill=(255, 255, 255, 255))
+    #function to lock, but keep visible
+    async def lock_but_keep_vis(ctx : discord.ApplicationContext, category):
+        student_role = discord.utils.get(ctx.guild.roles, name="Student")
+        assistant_role = discord.utils.get(ctx.guild.roles, name="Assistant")
+        educator_role = discord.utils.get(ctx.guild.roles, name="Assistant")
 
-        # Iterate over the voice channels in the category
-        for channel in category.voice_channels:
-            # Update channel permissions to deny all voice permissions
-            await channel.set_permissions(guild.student_role, connect=False, speak=False, stream=False, view_channel=True)
+        await category.set_permissions(ctx.guild.default_role, connect=False, view_channel=True)
+        await category.set_permissions(student_role, connect=False, view_channel=True)
+        await category.set_permissions(assistant_role, connect=False, view_channel=True)
+        await category.set_permissions(educator_role, connect=False, view_channel=True)
+        await category.set_permissions(ctx.guild.owner, connect=False, view_channel=True)
+
            
-            # Load the original channel icon image
-            icon_bytes = await channel.icon.read()
-            icon_image = Image.open(BytesIO(icon_bytes))
-
-            # Add the memo icon to the original image
-            icon_image.alpha_composite(memo_icon)
-
-            # Convert the image to bytes and update the channel icon
-            buffer = BytesIO()
-            icon_image.save(buffer, format='PNG')
-            buffer.seek(0)
-            await channel.edit(icon=buffer) 
     
     #update slash command
     @bot.slash_command(
-        name = 'update',
-        description = "Checks dates in database and updates the category with the upcoming assignments")
-    async def update_upcoming(ctx: discord.ApplicationContext, 
-                              start_date: discord.Option(str, description= "End date in the format YYYY-MM-DD"),
-                              end_date: discord.Option(str, description= "End date in the format YYYY-MM-DD")):
-        category = discord.utils.get(ctx.guild.categories, name = 'Upcoming')
+        name = 'upcoming',
+        description = "Updates the 'Upcoming' category to show all schoolwork due before the end date")
+    async def update_upcoming(ctx: discord.ApplicationContext,
+                              end_date: discord.Option(str, description= "End date in the format YYYY-MM-DD") = (datetime.date.today() + datetime.timedelta(days=7)).strftime('%Y-%m-%d')):
+
+        await ctx.defer()
+
+        category = discord.utils.get(ctx.guild.categories, name='Upcoming')
+        if category is None:
+            category = await ctx.guild.create_category("Upcoming")
 
         #clears the current category so that it does not get bloated
         await clear_upcoming(category)
 
-        #makes channel with the dates used
-        new_channel = await ctx.guild.create_voice_channel(
-            name = f"for {start_date} through {end_date}",
-            category = category
-        )
+        #runs the get assignment data function
+        assignment_date_data = await get_dates_assignments(str(ctx.guild_id), end_date)
+
+        #runs the get date data for quizzes
+        quiz_date_data = await get_dates_quiz(str(ctx.guild_id), end_date)
+
+        discussion_date_data = await get_dates_discussion(str(ctx.guild_id), end_date)
+
+         #iterates through all dates collected for quizzes
+        for item in quiz_date_data:
+            channel_name = str(item['title'])
+            points = str(item['points'])
+
+            await ctx.guild.create_voice_channel(
+                name = f"❓| {points} Pts. | {channel_name}",
+                category = category
+            )
         
-        #runs the get data function
-        date_data = await get_dates(start_date, end_date)
+        #iterates through all dates collected for assignments
+        for item in assignment_date_data:
+            channel_name = str(item['title'])
+            points = str(item['points'])
 
-        #iterates through all dates collected
-        for item in date_data:
-            channel_name = str(item['name'])
-
-            new_channel = await ctx.guild.create_voice_channel(
-                name = channel_name,
+            await ctx.guild.create_voice_channel(
+                name = f"📝| {points} Pts. | {channel_name}",
                 category = category
             )
 
-            await ctx.respond(f"Added new assignment to upcoming: {new_channel.name}")
+        for item in discussion_date_data:
+            channel_name = str(item['title'])
+            points = str(item['points'])
+
+            await ctx.guild.create_voice_channel(
+                name=f"💬| {points} Pts. | {channel_name}",
+                category=category
+            )
         
         #adds the icon for the channels
-        await add_memo_icon(category)
+        await lock_but_keep_vis(ctx, category)
+
+        await ctx.respond(f"Upcoming category updated")
+    
+    @bot.slash_command(name='grade',
+                        description='```/grade [discord_id] [task_id] [score]``` - post grades for a student')
+    async def grade(ctx: discord.ApplicationContext, discord_id: str, task_id: int, score: int):
+        if ctx.author.id != ctx.guild.owner_id:
+            await ctx.send("Error")
+            return
+        studentId_dict = await api.get_member_id(discord_id)
+        studentId = studentId_dict["id"]
+
+
+        grade_dict = {'graderId': studentId, 'taskId': task_id, 'studentId': studentId, 'score': score}
+        new_grade = Grade(graderId=grade_dict['graderId'], taskId=grade_dict['taskId'],
+                         studentId=grade_dict['studentId'], score=grade_dict['score'] )
+        
+        #post grade update
+        await api.update_grade(new_grade)
+
+
+        #send grade updated to the student
+        student_grade = await api.get_grades(studentId)
+
+        student = bot.get_user(int(discord_id))
+        if student is None:
+            # Handle the case where the student is not found
+            await ctx.channel.send("Could not find the student's Discord user.")
+        else:
+            # Send the grades to the student's "grades" channel
+            channel_name = student.name + "-grades"
+            channel = discord.utils.get(ctx.guild.text_channels, name=channel_name)
+            if channel is None:
+                # Create a new text channel for the student
+                overwrites = {
+                    ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                    student: discord.PermissionOverwrite(read_messages=True)
+                }
+                channel = await ctx.guild.create_text_channel(channel_name, overwrites=overwrites)
+
+
+            quiz_scores = []
+            assignment_scores = []
+            quiz_weight = 0.15 #quiz weight
+            assignment_weight = 0.20 
+            quiz_weighted_score = 0
+            assignment_weighted_score = 0
+            # Loop through the list of grades and separate quiz scores and assignment scores
+            for grade in student_grade:
+                if grade['type'] == 'Quiz':
+                    quiz_scores.append(grade['score'])
+                elif grade['type'] == 'Assignment':
+                    assignment_scores.append(grade['score'])
+            if len(quiz_scores) >= 1:
+            # Calculate the weighted average of quiz scores
+                quiz_weighted_avg = sum(quiz_scores) / sum([g['points'] for g in student_grade if g['type'] == 'Quiz'])
+                quiz_weighted_score = quiz_weighted_avg * quiz_weight
+            if len(assignment_scores) >= 1:
+            # Calculate the weighted average of assignment scores
+                assignment_weighted_avg = sum(assignment_scores) / sum([g['points'] for g in student_grade if g['type'] == 'Assignment'])
+                assignment_weighted_score = assignment_weighted_avg * assignment_weight
+
+            # Calculate the overall grade
+            overall_grade = (quiz_weighted_score + assignment_weighted_score) / (quiz_weight + assignment_weight)
+            overall_grade = format(overall_grade, '.2f')
+
+            grade_string = ""
+            for grade in student_grade:
+                grade_string += f"{grade['type']} - {grade['title']}: {grade['score']}/{grade['points']}\n"
+
+            grade_string+=f"overall grade - {overall_grade}"
+            # Send the grades to the student's new channel
+            await channel.send(f"Here are your grades, recalculated:\n{grade_string}")
+            await ctx.respond("posted grade!")
+
+        
 
     # TESTING COMMANDS-------------------------------------------------------------------------------
     # @bot.command()
