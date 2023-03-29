@@ -10,6 +10,7 @@ import io
 import datetime
 from PyPDF2 import PdfReader
 import api
+import utils
 import create_quiz
 import openai
 from io import BytesIO
@@ -90,18 +91,6 @@ def run_discord_bot():
         # Add classroom and educator to database
         await api.create_classroom(id=guild.id, name=guild.name)
         await api.add_member_to_table(guild_id=guild.id, role='Educator', nickname=guild.owner.nick, did=guild.owner.id)
-
-    async def add_member_to_table(guild_id, role, nick, discord_id):
-        classroom_id = await get_classroom_id(server_id=guild_id)
-
-        # Query 'User' table for the user
-        response = await get_user_id(discord_id=discord_id)
-        if 'message' in response:
-            response = await create_user(nick=nick, discord_id=discord_id)
-        user_id = response['user_id']
-
-        # Create row for user in 'Classroom User' table
-        await create_classroom_user(classroom_id=classroom_id, user_id=user_id, name=nick, role=role)
 
     #Gives new users the Student role
     @bot.event
