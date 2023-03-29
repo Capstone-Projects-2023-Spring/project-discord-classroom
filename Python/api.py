@@ -237,7 +237,11 @@ async def create_student(id: str, name:str, server: str):
 
 @app.post('/classroom_user')
 async def create_classroom_user(classroom_id: int, user_id: int, name: str, role:str):
-    supabase.table("Classroom_User").insert({"classroomId": classroom_id, 'userId': user_id, 'role': role}).execute()
+    if role == 'Student':
+        attendance = 0
+    else:
+        attendance = None
+    supabase.table("Classroom_User").insert({"classroomId": classroom_id, 'userId': user_id, 'role': role, 'attendance': attendance}).execute()
     return {'message': 'Classroom user created'}
     
 @app.put("/classroom_user")
