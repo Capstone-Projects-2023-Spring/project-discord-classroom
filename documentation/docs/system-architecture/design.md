@@ -63,60 +63,55 @@ erDiagram
         int classroomId FK
         int userId FK
         string role
+        int attendance
     }
     USER {
         int id PK
         string name
         string discordId
-        int attendance
-    }
-    CLASSROOM_TASK {
-        int id PK
-        int classroomId FK
-        string taskType
-        int taskTypeId FK
     }
     ASSIGNMENT {
         int id PK
         string name
-        string channelId
         int points
         dateFormat startDate
         dateFormat dueDate
+        int channelId
+        int classroomId FK
     }
     QUIZ {
         int id PK
-        string name
-        string channelId
+        string title
         int points
         dateFormat startDate
         dateFormat dueDate
         int timeLimit
         string questionsUrl
+        int channelId
+        int classroomId FK
     }
     DISCUSSION {
        int id PK
-       int name
-       string channelId
+       int title
        int points
        dateFormat startDate
        dateFormat dueDate 
+       int channelId
+       int classroomId FK
     }
     GRADE {
         int id PK
+        string taskType
         int taskId FK
         int studentId FK
         int graderId FK
         int score
-
     }
     CLASSROOM ||--|{ CLASSROOM_USER : has
-    CLASSROOM ||--|{ CLASSROOM_TASK : contains
-    CLASSROOM_TASK || -- || GRADE : contains
     CLASSROOM_USER }|--|| USER : has
-    CLASSROOM_TASK }|--|| ASSIGNMENT : is
-    CLASSROOM_TASK }|--|| QUIZ : is
-    CLASSROOM_TASK }|--|| DISCUSSION : is
+    CLASSROOM }|--|| ASSIGNMENT : is
+    CLASSROOM }|--|| QUIZ : is
+    CLASSROOM }|--|| DISCUSSION : is
     USER ||--o{ GRADE : has
 ```
 
