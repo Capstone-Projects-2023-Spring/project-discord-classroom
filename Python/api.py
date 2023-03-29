@@ -76,7 +76,7 @@ async def get_classrooms():
 
 
 @app.get("/classroomId", response_model=ClassroomId, responses={404: {"model": Message}})
-async def get_classroom_id(server_id: str):
+async def get_classroom_id(server_id: int):
     response = supabase.table('Classroom').select('*').eq('serverId', server_id).execute()
     if response.data is not []:
         return {'id': response.data[0]['id']}
@@ -236,24 +236,28 @@ async def create_student(id: str, name:str, server: str):
 # /classroom_user
 
 @app.post('/classroom_user')
-async def create_classroom_user(classroom_id:str, user_id: int, name: str, role:str):
-    supabase.table("Classroom_User").insert({"classroomId": classroom_id['id'], 'userId': user_id, 'role': role}).execute()
+async def create_classroom_user(classroom_id: int, user_id: int, name: str, role:str):
+    supabase.table("Classroom_User").insert({"classroomId": classroom_id, 'userId': user_id, 'role': role}).execute()
     return {'message': 'Classroom user created'}
     
 @app.put("/classroom_user")
 async def update_classroom_user_role(role: str, user_id: int, classroom_id: int):
-    response = supabase.table('Classroom_User').update({'role': role}).eq('id', user_id).eq('classroomId', classroom_id).execute()
+    if role == 'Student':
+        attendance = 0
+    else:
+        attendance = None
+    response = supabase.table('Classroom_User').update({'role': role, 'attendance': attendance}).eq('userId', user_id).eq('classroomId', classroom_id).execute()
     return {'message': 'Role updated'}
 
 # /user
 
 @app.put("/user")
-async def create_user(nick: str, discord_id: str):
-    response = supabase.table('User').insert({'discordId': discord_id, 'name': nick, "attendance": 0 }).execute()
+async def create_user(nick: str, discord_id: int):
+    response = supabase.table('User').insert({'discordId': discord_id, 'name': nick }).execute()
     return {'message': 'User created', 'id': response.data[0]['id']}
 
 @app.get("/user/id")
-async def get_user_id(discord_id: str):
+async def get_user_id(discord_id: int):
     response = supabase.table('User').select('id').eq('discordId', discord_id).execute()
     if response.data:
         return response.data[0]
@@ -261,6 +265,6 @@ async def get_user_id(discord_id: str):
         return {'message': 'User not found'}
 
 @app.put("/user/nick")
-async def update_user_nick(nick: str, id: str):
-    response = supabase.table('User').update({'name': nick}).eq('discordId', id).execute()
+async def update_user_nick(nick: str, discord_id: int):
+    response = supabase.table('User').update({'name': nick}).eq('discordId', discord_id).execute()
     return {'message': 'Nickname updated'}
