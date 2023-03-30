@@ -9,13 +9,15 @@ import api
 from create_classes import Quiz, Question
 import random
 import time
+import io
 
 
 class InputModal(discord.ui.Modal):
     def __init__(self, embed: discord.Embed, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.embed = embed
-        answer = discord.ui.InputText(label="Answer", style=discord.InputTextStyle.long, placeholder="Type answer here...")
+        answer = discord.ui.InputText(label="Answer", style=discord.InputTextStyle.long,
+                                      placeholder="Type answer here...")
         self.add_item(answer)
 
     async def callback(self, interaction: discord.Interaction):
@@ -69,7 +71,7 @@ class TakeQuiz(discord.ui.View):
             first.disabled = True
             left.disabled = True
 
-        if self.this_question != self.eq[len(self.eq)-1]:
+        if self.this_question != self.eq[len(self.eq) - 1]:
             right.disabled = False
             last.disabled = False
         else:
@@ -119,8 +121,6 @@ class TakeQuiz(discord.ui.View):
             submit_button = self.get_item("submit")
             submit_button.disabled = False
             await interaction.followup.edit_message(view=self, message_id=interaction.message.id)
-
-
 
     @discord.ui.button(row=0, style=discord.ButtonStyle.secondary, label="<<", disabled=True,
                        custom_id="first")
@@ -195,7 +195,8 @@ class TakeQuiz(discord.ui.View):
         await interaction.response.edit_message(embed=self.this_question)
         await self.update_letters(interaction, "E")
 
-    @discord.ui.button(row=2, style=discord.ButtonStyle.secondary, emoji="⌨", label="Type Answer", disabled=True, custom_id="input")
+    @discord.ui.button(row=2, style=discord.ButtonStyle.secondary, emoji="⌨", label="Type Answer", disabled=True,
+                       custom_id="input")
     async def input_button_callback(self, button, interaction: discord.Interaction):
         response = await interaction.response.send_modal(InputModal(self.this_question, title="Type Answer"))
         self.has_answer[self.eq.index(self.this_question)] = True
@@ -235,13 +236,15 @@ class TakeQuiz(discord.ui.View):
             else:
                 message += f"Question {i + 1}.\n\n{ques}\nStudent's Answer: ❌```{student_answers[i]}```\nCorrect Answer: ```{self.answers[i]}```\n\n"
         if from_timer:
-            await interaction.followup.edit_message(message_id=interaction.message.id, content="Time's Up - Quiz Submitted", embed=None, view=None)
+            await interaction.followup.edit_message(message_id=interaction.message.id,
+                                                    content="Time's Up - Quiz Submitted", embed=None, view=None)
         else:
             await interaction.response.edit_message(content="Quiz Submitted", embed=None, view=None)
         await new_channel.send(f"ID: Q-{quiz_id}-{user_id}")
         await new_channel.send(message)
 
-    @discord.ui.button(row=3, style=discord.ButtonStyle.success, emoji="✅", label="Submit Quiz", disabled=True, custom_id="submit")
+    @discord.ui.button(row=3, style=discord.ButtonStyle.success, emoji="✅", label="Submit Quiz", disabled=True,
+                       custom_id="submit")
     async def submit_button_callback(self, button, interaction: discord.Interaction):
         await self.submit_quiz(interaction, False)
 
@@ -259,7 +262,7 @@ class StartQuiz(discord.ui.View):
         if student_role not in interaction.user.roles:
             return await interaction.response.send_message("Only students can take quizzes", ephemeral=True)
         self.took_quiz.append(interaction.user)
-        quiz = await api.get_quiz(str(interaction.channel_id))
+        quiz = await api.get_quiz(interaction.channel_id)
         quiz_time = quiz['quiz']['timeLimit']
         quiz_id = quiz['quiz']['id']
         due = quiz['quiz']['dueDate']
@@ -304,7 +307,6 @@ class StartQuiz(discord.ui.View):
                 await interaction.edit_original_response(content=f"⏳ {str(time_format)}")
                 await asyncio.sleep(1)
 
-
             await take_quiz.submit_quiz(interaction, True)
 
     @discord.ui.button(row=0, style=discord.ButtonStyle.secondary, emoji='🔃', custom_id="refresh")
@@ -318,7 +320,8 @@ class StartQuiz(discord.ui.View):
             self.remove_item(refresh_button)
         await interaction.response.edit_message(view=self)
 
-def create_quiz(bot):
+
+def create_quiz(bot, preset=None):
     class QuizModal(discord.ui.Modal):
 
         def __init__(self, *args, **kwargs) -> None:
@@ -326,16 +329,29 @@ def create_quiz(bot):
 
             self.bot = bot
 
+            val_title = None
+            val_time_limit = 0
+            val_points = None
+            val_start_date = datetime.date.today().strftime('%Y-%m-%d')
+            val_due_date = (datetime.date.today() + datetime.timedelta(days=7)).strftime('%Y-%m-%d')
+            if preset:
+                val_title = preset['title']
+                val_time_limit = preset['time_limit']
+                val_points = int(preset['points'])
+                val_start_date = preset['start_date']
+                val_due_date = preset['due_date']
+
             title = discord.ui.InputText(label="Title", style=discord.InputTextStyle.short,
-                                         placeholder="ex: 'Parts of the Cell'", max_length=32)
+                                         placeholder="ex: 'Parts of the Cell'", max_length=32, value=val_title)
             points = discord.ui.InputText(label="Points", style=discord.InputTextStyle.short,
-                                          placeholder="ex: '50'", required=False)
+                                          placeholder="ex: '50'", required=False, value=val_points)
             start_date = discord.ui.InputText(label="Start Date", style=discord.InputTextStyle.short,
-                                              placeholder="ex: '2023-05-25'", value=f"{datetime.date.today().strftime('%Y-%m-%d')}")
+                                              placeholder="ex: '2023-05-25'", value=val_start_date)
             due_date = discord.ui.InputText(label="Due Date", style=discord.InputTextStyle.short,
-                                            placeholder="ex: '2023-05-30'", value=f"{(datetime.date.today() + datetime.timedelta(days=7)).strftime('%Y-%m-%d')}")
-            time_limit = discord.ui.InputText(label="Time Limit (minutes)", placeholder="ex: '30' for 30 minutes or '0' for no time limit",
-                                              style=discord.InputTextStyle.short, value="0")
+                                            placeholder="ex: '2023-05-30'", value=val_due_date)
+            time_limit = discord.ui.InputText(label="Time Limit (minutes)",
+                                              placeholder="ex: '30' for 30 minutes or '0' for no time limit",
+                                              style=discord.InputTextStyle.short, value=str(val_time_limit))
             self.add_item(title)
             self.add_item(points)
             self.add_item(start_date)
@@ -347,7 +363,7 @@ def create_quiz(bot):
             title = self.children[0].value
             if self.children[1].value != "":
                 try:
-                    points = int(self.children[1].value)
+                    points = float(self.children[1].value)
                 except ValueError:
                     return await interaction.response.send_message("Invalid points")
             try:
@@ -470,8 +486,17 @@ def create_quiz(bot):
             class QuizView(discord.ui.View):
                 def __init__(self):
                     super().__init__(timeout=None)
+                    if preset:
+                        preset_questions = preset['questions']
+                        for i, question in enumerate(preset_questions):
+                            new_embed = discord.Embed(title=f"Question {i+1}.")
+                            new_embed.add_field(name="Question", value=question['question'])
+                            new_embed.add_field(name='Answer', value=question['answer'])
+                            new_embed.add_field(name='Wrong Options', value=question['wrong'])
+                            new_embed.add_field(name='Points', value=question['points'])
+                            slides.append(new_embed)
 
-                async def update_buttons(self, interaction2):
+                async def update_buttons(self, interaction):
                     left = self.get_item("left")
                     right = self.get_item("right")
                     done = self.get_item("done")
@@ -508,12 +533,12 @@ def create_quiz(bot):
                     e.set_field_at(index=5, name="Number of Questions", value=str(len(slides) - 1), inline=False)
                     self.update_points()
 
-                    if interaction2.message is not None:
-                        await interaction2.followup.edit_message(embed=current_slide,
-                                                                 message_id=interaction2.message.id,
+                    if interaction.message is not None:
+                        await interaction.followup.edit_message(embed=current_slide,
+                                                                 message_id=interaction.message.id,
                                                                  view=self)
                     else:
-                        await interaction2.followup.edit_message(embed=current_slide,
+                        await interaction.followup.edit_message(embed=current_slide,
                                                                  message_id=quiz_message.id,
                                                                  view=self)
 
@@ -582,19 +607,21 @@ def create_quiz(bot):
                 @discord.ui.button(label="Done", row=2, style=discord.ButtonStyle.success, emoji="✅", disabled=True,
                                    custom_id="done")
                 async def done_button_callback(self, button, interaction: discord.Interaction):
-                    fields = slides[0].fields
-                    quiz_dict = {'title': fields[0].value, 'points': float(fields[1].value), 'start': fields[2].value,
-                                 'due': fields[3].value, 'time': fields[4].value}
+                    quiz_fields = slides[0].fields
 
                     question_list = []
+                    question_data = []
 
                     for i, question in enumerate(slides):
                         if i > 0:
-                            fields = question.fields
-                            wrong = fields[2].value.split(", ")
-                            question_dict = Question(question=fields[0].value, answer=fields[1].value,
-                                                     wrong=wrong, points=float(fields[3].value))
-                            question_list.append(question_dict)
+                            ques = question.fields[0].value
+                            answer = question.fields[1].value
+                            wrong = question.fields[2].value.split(", ")
+                            points = float(question.fields[3].value)
+                            new_question = Question(question=ques, answer=answer,
+                                                    wrong=wrong, points=points)
+                            question_list.append(new_question)
+                            question_data.append({'question': ques, 'answer': answer, 'wrong': question.fields[2].value, 'points': points})
 
                     await interaction.response.defer()
 
@@ -606,14 +633,15 @@ def create_quiz(bot):
                         if category.name == "Quizzes":
                             quizzes_category = category
 
-                    new_channel = await interaction.guild.create_text_channel(f"{quiz_dict['title']}",
+                    new_channel = await interaction.guild.create_text_channel(f"{quiz_fields[0].value}",
                                                                               category=quizzes_category)
 
                     res = await api.get_classroom_id(interaction.guild.id)
                     classroom_id = res['id']
 
-                    new_quiz = Quiz(title=quiz_dict['title'], points=quiz_dict['points'], start=quiz_dict['start'],
-                                    due=quiz_dict['due'], time=quiz_dict['time'], questions=url,
+                    new_quiz = Quiz(title=quiz_fields[0].value, points=float(quiz_fields[1].value),
+                                    start=quiz_fields[2].value,
+                                    due=quiz_fields[3].value, time=quiz_fields[4].value, questions=url,
                                     classroomId=classroom_id, channelId=new_channel.id)
 
                     await api.create_quiz(new_quiz)
@@ -621,7 +649,26 @@ def create_quiz(bot):
                     slides[0].title = "Quiz"
                     await new_channel.send(embed=slides[0], view=StartQuiz())
 
-                    await interaction.followup.edit_message(message_id=interaction.message.id, content="Created the Quiz!", embed=None, view=None)
+                    data = {
+                        'type': 'Quiz',
+                        'title': new_quiz.title,
+                        'time_limit': new_quiz.time,
+                        'points': new_quiz.points,
+                        'start_date': new_quiz.start,
+                        'due_date': new_quiz.due,
+                        'questions': question_data
+                    }
+
+                    json_str = json.dumps(data, indent=4)
+
+                    json_bytes = io.BytesIO(json_str.encode('utf-8'))
+                    json_bytes.seek(0)
+
+                    await interaction.followup.send('You can use this file with `/create upload` to quickly make tasks.',
+                        file=discord.File(json_bytes, f'Quiz-{title}.json'))
+
+                    await interaction.followup.edit_message(message_id=interaction.message.id,
+                                                            content="Created the Quiz!", embed=None, view=None)
 
                 @discord.ui.button(label="Edit", row=2, style=discord.ButtonStyle.primary, emoji="✂",
                                    custom_id="edit")
@@ -639,9 +686,7 @@ def create_quiz(bot):
             quiz_view = QuizView()
             await interaction.response.send_message(embed=current_slide, view=quiz_view)
             quiz_message = await interaction.original_response()
-
-            def check(reaction, user):
-                return user == interaction.user and reaction.message.id == quiz_message.id
+            await quiz_view.update_buttons(interaction)
 
     modal = QuizModal(title="Creating a Quiz")
     return modal

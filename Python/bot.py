@@ -558,7 +558,7 @@ def run_discord_bot():
             await ctx.respond("You need to be an Educator to create quizzes", delete_after=3)
 
     @create.command(name='discussion',
-                       description='Creates a new text channel with a prompt for discussion')
+                       description='```/create discussion``` - Creates a new text channel with a prompt for discussion')
     async def discussion(ctx: discord.ApplicationContext):
         edu_role = discord.utils.get(ctx.guild.roles, name="Educator")
         if edu_role in ctx.author.roles:
@@ -568,7 +568,7 @@ def run_discord_bot():
             await ctx.respond("You need to be an Educator to create discussions", delete_after=3)
 
     @create.command(name='assignment',
-                       description='```/assignment [start_date] [due_date] [points] (pdf)``` - Creates assignments for students')
+                       description='```/create assignment (file)``` - Creates assignments for students')
     async def assignment(ctx: discord.ApplicationContext, file: discord.Attachment = None):
         edu_role = discord.utils.get(ctx.guild.roles, name="Educator")
         if edu_role in ctx.author.roles:
@@ -576,6 +576,28 @@ def run_discord_bot():
             await ctx.send_modal(modal)
         else:
             await ctx.respond("You need to be an Educator to create assignments", delete_after=3)
+
+    @create.command(name='upload', description='```/create upload [json file]``` - Creates a task from a json file')
+    async def upload(ctx: discord.ApplicationContext, file: discord.Attachment):
+        edu_role = discord.utils.get(ctx.guild.roles, name="Educator")
+        if edu_role in ctx.author.roles:
+            contents = await file.read()
+            data = json.loads(contents)
+
+            if data['type'] == "Discussion":
+                modal = create_discussion.create_discussion(bot=bot, preset=data)
+                await ctx.send_modal(modal)
+            if data['type'] == "Assignment":
+                modal = create_assignment.create_assignment(bot=bot, preset=data)
+                await ctx.send_modal(modal)
+            if data['type'] == "Quiz":
+                modal = create_quiz.create_quiz(bot=bot, preset=data)
+                await ctx.send_modal(modal)
+        else:
+            await ctx.respond("You need to be an Educator to use /create upload", delete_after=3)
+
+
+
 
     @bot.slash_command(name='upload_file', description='```/upload file`` - User can follow link to upload file')
     async def upload_file(ctx):

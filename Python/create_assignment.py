@@ -14,7 +14,7 @@ import random
 import time
 
 
-def create_assignment(bot, file):
+def create_assignment(bot, file=None, preset=None):
     class AssignmentModal(discord.ui.Modal):
 
         def __init__(self, *args, **kwargs) -> None:
@@ -23,19 +23,29 @@ def create_assignment(bot, file):
             self.bot = bot
             self.file = file
 
+            val_title = None
+            val_details = None
+            val_points = None
+            val_start_date = datetime.date.today().strftime('%Y-%m-%d')
+            val_due_date = (datetime.date.today() + datetime.timedelta(days=7)).strftime('%Y-%m-%d')
+            if preset:
+                val_title = preset['title']
+                val_details = preset['details']
+                val_points = preset['points']
+                val_start_date = preset['start_date']
+                val_due_date = preset['due_date']
+
             title = discord.ui.InputText(label="Title", style=discord.InputTextStyle.short,
-                                         placeholder="ex: 'To Kill a Mockingbird Essay'", max_length=32)
+                                         placeholder="ex: 'To Kill a Mockingbird Essay'", max_length=32, value=val_title)
             details = discord.ui.InputText(label="Details",
                                            placeholder="ex: 'Write a 700 word essay on the symbolism in To Kill a Mockingbird in MLA format.'",
-                                           style=discord.InputTextStyle.long)
+                                           style=discord.InputTextStyle.long, value=val_details)
             points = discord.ui.InputText(label="Points", style=discord.InputTextStyle.short,
-                                          placeholder="ex: '40'")
+                                          placeholder="ex: '40'", value=val_points)
             start_date = discord.ui.InputText(label="Start Date", style=discord.InputTextStyle.short,
-                                              placeholder="ex: '2023-05-25'",
-                                              value=f"{datetime.date.today().strftime('%Y-%m-%d')}")
+                                              placeholder="ex: '2023-05-25'", value=val_start_date)
             due_date = discord.ui.InputText(label="Due Date", style=discord.InputTextStyle.short,
-                                            placeholder="ex: '2023-06-14'",
-                                            value=f"{(datetime.date.today() + datetime.timedelta(days=7)).strftime('%Y-%m-%d')}")
+                                            placeholder="ex: '2023-06-14'", value=val_due_date)
             self.add_item(title)
             self.add_item(details)
             self.add_item(points)
@@ -62,7 +72,7 @@ def create_assignment(bot, file):
             except ValueError:
                 return await interaction.response.send_message("Invalid due date format")
 
-            e.add_field(name="Description", value=details, inline=False)
+            e.add_field(name="Details", value=details, inline=False)
             e.add_field(name="Points", value=str(points), inline=False)
             e.add_field(name="Start Date", value=start_date, inline=False)
             e.add_field(name="Due Date", value=due_date, inline=False)
@@ -97,7 +107,23 @@ def create_assignment(bot, file):
 
             await api.create_assignment(new_assignment)
 
-            await interaction.response.send_message('Assignment created successfully')
+            data = {
+                'type': 'Assignment',
+                'title': title,
+                'details': details,
+                'points': points,
+                'start_date': start_date.isoformat(),
+                'due_date': due_date.isoformat()
+            }
+
+            json_str = json.dumps(data, indent=4)
+
+            json_bytes = io.BytesIO(json_str.encode('utf-8'))
+            json_bytes.seek(0)
+
+            await interaction.response.send_message(
+                'Assignment created.\nYou can use this file with `/create upload` to quickly make tasks.',
+                file=discord.File(json_bytes, f'Assignment-{title}.json'))
 
     modal = AssignmentModal(title="Creating an Assignment")
     return modal
