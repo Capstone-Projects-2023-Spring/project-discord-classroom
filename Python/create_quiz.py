@@ -10,6 +10,7 @@ from create_classes import Quiz, Question
 import random
 import time
 import io
+import re
 
 
 class InputModal(discord.ui.Modal):
@@ -26,12 +27,13 @@ class InputModal(discord.ui.Modal):
 
 
 class TakeQuiz(discord.ui.View):
-    def __init__(self, embed_ques: List[discord.Embed], title: str, answers: List[str]):
+    def __init__(self, embed_ques: List[discord.Embed], quiz_dict: dict, answers: List[str]):
         super().__init__(timeout=None)
         self.eq = embed_ques
         self.this_question = embed_ques[0]
-        self.quiz_title = title
+        self.quiz_title = quiz_dict['title']
         self.answers = answers
+        self.was_submitted = False
         right_button = self.get_item('right')
         last_button = self.get_item('last')
         self.has_answer = []
@@ -214,6 +216,8 @@ class TakeQuiz(discord.ui.View):
         res = await api.get_quiz(interaction.channel_id)
         quiz_id = res['quiz']['id']
 
+        self.was_submitted = True
+
         new_channel = await interaction.guild.create_text_channel(
             f"❓{self.quiz_title}-{interaction.user.display_name}", category=submissions_category)
 
@@ -235,10 +239,7 @@ class TakeQuiz(discord.ui.View):
                 message += f"Question {i + 1}.\n\n{ques}\nStudent's Answer: ✅```{student_answers[i]}```\nCorrect Answer: ```{self.answers[i]}```\n\n"
             else:
                 message += f"Question {i + 1}.\n\n{ques}\nStudent's Answer: ❌```{student_answers[i]}```\nCorrect Answer: ```{self.answers[i]}```\n\n"
-        if from_timer:
-            await interaction.followup.edit_message(message_id=interaction.message.id,
-                                                    content="Time's Up - Quiz Submitted", embed=None, view=None)
-        else:
+        if not from_timer:
             await interaction.response.edit_message(content="Quiz Submitted", embed=None, view=None)
         await new_channel.send(f"ID: Q-{quiz_id}-{user_id}")
         await new_channel.send(message)
@@ -252,17 +253,35 @@ class TakeQuiz(discord.ui.View):
 class StartQuiz(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
-        self.took_quiz = []
 
     @discord.ui.button(row=0, style=discord.ButtonStyle.success, label="Start Quiz", disabled=True, custom_id="start")
     async def start_button_callback(self, button, interaction: discord.Interaction):
-        if interaction.user in self.took_quiz:
-            return await interaction.response.send_message("You already took this quiz", ephemeral=True)
         student_role = discord.utils.get(interaction.guild.roles, name="Student")
         if student_role not in interaction.user.roles:
             return await interaction.response.send_message("Only students can take quizzes", ephemeral=True)
-        self.took_quiz.append(interaction.user)
         quiz = await api.get_quiz(interaction.channel_id)
+        user_id = await api.get_user_id(interaction.user.id)
+
+        #Checks if the user already took the quiz
+        submissions_category = discord.utils.get(interaction.guild.categories, name="Submissions")
+        if submissions_category:
+            for channel in submissions_category.channels:
+                if isinstance(channel, discord.TextChannel):
+                    channel_name = channel.name
+                    display_name_split = re.split(r'[-\s]', interaction.user.display_name)
+                    if channel_name[0] == '❓':
+                        submission_title = channel_name.split('❓')[1]
+                        if channel_name.split('-')[-1] == display_name_split[-1].lower() and submission_title.startswith(interaction.channel.name):
+                            try:
+                                first_message = await channel.history(oldest_first=True, limit=1).next()
+                                first_message_split = first_message.content.split('-')
+                                channel_quiz_id = first_message_split[1]
+                                channel_user_id = first_message_split[2]
+                                if str(channel_quiz_id) == str(quiz['quiz']['id']) and str(channel_user_id) == str(user_id['id']):
+                                    return await interaction.response.send_message("You already took this quiz", ephemeral=True)
+                            except Exception as e:
+                                print(f"Error fetching first message in channel {channel_name}")
+
         quiz_time = quiz['quiz']['timeLimit']
         quiz_id = quiz['quiz']['id']
         due = quiz['quiz']['dueDate']
@@ -292,7 +311,7 @@ class StartQuiz(discord.ui.View):
             embed.add_field(name="Answer", value="``` ```", inline=False)
             questions_as_embed.append(embed)
         current_question = questions_as_embed[0]
-        take_quiz = TakeQuiz(questions_as_embed, quiz['quiz']['title'], answers)
+        take_quiz = TakeQuiz(questions_as_embed, quiz['quiz'], answers)
         await interaction.response.send_message(embed=current_question, ephemeral=True, view=take_quiz)
 
         if quiz_time > 0:
@@ -300,14 +319,16 @@ class StartQuiz(discord.ui.View):
             start_time = time.time()
 
             # Update Timer
-            while time.time() - start_time < num_seconds:
+            while time.time() - start_time < num_seconds and take_quiz.was_submitted == False:
                 time_remaining = int(num_seconds - (time.time() - start_time))
                 minutes, seconds = divmod(time_remaining, 60)
                 time_format = '{:02d}:{:02d}'.format(minutes, seconds)
                 await interaction.edit_original_response(content=f"⏳ {str(time_format)}")
                 await asyncio.sleep(1)
 
-            await take_quiz.submit_quiz(interaction, True)
+            if take_quiz.was_submitted == False:
+                await interaction.edit_original_response(content=f"TIME'S UP! - Quiz Submitted", embed=None, view=None)
+                await take_quiz.submit_quiz(interaction, True)
 
     @discord.ui.button(row=0, style=discord.ButtonStyle.secondary, emoji='🔃', custom_id="refresh")
     async def refresh_button_callback(self, button, interaction):
@@ -424,10 +445,12 @@ def create_quiz(bot, preset=None):
                         add_e.add_field(name="Answer", value="None")
                     if self.children[2].value != "":
                         if len(self.children[2].value.split(", ")) > 4:
-                            return await interaction.response.send_message("Max wrong options is four", delete_after=5)
+                            return await interaction.response.send_message("Max wrong options is five", delete_after=5)
                         add_e.add_field(name="Wrong Options", value=self.children[2].value)
                     else:
                         add_e.add_field(name="Wrong Options", value="None")
+                    if self.children[1].value == "" and self.children[2].value != "":
+                        return await interaction.response.send_message("Cannot have wrong options without an answer", delete_after=5)
                     if even_points == 0:
                         add_e.add_field(name="Points", value=self.children[3].value)
                     else:
