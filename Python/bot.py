@@ -851,6 +851,48 @@ def run_discord_bot():
             await ctx.respond("posted grade!")
 
         
+    @bot.slash_command(name='submit',
+                        description='```/submit assignment (file) (url)``` - student submit assignment')
+    async def submit(ctx: discord.ApplicationContext, file : discord.Attachment = None, url : str = None):
+        if file and url:
+            await ctx.respond("Please provide either a file or a URL, not both.")
+
+        elif not file and not url:
+            await ctx.respond("Please provide either a file or a URL.")
+        else:
+            discord_id = ctx.author.id
+            studentId_dict = await api.get_user_id(discord_id)
+            studentId = studentId_dict["id"]
+            
+            chan_id = ctx.channel_id
+            assignment_dict = await api.get_assignment(chan_id)
+            assignmentId = assignment_dict['Assignment']['id']
+
+             
+            # Check if a Submission category already exists
+            submission_category = discord.utils.get(ctx.guild.categories, name="Submission")
+            
+            if submission_category is None:
+                # Create the Submission category if it doesn't exist
+                submission_category = await ctx.guild.create_category("Submission")
+            
+            # Create the text channel with the name "📝assignmenttitle-studentname" under the Submission category
+            channel_name = f"📝{assignment_dict['Assignment']['title']}-{ctx.author.name}"
+            # channel = await ctx.guild.create_text_channel(channel_name, category=submission_category)
+            existing_channel = discord.utils.get(submission_category.text_channels, name=channel_name)
+    
+            if existing_channel is not None:
+                # Delete the old text channel if it exists
+                await existing_channel.delete()
+            
+            channel = await ctx.guild.create_text_channel(channel_name, category=submission_category)
+            
+            await channel.send(f"Assignment ID: {assignmentId}- Student ID : {studentId}")
+            if file:
+                await channel.send(file)
+            else:
+                await channel.send(url)
+            await ctx.respond("submitted!")
 
     # TESTING COMMANDS-------------------------------------------------------------------------------
     # @bot.command()
