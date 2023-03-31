@@ -167,11 +167,18 @@ async def get_question(quiz_id: int = 0):
         return {'message', "Error retrieving question"}
 
 @app.get("/Assignment/")
-async def get_assignment(channel_id: str = 0):
+async def get_assignment(channel_id: int = 0):
     if channel_id == 0:
         return JSONResponse(status_code=404, content={"message": "Channel ID not given"})
     response = supabase.table("Assignment").select('*').eq('channelId', channel_id).execute()
     return {'Assignment': response.data[0]}
+
+@app.get("/Discussion/")
+async def get_discussion(channel_id: int = 0):
+    if channel_id == 0:
+        return JSONResponse(status_code=404, content={"message": "Channel ID not given"})
+    response = supabase.table("Discussion").select('*').eq('channelId', channel_id).execute()
+    return({'Discussion': response.data[0]})
 
 # ---------------------------POST Methods-------------------------------
 

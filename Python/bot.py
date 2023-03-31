@@ -596,7 +596,32 @@ def run_discord_bot():
         else:
             await ctx.respond("You need to be an Educator to use /create upload", delete_after=3)
 
+    @bot.slash_command(name='edit', description='```/edit``` - Used by Educators to edit quizzes, assignments, and discussions')
+    async def edit(ctx: discord.ApplicationContext):
+        edu_role = discord.utils.get(ctx.guild.roles, name="Educator")
+        if edu_role in ctx.author.roles:
+            class EditModal(discord.ui.Modal):
+                def __init__(self, task_dict: dict, *args, **kwargs) -> None:
+                    super().__init__(*args, **kwargs)
+                    answer = discord.ui.InputText(label="Answer", style=discord.InputTextStyle.long,
+                                                  placeholder="Type answer here...")
+                    self.add_item(answer)
 
+                async def callback(self, interaction: discord.Interaction):
+                    self.embed.set_field_at(index=1, name="Answer", value=f"```{self.children[0].value}```",
+                                            inline=False)
+                    await interaction.response.edit_message(embed=self.embed)
+            if ctx.channel.category.name == "Assignments":
+                request = await api.get_assignment(ctx.channel_id)
+                print(request)
+            if ctx.channel.category.name == "Discussions":
+                request = await api.get_discussion(ctx.channel_id)
+                print(request)
+            if ctx.channel.category.name == "Quizzes":
+                request = await api.get_quiz(ctx.channel_id)
+                print(request)
+        else:
+            await ctx.respond("You need to be an Educator to use /edit", delete_after=3)
 
 
     @bot.slash_command(name='upload_file', description='```/upload file`` - User can follow link to upload file')
