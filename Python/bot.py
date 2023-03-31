@@ -596,7 +596,51 @@ def run_discord_bot():
         else:
             await ctx.respond("You need to be an Educator to use /create upload", delete_after=3)
 
+    @bot.slash_command(name='edit', description='```/edit``` - Used by Educators to edit quizzes, assignments, and discussions')
+    async def edit(ctx: discord.ApplicationContext):
+        edu_role = discord.utils.get(ctx.guild.roles, name="Educator")
+        if edu_role in ctx.author.roles:
 
+            if ctx.channel.category.name == "Assignments":
+                assignment_dict = {}
+                first_message = await ctx.channel.history(oldest_first=True, limit=1).next()
+                assignment_dict['type'] = first_message.embeds[0].title
+                assignment_dict['title'] = first_message.embeds[0].fields[0].value
+                assignment_dict['details'] = first_message.embeds[0].fields[1].value
+                assignment_dict['points'] = first_message.embeds[0].fields[2].value
+                assignment_dict['start'] = first_message.embeds[0].fields[3].value
+                assignment_dict['due'] = first_message.embeds[0].fields[4].value
+                assignment_dict['channelId'] = ctx.channel_id
+                modal = create_quiz.EditModal(assignment_dict, first_message, title="Editing Assignment")
+                await ctx.send_modal(modal)
+            elif ctx.channel.category.name == "Quizzes":
+                quiz_dict = {}
+                first_message = await ctx.channel.history(oldest_first=True, limit=1).next()
+                quiz_dict['type'] = first_message.embeds[0].title
+                quiz_dict['title'] = first_message.embeds[0].fields[0].value
+                quiz_dict['time'] = first_message.embeds[0].fields[1].value
+                quiz_dict['points'] = first_message.embeds[0].fields[2].value
+                quiz_dict['start'] = first_message.embeds[0].fields[3].value
+                quiz_dict['due'] = first_message.embeds[0].fields[4].value
+                quiz_dict['channelId'] = ctx.channel_id
+                modal = create_quiz.EditModal(quiz_dict, first_message, title="Editing Quiz")
+                await ctx.send_modal(modal)
+            elif ctx.channel.category.name == "Discussions":
+                discussion_dict = {}
+                first_message = await ctx.channel.history(oldest_first=True, limit=1).next()
+                discussion_dict['type'] = first_message.embeds[0].title
+                discussion_dict['title'] = first_message.embeds[0].fields[0].value
+                discussion_dict['details'] = first_message.embeds[0].fields[1].value
+                discussion_dict['points'] = first_message.embeds[0].fields[2].value
+                discussion_dict['start'] = first_message.embeds[0].fields[3].value
+                discussion_dict['due'] = first_message.embeds[0].fields[4].value
+                discussion_dict['channelId'] = ctx.channel_id
+                modal = create_quiz.EditModal(discussion_dict, first_message, title="Editing Discussion")
+                await ctx.send_modal(modal)
+            else:
+                await ctx.respond("Can't use /edit here", delete_after=3)
+        else:
+            await ctx.respond("You need to be an Educator to use /edit", delete_after=3)
 
 
     @bot.slash_command(name='upload_file', description='```/upload file`` - User can follow link to upload file')

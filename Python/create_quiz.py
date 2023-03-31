@@ -13,6 +13,77 @@ import io
 import re
 
 
+class EditModal(discord.ui.Modal):
+    def __init__(self, task_dict: dict, message: discord.Message, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.type = task_dict['type']
+        self.message = message
+        self.channelId = task_dict['channelId']
+        val_title = task_dict['title']
+        val_points = task_dict['points']
+        val_start_date = task_dict['start']
+        val_due_date = task_dict['due']
+
+        title = discord.ui.InputText(label="Title", style=discord.InputTextStyle.short,
+                                     placeholder="ex: 'Introductions'", max_length=32, value=val_title)
+        self.add_item(title)
+
+        if 'details' in task_dict:
+            details = task_dict['details']
+            details = discord.ui.InputText(label="Details",
+                                           placeholder="ex: 'Introduce yourself to your fellow classmates.'",
+                                           style=discord.InputTextStyle.long, value=details)
+            self.add_item(details)
+
+        elif 'time' in task_dict:
+            val_time_limit = task_dict['time']
+            time_limit = discord.ui.InputText(label="Time Limit",
+                                              placeholder="ex: '30' for 30 minutes or '0' for no time limit",
+                                              style=discord.InputTextStyle.short, value=val_time_limit)
+            self.add_item(time_limit)
+
+        points = discord.ui.InputText(label="Points", style=discord.InputTextStyle.short,
+                                      placeholder="ex: '20'", value=val_points)
+        start_date = discord.ui.InputText(label="Start Date", style=discord.InputTextStyle.short,
+                                          placeholder="ex: '2023-05-25'", value=val_start_date)
+        due_date = discord.ui.InputText(label="Due Date", style=discord.InputTextStyle.short,
+                                        placeholder="ex: '2023-05-30'", value=val_due_date)
+
+        self.add_item(points)
+        self.add_item(start_date)
+        self.add_item(due_date)
+
+    async def callback(self, interaction: discord.Interaction):
+        e = discord.Embed(title=f"{self.type}")
+        title = self.children[0].value
+        points = self.children[2].value
+        start_date = self.children[3].value
+        due_date = self.children[4].value
+
+        update_json = {'title': title, 'points': int(points), 'startDate': start_date,
+                       'dueDate': due_date}
+
+        e.add_field(name="Title", value=title, inline=False)
+        if self.type == "Quiz":
+            time_limit = self.children[1].value
+            e.add_field(name="Time Limit", value=time_limit, inline=False)
+            update_json['timeLimit'] = time_limit
+        else:
+            details = self.children[1].value
+            e.add_field(name="Details", value=details, inline=False)
+        e.add_field(name="Points", value=points, inline=False)
+        e.add_field(name="Start Date", value=start_date, inline=False)
+        e.add_field(name="Due Date", value=due_date, inline=False)
+
+        if self.type == "Assignment":
+            supabase.table("Assignment").update(update_json).eq('channelId', self.channelId).execute()
+        if self.type == "Quiz":
+            supabase.table("Quiz").update(update_json).eq('channelId', self.channelId).execute()
+
+        await self.message.edit(embed=e)
+
+        await interaction.response.send_message(f"{self.type} Successfully Edited", delete_after=3, ephemeral=True)
+
 class InputModal(discord.ui.Modal):
     def __init__(self, embed: discord.Embed, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -364,43 +435,44 @@ def create_quiz(bot, preset=None):
 
             title = discord.ui.InputText(label="Title", style=discord.InputTextStyle.short,
                                          placeholder="ex: 'Parts of the Cell'", max_length=32, value=val_title)
+            time_limit = discord.ui.InputText(label="Time Limit (minutes)",
+                                              placeholder="ex: '30' for 30 minutes or '0' for no time limit",
+                                              style=discord.InputTextStyle.short, value=str(val_time_limit))
             points = discord.ui.InputText(label="Points", style=discord.InputTextStyle.short,
                                           placeholder="ex: '50'", required=False, value=val_points)
             start_date = discord.ui.InputText(label="Start Date", style=discord.InputTextStyle.short,
                                               placeholder="ex: '2023-05-25'", value=val_start_date)
             due_date = discord.ui.InputText(label="Due Date", style=discord.InputTextStyle.short,
                                             placeholder="ex: '2023-05-30'", value=val_due_date)
-            time_limit = discord.ui.InputText(label="Time Limit (minutes)",
-                                              placeholder="ex: '30' for 30 minutes or '0' for no time limit",
-                                              style=discord.InputTextStyle.short, value=str(val_time_limit))
             self.add_item(title)
+            self.add_item(time_limit)
             self.add_item(points)
             self.add_item(start_date)
             self.add_item(due_date)
-            self.add_item(time_limit)
 
         async def callback(self, interaction: discord.Interaction):
             e = discord.Embed(title="Creating Quiz...")
             title = self.children[0].value
-            if self.children[1].value != "":
+            if self.children[2].value != "":
                 try:
-                    points = float(self.children[1].value)
+                    points = float(self.children[2].value)
                 except ValueError:
                     return await interaction.response.send_message("Invalid points")
             try:
-                start_date = datetime.datetime.strptime(self.children[2].value, "%Y-%m-%d").date()
+                start_date = datetime.datetime.strptime(self.children[3].value, "%Y-%m-%d").date()
             except ValueError:
                 return await interaction.response.send_message("Invalid start date format")
             try:
-                due_date = datetime.datetime.strptime(self.children[3].value, "%Y-%m-%d").date()
+                due_date = datetime.datetime.strptime(self.children[4].value, "%Y-%m-%d").date()
             except ValueError:
                 return await interaction.response.send_message("Invalid due date format")
             try:
-                time_limit = int(self.children[4].value)
+                time_limit = int(self.children[1].value)
             except ValueError:
                 return await interaction.response.send_message("Invalid time limit")
 
             e.add_field(name="Title", value=title, inline=False)
+            e.add_field(name="Time Limit", value=str(time_limit), inline=False)
             if self.children[1].value != "":
                 e.add_field(name="Points", value=str(points), inline=False)
                 even_points = 1
@@ -409,7 +481,6 @@ def create_quiz(bot, preset=None):
                 even_points = 0
             e.add_field(name="Start Date", value=start_date, inline=False)
             e.add_field(name="Due Date", value=due_date, inline=False)
-            e.add_field(name="Time Limit", value=str(time_limit), inline=False)
             e.add_field(name="Number of Questions", value="0", inline=False)
 
             current_slide = e
@@ -662,9 +733,9 @@ def create_quiz(bot, preset=None):
                     res = await api.get_classroom_id(interaction.guild.id)
                     classroom_id = res['id']
 
-                    new_quiz = Quiz(title=quiz_fields[0].value, points=float(quiz_fields[1].value),
-                                    start=quiz_fields[2].value,
-                                    due=quiz_fields[3].value, time=quiz_fields[4].value, questions=url,
+                    new_quiz = Quiz(title=quiz_fields[0].value, points=float(quiz_fields[2].value),
+                                    start=quiz_fields[3].value,
+                                    due=quiz_fields[4].value, time=quiz_fields[1].value, questions=url,
                                     classroomId=classroom_id, channelId=new_channel.id)
 
                     await api.create_quiz(new_quiz)

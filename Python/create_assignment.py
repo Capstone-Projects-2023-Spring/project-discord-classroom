@@ -55,7 +55,7 @@ def create_assignment(bot, file=None, preset=None):
         async def callback(self, interaction: discord.Interaction):
             title = self.children[0].value
 
-            e = discord.Embed(title=f"{title}")
+            e = discord.Embed(title=f"Assignment")
 
             details = self.children[1].value
 
@@ -72,6 +72,7 @@ def create_assignment(bot, file=None, preset=None):
             except ValueError:
                 return await interaction.response.send_message("Invalid due date format")
 
+            e.add_field(name="Title", value=title, inline=False)
             e.add_field(name="Details", value=details, inline=False)
             e.add_field(name="Points", value=str(points), inline=False)
             e.add_field(name="Start Date", value=start_date, inline=False)
