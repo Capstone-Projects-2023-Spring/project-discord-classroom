@@ -600,75 +600,6 @@ def run_discord_bot():
     async def edit(ctx: discord.ApplicationContext):
         edu_role = discord.utils.get(ctx.guild.roles, name="Educator")
         if edu_role in ctx.author.roles:
-            class EditModal(discord.ui.Modal):
-                def __init__(self, task_dict: dict, message: discord.Message, *args, **kwargs) -> None:
-                    super().__init__(*args, **kwargs)
-                    print(task_dict)
-                    self.type = task_dict['type']
-                    self.message = message
-                    self.channelId = task_dict['channelId']
-                    val_title = task_dict['title']
-                    val_points = task_dict['points']
-                    val_start_date = task_dict['start']
-                    val_due_date = task_dict['due']
-
-                    title = discord.ui.InputText(label="Title", style=discord.InputTextStyle.short,
-                                                 placeholder="ex: 'Introductions'", max_length=32, value=val_title)
-                    self.add_item(title)
-
-                    if 'details' in task_dict:
-                        details = task_dict['details']
-                        details = discord.ui.InputText(label="Details", placeholder="ex: 'Introduce yourself to your fellow classmates.'",
-                                                       style=discord.InputTextStyle.long, value=details)
-                        self.add_item(details)
-
-                    elif 'time' in task_dict:
-                        val_time_limit = task_dict['time']
-                        time_limit = discord.ui.InputText(label="Time Limit", placeholder="ex: '30' for 30 minutes or '0' for no time limit",
-                                                       style=discord.InputTextStyle.short, value=val_time_limit)
-                        self.add_item(time_limit)
-
-                    points = discord.ui.InputText(label="Points", style=discord.InputTextStyle.short,
-                                                  placeholder="ex: '20'", value=val_points)
-                    start_date = discord.ui.InputText(label="Start Date", style=discord.InputTextStyle.short,
-                                                      placeholder="ex: '2023-05-25'", value=val_start_date)
-                    due_date = discord.ui.InputText(label="Due Date", style=discord.InputTextStyle.short,
-                                                    placeholder="ex: '2023-05-30'", value=val_due_date)
-
-                    self.add_item(points)
-                    self.add_item(start_date)
-                    self.add_item(due_date)
-
-                async def callback(self, interaction: discord.Interaction):
-                    e = discord.Embed(title=f"{self.type}")
-                    title = self.children[0].value
-                    points = self.children[2].value
-                    start_date = self.children[3].value
-                    due_date = self.children[4].value
-
-                    update_json = {'title': title, 'points': int(points), 'startDate': start_date,
-                                   'dueDate': due_date}
-
-                    e.add_field(name="Title", value=title, inline=False)
-                    if self.type == "Quiz":
-                        time_limit = self.children[1].value
-                        e.add_field(name="Time Limit", value=time_limit, inline=False)
-                        update_json['timeLimit'] = time_limit
-                    else:
-                        details = self.children[1].value
-                        e.add_field(name="Details", value=details, inline=False)
-                    e.add_field(name="Points", value=points, inline=False)
-                    e.add_field(name="Start Date", value=start_date, inline=False)
-                    e.add_field(name="Due Date", value=due_date, inline=False)
-
-                    if self.type == "Assignment":
-                        supabase.table("Assignment").update(update_json).eq('channelId', self.channelId).execute()
-                    if self.type == "Quiz":
-                        supabase.table("Quiz").update(update_json).eq('channelId', self.channelId).execute()
-
-                    await self.message.edit(embed=e)
-
-                    await interaction.response.send_message(f"{self.type} Successfully Edited", delete_after=3, ephemeral=True)
 
             if ctx.channel.category.name == "Assignments":
                 assignment_dict = {}
@@ -680,9 +611,9 @@ def run_discord_bot():
                 assignment_dict['start'] = first_message.embeds[0].fields[3].value
                 assignment_dict['due'] = first_message.embeds[0].fields[4].value
                 assignment_dict['channelId'] = ctx.channel_id
-                modal = EditModal(assignment_dict, first_message, title="Editing Assignment")
+                modal = create_quiz.EditModal(assignment_dict, first_message, title="Editing Assignment")
                 await ctx.send_modal(modal)
-            if ctx.channel.category.name == "Quizzes":
+            elif ctx.channel.category.name == "Quizzes":
                 quiz_dict = {}
                 first_message = await ctx.channel.history(oldest_first=True, limit=1).next()
                 quiz_dict['type'] = first_message.embeds[0].title
@@ -692,9 +623,9 @@ def run_discord_bot():
                 quiz_dict['start'] = first_message.embeds[0].fields[3].value
                 quiz_dict['due'] = first_message.embeds[0].fields[4].value
                 quiz_dict['channelId'] = ctx.channel_id
-                modal = EditModal(quiz_dict, first_message, title="Editing Quiz")
+                modal = create_quiz.EditModal(quiz_dict, first_message, title="Editing Quiz")
                 await ctx.send_modal(modal)
-            if ctx.channel.category.name == "Discussions":
+            elif ctx.channel.category.name == "Discussions":
                 discussion_dict = {}
                 first_message = await ctx.channel.history(oldest_first=True, limit=1).next()
                 discussion_dict['type'] = first_message.embeds[0].title
@@ -704,10 +635,10 @@ def run_discord_bot():
                 discussion_dict['start'] = first_message.embeds[0].fields[3].value
                 discussion_dict['due'] = first_message.embeds[0].fields[4].value
                 discussion_dict['channelId'] = ctx.channel_id
-                modal = EditModal(discussion_dict, first_message, title="Editing Discussion")
+                modal = create_quiz.EditModal(discussion_dict, first_message, title="Editing Discussion")
                 await ctx.send_modal(modal)
-            if ctx.channel.category.name == "Quizzes":
-                pass
+            else:
+                await ctx.respond("Can't use /edit here", delete_after=3)
         else:
             await ctx.respond("You need to be an Educator to use /edit", delete_after=3)
 

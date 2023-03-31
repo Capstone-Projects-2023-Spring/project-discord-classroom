@@ -13,6 +13,77 @@ import io
 import re
 
 
+class EditModal(discord.ui.Modal):
+    def __init__(self, task_dict: dict, message: discord.Message, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.type = task_dict['type']
+        self.message = message
+        self.channelId = task_dict['channelId']
+        val_title = task_dict['title']
+        val_points = task_dict['points']
+        val_start_date = task_dict['start']
+        val_due_date = task_dict['due']
+
+        title = discord.ui.InputText(label="Title", style=discord.InputTextStyle.short,
+                                     placeholder="ex: 'Introductions'", max_length=32, value=val_title)
+        self.add_item(title)
+
+        if 'details' in task_dict:
+            details = task_dict['details']
+            details = discord.ui.InputText(label="Details",
+                                           placeholder="ex: 'Introduce yourself to your fellow classmates.'",
+                                           style=discord.InputTextStyle.long, value=details)
+            self.add_item(details)
+
+        elif 'time' in task_dict:
+            val_time_limit = task_dict['time']
+            time_limit = discord.ui.InputText(label="Time Limit",
+                                              placeholder="ex: '30' for 30 minutes or '0' for no time limit",
+                                              style=discord.InputTextStyle.short, value=val_time_limit)
+            self.add_item(time_limit)
+
+        points = discord.ui.InputText(label="Points", style=discord.InputTextStyle.short,
+                                      placeholder="ex: '20'", value=val_points)
+        start_date = discord.ui.InputText(label="Start Date", style=discord.InputTextStyle.short,
+                                          placeholder="ex: '2023-05-25'", value=val_start_date)
+        due_date = discord.ui.InputText(label="Due Date", style=discord.InputTextStyle.short,
+                                        placeholder="ex: '2023-05-30'", value=val_due_date)
+
+        self.add_item(points)
+        self.add_item(start_date)
+        self.add_item(due_date)
+
+    async def callback(self, interaction: discord.Interaction):
+        e = discord.Embed(title=f"{self.type}")
+        title = self.children[0].value
+        points = self.children[2].value
+        start_date = self.children[3].value
+        due_date = self.children[4].value
+
+        update_json = {'title': title, 'points': int(points), 'startDate': start_date,
+                       'dueDate': due_date}
+
+        e.add_field(name="Title", value=title, inline=False)
+        if self.type == "Quiz":
+            time_limit = self.children[1].value
+            e.add_field(name="Time Limit", value=time_limit, inline=False)
+            update_json['timeLimit'] = time_limit
+        else:
+            details = self.children[1].value
+            e.add_field(name="Details", value=details, inline=False)
+        e.add_field(name="Points", value=points, inline=False)
+        e.add_field(name="Start Date", value=start_date, inline=False)
+        e.add_field(name="Due Date", value=due_date, inline=False)
+
+        if self.type == "Assignment":
+            supabase.table("Assignment").update(update_json).eq('channelId', self.channelId).execute()
+        if self.type == "Quiz":
+            supabase.table("Quiz").update(update_json).eq('channelId', self.channelId).execute()
+
+        await self.message.edit(embed=e)
+
+        await interaction.response.send_message(f"{self.type} Successfully Edited", delete_after=3, ephemeral=True)
+
 class InputModal(discord.ui.Modal):
     def __init__(self, embed: discord.Embed, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
