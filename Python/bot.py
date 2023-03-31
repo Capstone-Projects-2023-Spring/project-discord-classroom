@@ -338,10 +338,13 @@ def run_discord_bot():
         bot.add_listener(on_reaction_remove, 'on_reaction_remove')
 
     async def increment_attendance(discord_user_id: int, discord_server_id: int):
-        user_id = await api.get_user_id(discord_user_id)
-        classroom_id = await api.get_classroom_id(discord_server_id)
-        column = 'attendance'
-        supabase.table('Classroom_User').update({column: f'{column}+1'}).match({'classroomId': classroom_id, 'userId': 'user_id'}).execute()
+        request = await api.get_user_id(discord_user_id)
+        user_id = request['id']
+        request = await api.get_classroom_id(discord_server_id)
+        classroom_id = request['id']
+        request = supabase.table('Classroom_User').select('attendance').match({'classroomId': classroom_id, 'userId': user_id}).execute()
+        current_attendance = request.data[0]['attendance']
+        supabase.table('Classroom_User').update({'attendance': current_attendance+1}).match({'classroomId': classroom_id, 'userId': user_id}).execute()
 
     @bot.slash_command(
         name='attendance',
@@ -373,10 +376,11 @@ def run_discord_bot():
                 if r.emoji == '✅':
                     async for user in r.users():
                         users.append(user)
-                        await increment_attendance(user.id, ctx.guild_id)
+
             attended = []
             for user in users:
                 if not user.bot:
+                    await increment_attendance(user.id, ctx.guild_id)
                     if user.nick is not None:
                         attended.append(user.nick)
                     else:
@@ -399,9 +403,9 @@ def run_discord_bot():
             await ctx.author.send(response)
 
             # Update the 'total attendance' in the Supabase table
-            classroom_table = supabase.table('Classroom')
-            classroom_id = await api.get_classroom_id(str(guild_id))
-            _, error = await classroom_table.update({'total_attendance': supabase.sql('total_attendance + 1')}).single().where('class_id', '=', classroom_id).execute()
+            request = supabase.table('Classroom').select('attendance').eq('serverId', ctx.guild_id).execute()
+            classroom_attendance = request.data[0]['attendance']
+            _, error = supabase.table('Classroom').update({'attendance': classroom_attendance+1}).eq('serverId', ctx.guild_id).execute()
             if error:
                 print(f"Error updating total attendance: {error}")
         else:
