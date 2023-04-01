@@ -79,13 +79,31 @@ async def get_classroom_id(server_id: int):
         return {'id': response.data[0]['id']}
     return JSONResponse(status_code=404, content={"message": "Classroom not found"})
 
+@app.get("/classroomAttendance")
+async def get_classroom_attendance(server_id: int):
+    response = supabase.table('Classroom').select('attendance').eq('serverId', server_id).execute()
+    if response.data is not []:
+        return {'attendance': response.data[0]['attendance']}
+    return JSONResponse(status_code=404, content={"message": "Classroom not found"})
+
 
 @app.get("/user")
 async def get_user_id(discord_id: int):
     response = supabase.table('User').select('id').eq('discordId', discord_id).execute()
-    if response.data is not []:
+    if response.data:
         return {'id': response.data[0]['id']}
     return JSONResponse(status_code=404, content={"message": "User not found"})
+
+@app.get("/userAttendance")
+async def get_user_attendance(user_id: int, classroom_id: int):
+    response = supabase.table('Classroom_User').select('attendance').match({'classroomId': classroom_id, 'userId': user_id}).execute()
+    if response.data:
+        return {'attendance': response.data[0]['attendance']}
+    return JSONResponse(status_code=404, content={"message": "User not found"})
+
+@app.put("/userAttendance")
+async def update_user_attendance(old_attendance: int, user_id: int, classroom_id: int):
+    response = supabase.table('Classroom_User').update({'attendance': old_attendance+1}).match({'classroomId': classroom_id, 'userId': user_id}).execute()
 
 
 @app.get("/educators/", response_model=List[Educator], responses={404: {"model": Message}})
