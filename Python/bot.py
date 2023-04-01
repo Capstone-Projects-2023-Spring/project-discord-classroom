@@ -854,11 +854,19 @@ def run_discord_bot():
     @bot.slash_command(name='submit',
                         description='```/submit assignment (file) (url)``` - student submit assignment')
     async def submit(ctx: discord.ApplicationContext, file : discord.Attachment = None, url : str = None):
+        student_role = discord.utils.get(ctx.guild.roles, name="Student")
+        if student_role not in ctx.author.roles:
+            return await ctx.respond("Only Students can use /submit command")
+
+        category_name = ctx.channel.category.name
+        if category_name != "Assignments":
+            return await ctx.respond("/submit is only allowed in the designated assignment channel.")
+
         if file and url:
-            await ctx.respond("Please provide either a file or a URL, not both.")
+            return await ctx.respond("Please provide either a file or a URL, not both.")
 
         elif not file and not url:
-            await ctx.respond("Please provide either a file or a URL.")
+            return await ctx.respond("Please provide either a file or a URL.")
         else:
             discord_id = ctx.author.id
             studentId_dict = await api.get_user_id(discord_id)
@@ -892,7 +900,7 @@ def run_discord_bot():
                 await channel.send(file)
             else:
                 await channel.send(url)
-            await ctx.respond("submitted!")
+            return await ctx.respond("submitted!")
 
     # TESTING COMMANDS-------------------------------------------------------------------------------
     # @bot.command()
