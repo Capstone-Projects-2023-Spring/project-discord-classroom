@@ -18,8 +18,12 @@ app = FastAPI(
     version="0.0.1"
 )
 
-if os.path.exists(os.getcwd() + "/config.json"):
-    with open("config.json") as f:
+json_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../Python/config.json"))
+
+print(json_path)
+
+if json_path:
+    with open(json_path) as f:
         configData = json.load(f)
 else:
     print("ERROR: config.json does not exist")
@@ -57,9 +61,6 @@ class Section(BaseModel):
     classroomId: int
     totalAttendance: int
     totalGrade: int
-
-
-
 
 class Message(BaseModel):
     message: str
