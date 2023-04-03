@@ -191,6 +191,14 @@ async def get_assignment(channel_id: int = 0):
     response = supabase.table("Assignment").select('*').eq('channelId', channel_id).execute()
     return {'Assignment': response.data[0]}
 
+@app.put("/Assignment_Update/")
+async def update_assignment(dictionary: dict, channel_id: int):
+    supabase.table("Assignment").update(dictionary).eq('channelId', channel_id).execute()
+
+@app.put("/Quiz_Update/")
+async def update_quiz(dictionary: dict, channel_id: int):
+    supabase.table("Quiz").update(dictionary).eq('channelId', channel_id).execute()
+
 # ---------------------------POST Methods-------------------------------
 
 @app.post("/quizzes/")

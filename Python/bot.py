@@ -113,8 +113,8 @@ def run_discord_bot():
 
         # Create server categories
         upcoming = await guild.create_category("Upcoming")
-        general = await guild.create_category("General")
         lounge = await guild.create_category("Lounge")
+        general = await guild.create_category("General")
         await lounge.set_permissions(student_role, view_channel=False)
         await guild.create_category("Assignments")
         await guild.create_category("Quizzes")
@@ -123,12 +123,17 @@ def run_discord_bot():
         await submissions.set_permissions(student_role, view_channel=False)
         questions = await guild.create_category("Questions")
 
+        announcement_channel = await guild.create_text_channel("Announcements", category=general)
+        await announcement_channel.set_permissions(student_role, send_messages=False)
         await guild.create_text_channel("General", category=general)
-        await guild.create_text_channel("Announcements", category=general)
-        await guild.create_text_channel("Syllabus", category=general)
+        attendance_channel = await guild.create_text_channel("Attendance", category=general)
+        await attendance_channel.set_permissions(student_role, send_messages=False, add_reactions=False)
+        syllabus_channel = await guild.create_text_channel("Syllabus", category=general)
+        await syllabus_channel.set_permissions(student_role, send_messages=False)
         await guild.create_voice_channel("Lecture", category=general)
         await guild.create_voice_channel("Chill", category=general)
 
+        await guild.create_text_channel("Lecture-UI", category=lounge)
         await guild.create_text_channel("Educators-Assistants", category=lounge)
         await guild.create_text_channel("Terminal", category=lounge)
         await guild.create_voice_channel("Educators-Assistants", category=lounge)
@@ -144,8 +149,8 @@ def run_discord_bot():
         await member.add_roles(role)
         discordNickname = member.display_name
         discordId = member.id
-        await utils.add_member_to_table(guild_id=member.guild.id, role="Student", nickname=discordNickname,
-                                        did=discordId)
+        await utils.add_member_to_table(guild_id=member.guild.id, role="Student", nick=discordNickname,
+                                        discord_id=discordId)
 
     @bot.event
     async def on_member_remove(member: discord.Member):
@@ -160,7 +165,7 @@ def run_discord_bot():
     async def on_member_update(before: discord.Member, after: discord.Member):
         # Update member nickname in database
         if before.nick != after.nick:
-            await api.update_member_nick(after.nick, str(after.id))
+            await api.update_user_nick(after.nick, after.id)
 
         # Update member role in database
         if before.roles != after.roles:
@@ -287,7 +292,7 @@ def run_discord_bot():
 
         async def update_poll_data(change_to_reactions, num_total_reactions, reaction):
             num_total_reactions[0] += change_to_reactions
-            print(f"{num_total_reactions[0]} users reacted to the message")
+            # print(f"{num_total_reactions[0]} users reacted to the message")
 
             new_description_for_option_idx = [None] * len(options)
             for i in range(len(options)):
@@ -296,10 +301,10 @@ def run_discord_bot():
                 if reaction.emoji == chr(127462 + i):
                     num_reactions_for_option_idx[i] += change_to_reactions
 
-                print(f"option{i + 1} reaction total: {num_reactions_for_option_idx[i]}")
+                # print(f"option{i + 1} reaction total: {num_reactions_for_option_idx[i]}")
                 reactionPercentage = round((num_reactions_for_option_idx[i] / num_total_reactions[0]) * 100) if \
-                num_total_reactions[0] > 0 else 0
-                print(f"option{i + 1}%: {reactionPercentage}")
+                    num_total_reactions[0] > 0 else 0
+                # print(f"option{i + 1}%: {reactionPercentage}")
 
                 boxesForOption = boxes.copy()
                 for j in range(round(reactionPercentage / 10)):
@@ -331,81 +336,25 @@ def run_discord_bot():
         bot.add_listener(on_reaction_add, 'on_reaction_add')
         bot.add_listener(on_reaction_remove, 'on_reaction_remove')
 
-    @bot.slash_command(
-        name='attendance',
-        description='```/attendance [time (minutes)]``` - Creates attendance poll')
-    async def attendance(ctx: discord.ApplicationContext, time: float = 5):
+    @bot.slash_command(name='attendance', description='```/attendance``` - Used by students to check their attendance')
+    async def attendance(ctx: discord.ApplicationContext):
         user_roles = [role.name for role in ctx.author.roles]
         guild_id = ctx.guild_id
-        if 'Educator' in user_roles or 'Assistant' in user_roles:
-            await ctx.respond("Now taking Attendance...")
-            date = datetime.datetime.now().strftime("%m - %d - %y %I:%M %p")
-            student_role = discord.utils.get(ctx.guild.roles, name="Student")
-            embed = discord.Embed(title="Attendance",
-                                  description=f'{student_role.mention} React to this message to check into today\'s attendance')
-            message = await ctx.send(embed=embed)
-            await message.add_reaction('✅')
-
-            timeLeft = time * 60
-            while timeLeft >= 0:
-                embed.title = f"Attendance - {int(timeLeft)}s"
-                await asyncio.sleep(1)
-                await message.edit(embed=embed)
-                timeLeft -= 1
-            embed.description = "Attendance CLOSED"
-            await asyncio.sleep(1)
-            await message.edit(embed=embed)
-            attendance_message = await ctx.channel.fetch_message(message.id)
-            reactions = attendance_message.reactions
-            users = []
-            for r in reactions:
-                if r.emoji == '✅':
-                    async for user in r.users():
-                        users.append(user)
-
-            attended = []
-            for user in users:
-                if not user.bot:
-                    await utils.increment_attendance(user.id, ctx.guild_id)
-                    if user.nick is not None:
-                        attended.append(user.nick)
-                    else:
-                        attended.append(user.name)
-
-            response = f"Attendance for {date}:\n\nAttended:\n" + '\n'.join(attended)
-
-            students = discord.utils.get(ctx.guild.roles, name="Student").members
-
-            absent = []
-
-            for student in students:
-                if student not in users:
-                    if student.nick is not None:
-                        absent.append(student.nick)
-                    else:
-                        absent.append(student.name)
-
-            response += "\n\nAbsent:\n" + '\n'.join(absent)
-            await ctx.author.send(response)
-
-            # Update the 'total attendance' in the Supabase table
-            request = supabase.table('Classroom').select('attendance').eq('serverId', ctx.guild_id).execute()
-            classroom_attendance = request.data[0]['attendance']
-            _, error = supabase.table('Classroom').update({'attendance': classroom_attendance + 1}).eq('serverId',
-                                                                                                       ctx.guild_id).execute()
-        else:
-            res = supabase.table('User').select('id').eq('discordId', ctx.author.id).execute()
-            user_id = res.data[0]['id']
-            res = await api.get_classroom_id(ctx.guild_id)
-            classroom_id = res['id']
-            res = supabase.table('Classroom_User').select('attendance').match(
-                {'userId': user_id, 'classroomId': classroom_id}).execute()
-            user_attendance = res.data[0]['attendance']
-            res = supabase.table('Classroom').select('attendance').eq('serverId', ctx.guild_id).execute()
-            classroom_attendance = res.data[0]['attendance']
-            response = f"Your attendance count is {user_attendance} / {classroom_attendance}."
-            await ctx.author.send(response)
-            await ctx.respond("Check DMs for your attendance", delete_after=2)
+        if "Student" not in user_roles:
+            return await ctx.respond(
+                "Only Students can use /attendance\nIf you're trying to take attendance use `/lecture attendance`")
+        res = supabase.table('User').select('id').eq('discordId', ctx.author.id).execute()
+        user_id = res.data[0]['id']
+        res = await api.get_classroom_id(ctx.guild_id)
+        classroom_id = res['id']
+        res = supabase.table('Classroom_User').select('attendance').match(
+            {'userId': user_id, 'classroomId': classroom_id}).execute()
+        user_attendance = res.data[0]['attendance']
+        res = supabase.table('Classroom').select('attendance').eq('serverId', ctx.guild_id).execute()
+        classroom_attendance = res.data[0]['attendance']
+        response = f"Your attendance count is {user_attendance} / {classroom_attendance}."
+        await ctx.author.send(response)
+        await ctx.respond("Check DMs for your attendance", delete_after=2)
 
     @bot.slash_command(name='ta',
                        description='```/ta [user]``` - Gives/Removes the user the Assistant role')
@@ -583,6 +532,136 @@ def run_discord_bot():
                 await ctx.send_modal(modal)
         else:
             await ctx.respond("You need to be an Educator to use /create upload", delete_after=3)
+
+    lecture = bot.create_group("lecture", "Commands used during lectures")
+
+    @lecture.command(name="attendance",
+                     description='```/lecture attendance [time (minutes)]``` - Creates attendance poll')
+    async def attendance(ctx: discord.ApplicationContext, time: float = 5):
+        user_roles = [role.name for role in ctx.author.roles]
+        guild_id = ctx.guild_id
+        if "Educator" not in user_roles:
+            return await ctx.respond("Only educators can use /lecture commands")
+        attendance_channel = discord.utils.get(ctx.guild.channels, name="attendance")
+        await ctx.respond("Now taking Attendance...", delete_after=3)
+        date = datetime.datetime.now().strftime("%m - %d - %y %I:%M %p")
+        student_role = discord.utils.get(ctx.guild.roles, name="Student")
+        embed = discord.Embed(title="Attendance",
+                              description=f'{student_role.mention} React to this message to check into today\'s attendance')
+        message = await attendance_channel.send(embed=embed)
+        await message.add_reaction('✅')
+
+        timeLeft = time * 60
+        while timeLeft >= 0:
+            embed.title = f"Attendance - {int(timeLeft)}s"
+            await asyncio.sleep(1)
+            await message.edit(embed=embed)
+            timeLeft -= 1
+        embed.description = "Attendance CLOSED"
+        await asyncio.sleep(1)
+        await message.edit(embed=embed)
+        attendance_message = await attendance_channel.fetch_message(message.id)
+        reactions = attendance_message.reactions
+        users = []
+        for r in reactions:
+            if r.emoji == '✅':
+                async for user in r.users():
+                    users.append(user)
+
+        attended = []
+        for user in users:
+            if not user.bot:
+                await utils.increment_attendance(user.id, ctx.guild_id)
+                if user.nick is not None:
+                    attended.append(user.nick)
+                else:
+                    attended.append(user.name)
+
+        response = f"Attendance for {date}:\n\nAttended:\n" + '\n'.join(attended)
+
+        students = discord.utils.get(ctx.guild.roles, name="Student").members
+
+        absent = []
+
+        for student in students:
+            if student not in users:
+                if student.nick is not None:
+                    absent.append(student.nick)
+                else:
+                    absent.append(student.name)
+
+        response += "\n\nAbsent:\n" + '\n'.join(absent)
+        await ctx.author.send(response)
+
+        # Update the 'total attendance' in the Supabase table
+        request = supabase.table('Classroom').select('attendance').eq('serverId', ctx.guild_id).execute()
+        classroom_attendance = request.data[0]['attendance']
+        _, error = supabase.table('Classroom').update({'attendance': classroom_attendance + 1}).eq('serverId',
+                                                                                                   ctx.guild_id).execute()
+
+    @lecture.command(name="mute",
+                     description='```/lecture mute``` - Mutes everyone in the voice channel besides the Educator')
+    async def mute(ctx: discord.ApplicationContext):
+        user_roles = [role.name for role in ctx.author.roles]
+        if "Educator" not in user_roles:
+            return await ctx.respond("Only educators can use /lecture commands", delete_after=3)
+        if ctx.author.voice is None:
+            return await ctx.respond("You are not in a voice channel", delete_after=3)
+        voice_channel = ctx.author.voice.channel
+        members_in_voice = voice_channel.members
+
+        for member in members_in_voice:
+            if member != ctx.author:
+                await member.edit(mute=True)
+
+        await ctx.respond("Students Muted.\nUse `/lecture unmute` to remove the mute from the members", delete_after=3)
+
+    @lecture.command(name="unmute",
+                     description='```/lecture unmute``` - Unmutes everyone in the voice channel')
+    async def unmute(ctx: discord.ApplicationContext):
+        user_roles = [role.name for role in ctx.author.roles]
+        if "Educator" not in user_roles:
+            return await ctx.respond("Only educators can use /lecture commands", delete_after=3)
+        if ctx.author.voice is None:
+            return await ctx.respond("You are not in a voice channel", delete_after=3)
+        voice_channel = ctx.author.voice.channel
+        members_in_voice = voice_channel.members
+
+        for member in members_in_voice:
+            if member != ctx.author:
+                await member.edit(mute=False)
+
+        await ctx.respond("Students Unmuted.", delete_after=3)
+
+    @lecture.command(name="breakout",
+                     description='```/lecture breakout [number_of_rooms]``` - Creates a number of breakout rooms for students')
+    async def breakout(ctx: discord.ApplicationContext, number_of_rooms: int, number_of_minutes: float = 60):
+        general_category = discord.utils.get(ctx.guild.categories, name="General")
+
+        rooms = []
+
+        for i in range(number_of_rooms):
+            rooms.append(await ctx.guild.create_voice_channel(f"Breakout Room {i+1}", category=general_category))
+
+        interaction = await ctx.respond(f"{number_of_rooms} Breakout rooms created, react with ❌ to remove them when done.")
+        message = await interaction.original_response()
+        await message.add_reaction('❌')
+
+        def check(reaction, user):
+            return user == ctx.author and reaction.message.id == message.id and str(reaction.emoji) in ['❌']
+
+        while True:
+            try:
+                reaction, user = await bot.wait_for('reaction_add', check=check, timeout=number_of_minutes*60)
+                for room in rooms:
+                    await room.delete()
+                break
+            except asyncio.TimeoutError:
+                for room in rooms:
+                    await room.delete()
+                break
+
+        await message.edit("Breakout rooms deleted.", delete_after=3)
 
     @bot.slash_command(name='edit',
                        description='```/edit``` - Used by Educators to edit quizzes, assignments, and discussions')
@@ -928,10 +1007,9 @@ def run_discord_bot():
             await channel.send(f"Here are your grades, recalculated:\n{grade_string}")
             await ctx.respond("posted grade!")
 
-        
     @bot.slash_command(name='submit',
-                        description='```/submit assignment (file) (url)``` - student submit assignment')
-    async def submit(ctx: discord.ApplicationContext, file : discord.Attachment = None, url : str = None):
+                       description='```/submit assignment (file) (url)``` - student submit assignment')
+    async def submit(ctx: discord.ApplicationContext, file: discord.Attachment = None, url: str = None):
         student_role = discord.utils.get(ctx.guild.roles, name="Student")
         if student_role not in ctx.author.roles:
             return await ctx.respond("Only Students can use /submit command")
@@ -949,30 +1027,29 @@ def run_discord_bot():
             discord_id = ctx.author.id
             studentId_dict = await api.get_user_id(discord_id)
             studentId = studentId_dict["id"]
-            
+
             chan_id = ctx.channel_id
             assignment_dict = await api.get_assignment(chan_id)
             assignmentId = assignment_dict['Assignment']['id']
 
-             
             # Check if a Submission category already exists
             submission_category = discord.utils.get(ctx.guild.categories, name="Submission")
-            
+
             if submission_category is None:
                 # Create the Submission category if it doesn't exist
                 submission_category = await ctx.guild.create_category("Submission")
-            
+
             # Create the text channel with the name "📝assignmenttitle-studentname" under the Submission category
             channel_name = f"📝{assignment_dict['Assignment']['title']}-{ctx.author.name}"
             # channel = await ctx.guild.create_text_channel(channel_name, category=submission_category)
             existing_channel = discord.utils.get(submission_category.text_channels, name=channel_name)
-    
+
             if existing_channel is not None:
                 # Delete the old text channel if it exists
                 await existing_channel.delete()
-            
+
             channel = await ctx.guild.create_text_channel(channel_name, category=submission_category)
-            
+
             await channel.send(f"Assignment ID: {assignmentId}- Student ID : {studentId}")
             if file:
                 await channel.send(file)
