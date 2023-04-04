@@ -23,4 +23,6 @@ async def increment_attendance(discord_user_id: int, discord_server_id: int):
         classroom_id = request['id']
         request = await api.get_user_attendance(user_id, classroom_id)
         current_attendance = request['attendance']
-        await api.update_user_attendance(current_attendance, user_id, classroom_id)
+        # print(current_attendance)
+        if current_attendance is not None:
+                await api.update_user_attendance(current_attendance, user_id, classroom_id)

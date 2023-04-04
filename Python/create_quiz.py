@@ -18,7 +18,7 @@ class EditModal(discord.ui.Modal):
         super().__init__(*args, **kwargs)
         self.type = task_dict['type']
         self.message = message
-        self.channelId = task_dict['channelId']
+        self.channel_id = task_dict['channelId']
         val_title = task_dict['title']
         val_points = task_dict['points']
         val_start_date = task_dict['start']
@@ -60,7 +60,7 @@ class EditModal(discord.ui.Modal):
         start_date = self.children[3].value
         due_date = self.children[4].value
 
-        update_json = {'title': title, 'points': int(points), 'startDate': start_date,
+        update_json = {'title': title, 'points': int(float(points)), 'startDate': start_date,
                        'dueDate': due_date}
 
         e.add_field(name="Title", value=title, inline=False)
@@ -76,9 +76,9 @@ class EditModal(discord.ui.Modal):
         e.add_field(name="Due Date", value=due_date, inline=False)
 
         if self.type == "Assignment":
-            supabase.table("Assignment").update(update_json).eq('channelId', self.channelId).execute()
+            await api.update_assignment(update_json, self.channel_id)
         if self.type == "Quiz":
-            supabase.table("Quiz").update(update_json).eq('channelId', self.channelId).execute()
+            await api.update_quiz(update_json, self.channel_id)
 
         await self.message.edit(embed=e)
 
