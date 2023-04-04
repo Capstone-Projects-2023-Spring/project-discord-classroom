@@ -98,13 +98,14 @@ class InputModal(discord.ui.Modal):
 
 
 class TakeQuiz(discord.ui.View):
-    def __init__(self, embed_ques: List[discord.Embed], quiz_dict: dict, answers: List[str]):
+    def __init__(self, embed_ques: List[discord.Embed], quiz_dict: dict, answers: List[str], points: List[float]):
         super().__init__(timeout=None)
         self.eq = embed_ques
         self.this_question = embed_ques[0]
         self.quiz_title = quiz_dict['title']
         self.answers = answers
         self.was_submitted = False
+        self.points = points
         right_button = self.get_item('right')
         last_button = self.get_item('last')
         self.has_answer = []
@@ -307,9 +308,9 @@ class TakeQuiz(discord.ui.View):
 
         for i, ques in enumerate(questions):
             if student_answers[i].lower().strip() == self.answers[i].lower().strip():
-                message += f"Question {i + 1}.\n\n{ques}\nStudent's Answer: ✅```{student_answers[i]}```\nCorrect Answer: ```{self.answers[i]}```\n\n"
+                message += f"Question {i + 1}.\t{self.points[i]} Pts.\n{ques}\nStudent's Answer: ✅```{student_answers[i]}```\nCorrect Answer: ```{self.answers[i]}```\n\n"
             else:
-                message += f"Question {i + 1}.\n\n{ques}\nStudent's Answer: ❌```{student_answers[i]}```\nCorrect Answer: ```{self.answers[i]}```\n\n"
+                message += f"Question {i + 1}.\t{self.points[i]} Pts.\n{ques}\nStudent's Answer: ❌```{student_answers[i]}```\nCorrect Answer: ```{self.answers[i]}```\n\n"
         if not from_timer:
             await interaction.response.edit_message(content="Quiz Submitted", embed=None, view=None)
         await new_channel.send(f"ID: Q-{quiz_id}-{user_id}")
@@ -364,9 +365,11 @@ class StartQuiz(discord.ui.View):
             return await interaction.response.edit_message(embed=embed, view=self)
         question_json = await api.get_question(quiz_id)
         answers = []
+        points = []
         questions_as_embed = []
         for i, question in enumerate(question_json):
             answers.append(question['answer'])
+            points.append(question['points'])
             embed = discord.Embed(
                 title=f"Question {i + 1}/{len(question_json)}.\t\t\t\t{str(question['points'])} Pts.")
             embed.add_field(name="Question", value=question['question'], inline=False)
@@ -382,7 +385,7 @@ class StartQuiz(discord.ui.View):
             embed.add_field(name="Answer", value="``` ```", inline=False)
             questions_as_embed.append(embed)
         current_question = questions_as_embed[0]
-        take_quiz = TakeQuiz(questions_as_embed, quiz['quiz'], answers)
+        take_quiz = TakeQuiz(questions_as_embed, quiz['quiz'], answers, points)
         await interaction.response.send_message(embed=current_question, ephemeral=True, view=take_quiz)
 
         if quiz_time > 0:
