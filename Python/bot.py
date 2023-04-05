@@ -335,7 +335,47 @@ def run_discord_bot():
         bot.add_listener(on_reaction_add, 'on_reaction_add')
         bot.add_listener(on_reaction_remove, 'on_reaction_remove')
 
-    @bot.slash_command(name='attendance', description='```/attendance``` - Used by students to check their attendance')
+    class AnonPoll(discord.ui.View):
+        def __init__(self, options: List[str]):
+            super().__init__()
+            self.options = options
+            for i in range(len(self.options)):
+                button = discord.ui.Button(label=self.options[i], style=discord.ButtonStyle.primary, emoji=chr(0x1f1e6 + i))
+                self.add_item(button)
+            
+            
+    @bot.slash_command(name='anonpoll', description='```/anon poll [topic] [option1] [option2] ... ``` - Creates a poll for users (8 max options)')
+    async def anon_poll(ctx: discord.ApplicationContext, topic: str, option1: str, option2: str, option3: str = None,
+                option4: str = None, option5: str = None, option6: str = None, option7: str = None,
+                option8: str = None):
+        
+        await ctx.defer()
+
+        options = [option1, option2]
+        if option3:
+            options.append(option3)
+        if option4:
+            options.append(option4)
+        if option5:
+            options.append(option5)
+        if option6:
+            options.append(option6)
+        if option7:
+            options.append(option7)
+        if option8:
+            options.append(option8)
+
+        embed = discord.Embed(title=topic, description=' '.join(
+        [f'{chr(0x1f1e6 + i)} {option}\n\n' for i, option in enumerate(options)]))
+    
+        await ctx.respond("Poll Created")
+
+        # Send the poll message and add buttons
+        message = await ctx.send(embed=embed, view=AnonPoll(options))
+        
+        
+    @bot.slash_command(name='attendance',
+                        description='```/attendance``` - Used by students to check their attendance')
     async def attendance(ctx: discord.ApplicationContext):
         user_roles = [role.name for role in ctx.author.roles]
         guild_id = ctx.guild_id
