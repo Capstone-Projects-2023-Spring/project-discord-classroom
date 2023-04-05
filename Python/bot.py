@@ -335,13 +335,16 @@ def run_discord_bot():
         bot.add_listener(on_reaction_add, 'on_reaction_add')
         bot.add_listener(on_reaction_remove, 'on_reaction_remove')
 
-    class AnonPoll(discord.ui.View):
-        def __init__(self, options: List[str]):
+    class AnonPoll(discord.ui.View): #class is created for the discord view of the poll with buttons
+        def __init__(self, options: List[str], ctx: discord.ApplicationContext):
             super().__init__()
             self.options = options
-            for i in range(len(self.options)):
+            for i in range(len(self.options)): #each option is created to be a button
                 button = discord.ui.Button(label=self.options[i], style=discord.ButtonStyle.primary, emoji=chr(0x1f1e6 + i))
                 self.add_item(button)
+            user_roles = [role.name for role in ctx.author.roles]
+            if "Educator" in user_roles: #only educator should have access to end a poll
+                self.add_item(discord.ui.Button(label="End Poll!", style=discord.ButtonStyle.danger)) 
             
             
     @bot.slash_command(name='anonpoll', description='```/anon poll [topic] [option1] [option2] ... ``` - Creates a poll for users (8 max options)')
@@ -371,8 +374,8 @@ def run_discord_bot():
         await ctx.respond("Poll Created")
 
         # Send the poll message and add buttons
-        message = await ctx.send(embed=embed, view=AnonPoll(options))
-        
+        message = await ctx.send(embed=embed, view=AnonPoll(options, ctx))
+
         
     @bot.slash_command(name='attendance',
                         description='```/attendance``` - Used by students to check their attendance')
