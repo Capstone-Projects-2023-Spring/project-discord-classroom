@@ -145,6 +145,12 @@ async def get_classroom_user_attendance(user_id: int, classroom_id: int):
     classroom_user = sb_response.data
     return JSONResponse(content={'attendance': classroom_user.attendance})
 
+@app.put("/userAttendance")
+async def update_user_attendance(user_id: int, classroom_id: int):
+    response = await get_classroom_user_attendance
+    attendance = response['attendance']
+    response = supabase.table('Classroom_User').update({'attendance': attendance+1}).match({'classroomId': classroom_id, 'userId': user_id}).execute()
+
 @app.get("/classroom_user/{classroom_id}/student", response_model=List[Classroom_User])
 async def get_students(classroom_id: int):
     sb_response = supabase.table('Classroom_User').select('*').match({'classroomId': classroom_id, 'role': "Student"}).execute()
@@ -227,9 +233,7 @@ async def get_user_id(discord_id: int, response_model=User, response_model_inclu
 
 
 
-# @app.put("/userAttendance")
-# async def update_user_attendance(old_attendance: int, user_id: int, classroom_id: int):
-#     response = supabase.table('Classroom_User').update({'attendance': old_attendance+1}).match({'classroomId': classroom_id, 'userId': user_id}).execute()
+
 
 # @app.put("/Assignment_Update/")
 # async def update_assignment(dictionary: dict, channel_id: int):
