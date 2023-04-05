@@ -1,18 +1,18 @@
+from create_classes import Assignment, Discussion, Grade, Question, Quiz,
 from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from storage3.utils import StorageException
 from supabase import create_client
-from fastapi.responses import JSONResponse
+from typing import List
+
+import asyncio
+import datetime
+import hashlib
 import json
 import os
-from pydantic import BaseModel
-from typing import List
-from create_classes import Quiz, Assignment, Grade, Discussion
-from create_classes import Question
-import hashlib
 import pickle
-import asyncio
 import requests
-import datetime
 
 app = FastAPI(
     title="ClassroomBotAPI",
