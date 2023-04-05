@@ -145,7 +145,7 @@ async def get_classroom_user_attendance(user_id: int, classroom_id: int):
     classroom_user = sb_response.data
     return JSONResponse(content={'attendance': classroom_user.attendance})
 
-@app.put("/userAttendance")
+@app.put("/classroom_user/{user_id}/{classroom_id}/attendance")
 async def update_user_attendance(user_id: int, classroom_id: int):
     response = await get_classroom_user_attendance
     attendance = response['attendance']
