@@ -12,6 +12,7 @@ import hashlib
 import pickle
 import asyncio
 import requests
+import datetime
 
 app = FastAPI(
     title="ClassroomBotAPI",
@@ -32,37 +33,84 @@ supabase = create_client(
 )
 
 #classes
+class Assignment(BaseModel):
+    id: int
+    channelId: int
+    points: int
+    startDate: datetime.date
+    dueDate: datetime.date
+    classroom_id: int
+    title: str
+
 class Classroom(BaseModel):
     id: int
-    serverId: str
+    serverId: int
     serverName: str
 
-class ClassroomId(BaseModel):
+class Classroom_User(BaseModel):
     id: int
-
-class Educator(BaseModel):
-    id: int
-    name: str
-    sectionId: int
-
-class Student(BaseModel):
-    id: int
-    sectionId: int
-    name: str
+    classroomId: int
+    role: str
+    userId: int
     attendance: int
 
-class Section(BaseModel):
+class Discussion(BaseModel):
+    id: int
+    classroomId: int
+    channelId: int
+    title: str # TODO: Why varchar as opposed to text?
+    points: int
+    startDate: datetime.date
+    dueDate: datetime.date
+
+class Grade(BaseModel):
+    id: int
+    taskType: str
+    graderId: int
+    taskId: int
+    studentId: int
+    score: int
+
+class Quiz(BaseModel):
+    id: int
+    questions: str
+    channelId: int
+    title: str
+    points: float # TODO: should this be float or int?
+    startDate: datetime.date
+    dueDate: datetime.date
+    timeLimit: int
+    classroomId: int
+
+class User(BaseModel):
     id: int
     name: str
-    classroomId: int
-    totalAttendance: int
-    totalGrade: int
+    discordId: int
 
 
+# class ClassroomId(BaseModel):
+#     id: int
 
+# class Educator(BaseModel):
+#     id: int
+#     name: str
+#     sectionId: int
 
-class Message(BaseModel):
-    message: str
+# class Student(BaseModel):
+#     id: int
+#     sectionId: int
+#     name: str
+#     attendance: int
+
+# class Section(BaseModel):
+#     id: int
+#     name: str
+#     classroomId: int
+#     totalAttendance: int
+#     totalGrade: int
+
+# class Message(BaseModel):
+#     message: str
 
 
 @app.get("/classrooms", response_model=List[Classroom])
