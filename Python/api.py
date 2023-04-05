@@ -120,7 +120,7 @@ async def get_all_classrooms():
 @app.delete("/classroom/")
 async def delete_classroom(server_id: int):
     sb_resposne = supabase.table('Classroom').delete().eq('serverId', server_id).execute()
-    return JSONResponse=({'message': 'classroom deleted'})
+    return JSONResponse({'message': 'classroom deleted'})
 
 @app.get("/classroom/{server_id}", response_model=Classroom)
 async def get_classroom(server_id: int):
@@ -131,7 +131,7 @@ async def get_classroom(server_id: int):
 @app.get("/classroom/{server_id}/attendance")
 async def get_classroom_attendance(server_id: int):
     classroom = await get_classroom(server_id)
-    return JSONResponse(content={'attendance': classroom.attendance}
+    return JSONResponse(content={'attendance': classroom.attendance})
 
 # ===============
 # /classroom_user
@@ -208,7 +208,7 @@ async def update_grade(grade: Grade):
 
     res = supabase.table("Grade").insert(list).execute()
 
-    return JSONResponse=({"message": "grade updated"})
+    return JSONResponse({"message": "grade updated"})
 
 # =====
 # /quiz
