@@ -133,7 +133,6 @@ def run_discord_bot():
         await guild.create_voice_channel("Lecture", category=general)
         await guild.create_voice_channel("Chill", category=general)
 
-        await guild.create_text_channel("Lecture-UI", category=lounge)
         await guild.create_text_channel("Educators-Assistants", category=lounge)
         await guild.create_text_channel("Terminal", category=lounge)
         await guild.create_voice_channel("Educators-Assistants", category=lounge)
@@ -1021,41 +1020,51 @@ def run_discord_bot():
         if file and url:
             return await ctx.respond("Please provide either a file or a URL, not both.")
 
-        elif not file and not url:
+        if not file and not url:
             return await ctx.respond("Please provide either a file or a URL.")
+
+        first_message = await ctx.channel.history(oldest_first=True, limit=1).next()
+        embed = first_message.embeds[0]
+        due_date_str = embed.fields[4].value
+        due_date = datetime.datetime.strptime(due_date_str, "%Y-%m-%d").date()
+        today = datetime.date.today()
+
+        discord_id = ctx.author.id
+        studentId_dict = await api.get_user_id(discord_id)
+        studentId = studentId_dict["id"]
+
+        chan_id = ctx.channel_id
+        assignment_dict = await api.get_assignment(chan_id)
+        assignmentId = assignment_dict['Assignment']['id']
+        assignmentTitle = assignment_dict['Assignment']['title']
+
+        # Check if a Submission category already exists
+        submission_category = discord.utils.get(ctx.guild.categories, name="Submission")
+
+        if submission_category is None:
+            # Create the Submission category if it doesn't exist
+            submission_category = await ctx.guild.create_category("Submission")
+
+        # Create the text channel with the name "📝assignmenttitle-studentname" under the Submission category
+        channel_name = f"📝{assignment_dict['Assignment']['title']}-{ctx.author.name}"
+        # channel = await ctx.guild.create_text_channel(channel_name, category=submission_category)
+        existing_channel = discord.utils.get(submission_category.text_channels, name=channel_name)
+
+        if existing_channel is not None:
+            # Delete the old text channel if it exists
+            await existing_channel.delete()
+
+        channel = await ctx.guild.create_text_channel(channel_name, category=submission_category)
+
+        await channel.send(f"ID: A-{assignmentId}-{studentId}")
+        if today > due_date:
+            await channel.send(f"```diff\n- THIS SUBMISSION IS {abs((today - due_date).days)} DAY(S) LATE```")
+        if file:
+            await channel.send(content=f"**Assignment - {assignmentTitle}**\nStudent: {ctx.author.display_name}\n", file=await file.to_file())
         else:
-            discord_id = ctx.author.id
-            studentId_dict = await api.get_user_id(discord_id)
-            studentId = studentId_dict["id"]
+            await channel.send(content=f"**Assignment - {assignmentTitle}**\nStudent: {ctx.author.display_name}\n\nSubmission: {url}")
 
-            chan_id = ctx.channel_id
-            assignment_dict = await api.get_assignment(chan_id)
-            assignmentId = assignment_dict['Assignment']['id']
-
-            # Check if a Submission category already exists
-            submission_category = discord.utils.get(ctx.guild.categories, name="Submission")
-
-            if submission_category is None:
-                # Create the Submission category if it doesn't exist
-                submission_category = await ctx.guild.create_category("Submission")
-
-            # Create the text channel with the name "📝assignmenttitle-studentname" under the Submission category
-            channel_name = f"📝{assignment_dict['Assignment']['title']}-{ctx.author.name}"
-            # channel = await ctx.guild.create_text_channel(channel_name, category=submission_category)
-            existing_channel = discord.utils.get(submission_category.text_channels, name=channel_name)
-
-            if existing_channel is not None:
-                # Delete the old text channel if it exists
-                await existing_channel.delete()
-
-            channel = await ctx.guild.create_text_channel(channel_name, category=submission_category)
-
-            await channel.send(f"Assignment ID: {assignmentId}- Student ID : {studentId}")
-            if file:
-                await channel.send(file)
-            else:
-                await channel.send(url)
-            return await ctx.respond("submitted!")
+        return await ctx.respond("Assignment Submitted!")
 
     # TESTING COMMANDS-------------------------------------------------------------------------------
     # @bot.command()
