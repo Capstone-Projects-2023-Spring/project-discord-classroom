@@ -339,13 +339,30 @@ def run_discord_bot():
         def __init__(self, options: List[str], ctx: discord.ApplicationContext):
             super().__init__()
             self.options = options
+            self.buttons = [None] * len(options)
+            self.num_votes_for_option_idx = [0] * len(options)
+
+            # TODO - should we only let a single user choose one option?
+            #           ie, should a previously selected option be "cleared" if a new one is reacted
+            def makeOptionCallback(idx):
+                async def optionCallback(interaction):
+                    self.buttons[idx].style = discord.ButtonStyle.secondary
+                    # TODO - do we want to allow them to deselect? can't be disabled then
+                    self.buttons[idx].disabled = True
+                    self.num_votes_for_option_idx[idx] += 1
+                    await interaction.response.edit_message(view=self)
+                return optionCallback
+            
             for i in range(len(self.options)): #each option is created to be a button
                 button = discord.ui.Button(label=self.options[i], style=discord.ButtonStyle.primary, emoji=chr(0x1f1e6 + i))
+                self.buttons[i] = button
+                button.callback = makeOptionCallback(i)
                 self.add_item(button)
+
             user_roles = [role.name for role in ctx.author.roles]
             if "Educator" in user_roles: #only educator should have access to end a poll
                 self.add_item(discord.ui.Button(label="End Poll!", style=discord.ButtonStyle.danger)) 
-            
+        
             
     @bot.slash_command(name='anonpoll', description='```/anon poll [topic] [option1] [option2] ... ``` - Creates a poll for users (8 max options)')
     async def anon_poll(ctx: discord.ApplicationContext, topic: str, option1: str, option2: str, option3: str = None,
