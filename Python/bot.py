@@ -717,26 +717,60 @@ def run_discord_bot():
 
     @tutor.command(name='quiz', description='```/tutor quiz [number_of_questions] [subject] [grade]```')
     async def quiz(ctx: discord.ApplicationContext, number_of_questions: int, subject: str, grade: str):
+
+        if number_of_questions > 5:
+            return await ctx.respond("Max number of questions is 5")
+
+        try:
+            ordinal_grade = utils.get_ordinal_number(grade)
+            # print(f"Ordinal number: {ordinal_grade}")
+        except ValueError as e:
+            print(e)
+
         messages = [
             {"role": "system",
-             "content": "You are TutorGPT, a friendly and helpful AI that assists students with learning and understanding their school work."}
+             "content": "You are TutorGPT, a friendly and helpful AI that assists students with learning and understanding their school work. You are "
+                        "responsible for creating quizzes for students with a given ordinal grade, subject, and number of questions. You should respond in less than "
+                        "150 words with the questions. Then I will tell you to generate answers for the questions to then compare with the user's answers. Do not "
+                        "respond with intro messages like, just respond with the questions or answers themselves"}
         ]
 
         await ctx.defer()
 
         messages.append(
             {"role": "user",
-             "content": f"Give me a {grade} grade quiz on {subject} with {number_of_questions} questions in less than 150 words with the answers but"
-                        f"each answer's text is wrapped in two '|' like ||Answer: The answer is 4|| this is to hide the answer from the user"}
+             "content": f"Give me a {ordinal_grade} grade quiz on {subject} with {number_of_questions} questions. Do NOT show me the answers."}
         )
-        chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages, max_tokens=150)
-        reply = chat.choices[0].message.content
+
+        # print(messages)
         chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages, max_tokens=150)
         reply = chat.choices[0].message.content
 
+        messages.append(
+            {"role": 'assistant', 'content': reply}
+        )
+
+        print("Quiz:", reply)
+
         user = ctx.author
         await ctx.respond("Check DMs", delete_after=3)
-        await user.send(f"TutorGPT: {reply}")
+        await user.send(f"TutorGPT:\n {reply}")
+
+        messages.append(
+            {"role": 'user', 'content': "Now give your answers to the questions above, I won't be able to see your answers so don't worry about cheating."}
+        )
+
+        chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages, max_tokens=150)
+        answers = chat.choices[0].message.content
+
+        print("Answers:", answers)
+
+        def check(message):
+            return message.author == user and message.channel == user.dm_channel
+
+        response = await bot.wait_for('message', check=check)
+
+        await user.send(f"TutorGPT: Here are the correct answers\n {answers}")
 
     @tutor.command(name='flashcards',
                    description='```/tutor flashcards [topic]``` creates a list of flashcards on a topic or from notes')
@@ -758,7 +792,7 @@ def run_discord_bot():
         )
 
         while True:
-            chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages, max_tokens=150)
+            chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages, max_tokens=200)
             reply = chat.choices[0].message.content
             user = ctx.author
             await ctx.respond("Check DMs", delete_after=3)
@@ -1065,56 +1099,5 @@ def run_discord_bot():
             await channel.send(content=f"**Assignment - {assignmentTitle}**\nStudent: {ctx.author.display_name}\n\nSubmission: {url}")
 
         return await ctx.respond("Assignment Submitted!")
-
-    # TESTING COMMANDS-------------------------------------------------------------------------------
-    # @bot.command()
-    # async def wipe(ctx):
-    #     guild = ctx.guild
-    #     for channel in guild.channels:
-    #         await channel.delete()
-    #
-    #     await guild.create_text_channel("testing")
-    #
-    # @bot.command()
-    # async def removeRoles(ctx):
-    #     safeRoles = ["Developer", "@everyone", "Classroom", "ClassroomTest 2", "ClassroomTest 1"]
-    #     guild = ctx.guild
-    #     for role in guild.roles:
-    #         if role.name not in safeRoles:
-    #             print("Deleting role: ", role.name)
-    #             await role.delete()
-    #     await ctx.send('All roles removed')
-    #
-    # @bot.command()
-    # async def removeSections(ctx):
-    #     safeRoles = ["Developer", "@everyone", "Classroom", "ClassroomTest 2", "ClassroomTest 1",
-    #                  "Educator", "Assistant", "Student"]
-    #     guild = ctx.guild
-    #     for role in guild.roles:
-    #         if role.name not in safeRoles:
-    #             print("Deleting role: ", role.name)
-    #             await role.delete()
-    #     await ctx.send('All roles removed')
-    #
-    # @bot.command()
-    # async def reset(ctx):
-    #     guild = ctx.guild
-    #     for channel in guild.channels:
-    #         if channel.name != 'testing':
-    #             await channel.delete()
-    #     await removeRoles(ctx)
-    #     await on_guild_join(ctx.guild)
-    #
-    # @bot.command()
-    # async def testInsert(ctx, arg1, arg2):
-    #     list = {'student_name': arg1, 'grade': arg2}
-    #     data = supabase.table("TestTable").insert(list).execute()
-    #     print(data)
-    #     await ctx.channel.send("Inserted new student")
-    #
-    # @bot.command()
-    # async def test(ctx):
-    #     print("Test")
-    #     await ctx.channel.send("Test")
 
     bot.run(DISCORD_TOKEN)
