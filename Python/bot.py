@@ -1106,27 +1106,33 @@ def run_discord_bot():
                        description = '```/discussion_grade``` - when used in a discussion channel will record and give credit to all students who participated')
     async def discussion_grade(ctx):
         #check that the command was used in a valid category and channel before working
-        category = ctx.channel.category
-        if category is not None and category.name == 'Discussions':
-            channel = bot.get_channel(ctx.channel.id)
-            grader_id = ctx.author.id
-            score = supabase.table("Discussion").select('points').eq({'channelId': channel}).execute
-            taskId = supabase.table("Discussion").select('id').eq('channelId', channel).execute()
-            taskType = "Discussion"
+        allowed_roles = ["Educator", "Assistant"]
+        user_roles = [role.name for role in ctx.author.roles]
+        
+        if any(role in allowed_roles for role in user_roles):
+            category = ctx.channel.category
+            if category is not None and category.name == 'Discussions':
+                channel = bot.get_channel(ctx.channel.id)
+                grader_id = ctx.author.id
+                score = supabase.table("Discussion").select('points').eq('channelId', channel).execute()
+                taskId = supabase.table("Discussion").select('id').eq('channelId', channel).execute()
+                taskType = "Discussion"
 
-            #makes list of all users in channel
-            users = set()
-            async for message in channel.history(limit = None):
-                if message.author.bot:
-                    continue
-                users.add(message.author.id)
+                #makes list of all users in channel
+                users = set()
+                async for message in channel.history(limit = None):
+                    if message.author.bot:
+                        continue
+                    users.add(message.author.id)
 
-            #adds the users that got credit for discussion
-            unique_users = set(users)
-            for student_id in unique_users:
-                supabase.table('Grade').insert({'taskType': taskType, 'graderId' : grader_id, 'taskId' : taskId, 'studentId' : student_id, 'score' : score}).execute
+                #adds the users that got credit for discussion
+                unique_users = set(users)
+                for student_id in unique_users:
+                   data = supabase.table('Grade').insert({'taskType': taskType, 'graderId' : grader_id, 'taskId' : taskId, 'studentId' : student_id, 'score' : score}).execute()
+            else:
+                # Return an error message if the command was used in a channel that is not under a category named "Discussions"
+                await ctx.send(f"Sorry, this command can only be used in channels under a category named Discussions.") 
         else:
-            # Return an error message if the command was used in a channel that is not under a category named "Discussions"
-            await ctx.send(f"Sorry, this command can only be used in channels under a category named Discussions.") 
+            await ctx.send(f"You need to be an Educator or Ta for this command")
 
     bot.run(DISCORD_TOKEN)
