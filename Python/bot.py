@@ -336,32 +336,62 @@ def run_discord_bot():
         bot.add_listener(on_reaction_remove, 'on_reaction_remove')
 
     class AnonPoll(discord.ui.View): #class is created for the discord view of the poll with buttons
-        def __init__(self, options: List[str], ctx: discord.ApplicationContext):
+        def __init__(self, options: List[str], ctx: discord.ApplicationContext, message: discord.Message):
             super().__init__()
             self.options = options
             self.buttons = [None] * len(options)
             self.num_votes_for_option_idx = [0] * len(options)
+            self.num_total_reactions = 0
 
-            # TODO - should we only let a single user choose one option?
-            #           ie, should a previously selected option be "cleared" if a new one is reacted
             def makeOptionCallback(idx):
                 async def optionCallback(interaction):
-                    self.buttons[idx].style = discord.ButtonStyle.secondary
-                    # TODO - do we want to allow them to deselect? can't be disabled then
-                    self.buttons[idx].disabled = True
+                    await interaction.response.send_message(f'You voted for {self.options[idx]}', ephemeral=True)
                     self.num_votes_for_option_idx[idx] += 1
+                    self.num_total_reactions += 1
                     await interaction.response.edit_message(view=self)
                 return optionCallback
             
             for i in range(len(self.options)): #each option is created to be a button
-                button = discord.ui.Button(label=self.options[i], style=discord.ButtonStyle.primary, emoji=chr(0x1f1e6 + i))
+                button = discord.ui.Button(label=self.options[i], style=discord.ButtonStyle.secondary, emoji=chr(0x1f1e6 + i))
                 self.buttons[i] = button
                 button.callback = makeOptionCallback(i)
                 self.add_item(button)
 
+            async def endPollCallback(interaction):
+                
+                # TODO - update embed with poll results
+                #embed = discord.Embed(description="test desc")
+                description_for_option_idx = [None] * len(options)
+                boxesForOption = []
+                for i in range(10):
+                    boxesForOption.append("⬛")
+            
+                for i in range(len(options)):
+                    
+                    reactionPercentage = round((self.num_votes_for_option_idx[i] / self.num_total_reactions) * 100) if \
+                        self.num_total_reactions > 0 else 0
+                    for j in range(round(reactionPercentage / 10)):
+                        if i < 7:
+                            boxesForOption[j] = f"{chr(0x1F7E5 + i)}"
+                        else:
+                            boxesForOption[j] = f"{chr(0x2B1C)}"
+                    boxesForOptionStr = ''.join(boxesForOption)
+
+                    description_for_option_idx[
+                        i] = f'{chr(0x1f1e6 + i)} {options[i]}\n `{boxesForOptionStr}` {self.num_votes_for_option_idx[i]} ({reactionPercentage}%)\n'
+                embed = message.embeds[0]
+                embed.description = ' '.join(description_for_option_idx)
+                await message.edit(embed=embed)
+                endPollButton.disabled = True
+                for button in self.buttons:
+                     button.disabled = True
+                await interaction.response.edit_message(view=self)
+
             user_roles = [role.name for role in ctx.author.roles]
             if "Educator" in user_roles: #only educator should have access to end a poll
-                self.add_item(discord.ui.Button(label="End Poll!", style=discord.ButtonStyle.danger)) 
+                endPollButton = discord.ui.Button(label="End Poll", style=discord.ButtonStyle.danger, custom_id="end")
+                endPollButton.callback = endPollCallback
+                self.add_item(endPollButton) 
         
             
     @bot.slash_command(name='anonpoll', description='```/anon poll [topic] [option1] [option2] ... ``` - Creates a poll for users (8 max options)')
@@ -389,9 +419,9 @@ def run_discord_bot():
         [f'{chr(0x1f1e6 + i)} {option}\n\n' for i, option in enumerate(options)]))
     
         await ctx.respond("Poll Created")
-
         # Send the poll message and add buttons
-        message = await ctx.send(embed=embed, view=AnonPoll(options, ctx))
+        message = await ctx.send(embed=embed)
+        await message.edit(view=AnonPoll(options, ctx, message))
 
         
     @bot.slash_command(name='attendance',
