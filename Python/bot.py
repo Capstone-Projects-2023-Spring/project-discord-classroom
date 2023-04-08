@@ -246,6 +246,32 @@ def run_discord_bot():
             else:
                 await ctx.send("Invalid file format, only PDF files are accepted.")
 
+    @bot.slash_command(name='delete', description ='```/delete ``` - Deletes a quiz, assignment, or discussion')
+    async def delete(ctx: discord.ApplicationContext):
+        user_roles = [role.name for role in ctx.author.roles]
+
+        if "Educator" not in user_roles:
+            await ctx.respond("You do not have permission to use this command. Only an educator can use /delete", delete_after=10) 
+        else:
+            channel = ctx.channel
+            embed = discord.Embed(title="Delete this channel?", color=0x00FF00)
+            embed.add_field(name="Are you sure you want to delete this channel?", value="✅ Yes\n❌ No")
+            interaction: discord.Interaction = await ctx.respond(embed=embed)
+            message: discord.Message = await interaction.original_response()
+            await message.add_reaction("✅")
+            await message.add_reaction("❌")
+
+            def check(reaction, user):
+                return user == ctx.author and reaction.message.id == message.id and str(reaction.emoji) in ["✅", "❌"]
+
+            while True:
+                reaction, user = await bot.wait_for('reaction_add', check=check)
+            
+                if reaction.emoji == "✅":
+                    await channel.delete()
+                elif reaction.emoji == "❌":
+                    await message.delete()
+
     @bot.slash_command(name='poll',
                        description='```/poll [topic] [option1] [option2] ... [option8]``` - Creates a poll for users (8 max options)')
     async def poll(ctx: discord.ApplicationContext, topic: str, option1: str, option2: str, option3: str = None,
@@ -385,7 +411,7 @@ def run_discord_bot():
                 endPollButton.disabled = True
                 for button in self.buttons:
                      button.disabled = True
-                     
+
                 await interaction.response.edit_message(view=self)
 
             #get the roles for each user
