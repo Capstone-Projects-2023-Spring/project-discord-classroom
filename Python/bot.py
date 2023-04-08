@@ -114,13 +114,15 @@ def run_discord_bot():
         # Create server categories
         upcoming = await guild.create_category("Upcoming")
         lounge = await guild.create_category("Lounge")
-        general = await guild.create_category("General")
         await lounge.set_permissions(student_role, view_channel=False)
+        general = await guild.create_category("General")
         await guild.create_category("Assignments")
         await guild.create_category("Quizzes")
         await guild.create_category("Discussions")
         submissions = await guild.create_category("Submissions")
         await submissions.set_permissions(student_role, view_channel=False)
+        grades = await guild.create_category("Grades")
+        await grades.set_permissions(student_role, view_channel=False)
         questions = await guild.create_category("Questions")
 
         announcement_channel = await guild.create_text_channel("Announcements", category=general)
@@ -168,35 +170,32 @@ def run_discord_bot():
 
         # Update member role in database
         if before.roles != after.roles:
-            educator_role = discord.utils.get(after.guild.roles, name="Educator")
-            assistant_role = discord.utils.get(after.guild.roles, name="Assistant")
-            student_role = discord.utils.get(after.guild.roles, name="Student")
-            new_role = list(set(after.roles) - set(before.roles))
-            removed_role = list(set(before.roles) - set(after.roles))
-            # print(before.roles, after.roles)
-            if new_role and new_role[0].name in ['Student', 'Educator', 'Assistant']:
-                if new_role:
-                    if new_role[0] == educator_role:
-                        await after.remove_roles(assistant_role)
-                        await after.remove_roles(student_role)
-                        new_role = new_role[0].name
-                    if new_role[0] == assistant_role:
-                        await after.remove_roles(educator_role)
-                        await after.remove_roles(student_role)
-                        new_role = new_role[0].name
-                    if new_role[0] == student_role:
-                        await after.remove_roles(educator_role)
-                        await after.remove_roles(assistant_role)
-                        new_role = new_role[0].name
-                if len(after.roles) == 1:
-                    await after.add_roles(student_role)
-                res = await api.get_user_id(after.id)
-                user_id = res['id']
-                server_id = after.guild.id
-                res = await api.get_classroom_id(server_id)
-                classroom_id = res['id']
-                if new_role:
+            role_names = ['Student', 'Educator', 'Assistant']
+            guild = before.guild
+            roles = {role.name: role for role in guild.roles if role.name in role_names}
+            before_member_roles = [role for role in before.roles if role.name in role_names]
+            after_member_roles = [role for role in after.roles if role.name in role_names]
+            role_count = len(after_member_roles)
+            res = await api.get_user_id(after.id)
+            user_id = res['id']
+            server_id = after.guild.id
+            res = await api.get_classroom_id(server_id)
+            classroom_id = res['id']
+            if role_count == 0:
+                await after.add_roles(roles['Student'])
+                new_role = 'Student'
+                if not any(role.name == "Student" for role in before.roles):
                     await api.update_member_role(new_role, user_id, classroom_id)
+            elif role_count > 1:
+                new_roles = [x for x in after_member_roles if x not in before_member_roles]
+                new_role = new_roles[0].name
+                latest_role = new_roles[0]
+                roles_to_remove = [role for role in after_member_roles if role != latest_role]
+
+                for role in roles_to_remove:
+                    await after.remove_roles(role)
+
+                await api.update_member_role(new_role, user_id, classroom_id)
 
     @bot.slash_command(name='syllabus',
                        description='```/syllabus [.pdf file]``` - Updates the syllabus page with the linked pdf file')
