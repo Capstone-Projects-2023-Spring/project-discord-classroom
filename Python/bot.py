@@ -340,14 +340,14 @@ def run_discord_bot():
             super().__init__()
             self.options = options
             self.buttons = [None] * len(options)
-            self.num_votes_for_option_idx = [0] * len(options)
-            self.num_total_reactions = 0
+            self.num_votes_for_option_idx = [0] * len(options) #number of votes for each option
+            self.num_total_votes = 0
 
-            def makeOptionCallback(idx):
+            def makeOptionCallback(idx): #callback function for when user presses button to select an option
                 async def optionCallback(interaction):
                     await interaction.response.send_message(f'You voted for {self.options[idx]}', ephemeral=True)
                     self.num_votes_for_option_idx[idx] += 1
-                    self.num_total_reactions += 1
+                    self.num_total_votes += 1
                     await interaction.response.edit_message(view=self)
                 return optionCallback
             
@@ -357,39 +357,41 @@ def run_discord_bot():
                 button.callback = makeOptionCallback(i)
                 self.add_item(button)
 
-            async def endPollCallback(interaction):
-                
-                # TODO - update embed with poll results
-                #embed = discord.Embed(description="test desc")
+            async def endPollCallback(interaction): #callback function to display results when poll ends
                 description_for_option_idx = [None] * len(options)
                 boxesForOption = []
                 for i in range(10):
                     boxesForOption.append("⬛")
             
-                for i in range(len(options)):
-                    
-                    reactionPercentage = round((self.num_votes_for_option_idx[i] / self.num_total_reactions) * 100) if \
+                for i in range(len(options)): #disply the poll results for each option
+                    reactionPercentage = round((self.num_votes_for_option_idx[i] / self.num_total_votes) * 100) if \
                         self.num_total_reactions > 0 else 0
+                    
                     for j in range(round(reactionPercentage / 10)):
                         if i < 7:
                             boxesForOption[j] = f"{chr(0x1F7E5 + i)}"
                         else:
                             boxesForOption[j] = f"{chr(0x2B1C)}"
+
                     boxesForOptionStr = ''.join(boxesForOption)
 
                     description_for_option_idx[
                         i] = f'{chr(0x1f1e6 + i)} {options[i]}\n `{boxesForOptionStr}` {self.num_votes_for_option_idx[i]} ({reactionPercentage}%)\n'
-                embed = message.embeds[0]
+                
+                embed = message.embeds[0] #gets the poll message embed
                 embed.description = ' '.join(description_for_option_idx)
                 await message.edit(embed=embed)
+
                 endPollButton.disabled = True
                 for button in self.buttons:
                      button.disabled = True
+                     
                 await interaction.response.edit_message(view=self)
 
+            #get the roles for each user
             user_roles = [role.name for role in ctx.author.roles]
             if "Educator" in user_roles: #only educator should have access to end a poll
-                endPollButton = discord.ui.Button(label="End Poll", style=discord.ButtonStyle.danger, custom_id="end")
+                endPollButton = discord.ui.Button(label="End Poll", style=discord.ButtonStyle.danger)
                 endPollButton.callback = endPollCallback
                 self.add_item(endPollButton) 
         
@@ -415,11 +417,13 @@ def run_discord_bot():
         if option8:
             options.append(option8)
 
+        #create the poll embed to show user options
         embed = discord.Embed(title=topic, description=' '.join(
         [f'{chr(0x1f1e6 + i)} {option}\n\n' for i, option in enumerate(options)]))
     
         await ctx.respond("Poll Created")
-        # Send the poll message and add buttons
+
+        # Send the poll message and add buttons to the view
         message = await ctx.send(embed=embed)
         await message.edit(view=AnonPoll(options, ctx, message))
 
