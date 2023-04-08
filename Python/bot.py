@@ -335,7 +335,101 @@ def run_discord_bot():
         bot.add_listener(on_reaction_add, 'on_reaction_add')
         bot.add_listener(on_reaction_remove, 'on_reaction_remove')
 
-    @bot.slash_command(name='attendance', description='```/attendance``` - Used by students to check their attendance')
+    class AnonPoll(discord.ui.View): #class is created for the discord view of the poll with buttons
+        def __init__(self, options: List[str], ctx: discord.ApplicationContext, message: discord.Message):
+            super().__init__()
+            self.options = options
+            self.buttons = [None] * len(options)
+            self.num_votes_for_option_idx = [0] * len(options) #number of votes for each option
+            self.num_total_votes = 0
+
+            def makeOptionCallback(idx): #callback function for when user presses button to select an option
+                async def optionCallback(interaction):
+                    await interaction.response.send_message(f'You voted for {self.options[idx]}', ephemeral=True)
+                    self.num_votes_for_option_idx[idx] += 1
+                    self.num_total_votes += 1
+                    await interaction.response.edit_message(view=self)
+                return optionCallback
+            
+            for i in range(len(self.options)): #each option is created to be a button
+                button = discord.ui.Button(label=self.options[i], style=discord.ButtonStyle.secondary, emoji=chr(0x1f1e6 + i))
+                self.buttons[i] = button
+                button.callback = makeOptionCallback(i)
+                self.add_item(button)
+
+            async def endPollCallback(interaction): #callback function to display results when poll ends
+                description_for_option_idx = [None] * len(options)
+                boxesForOption = []
+                for i in range(10):
+                    boxesForOption.append("⬛")
+            
+                for i in range(len(options)): #disply the poll results for each option
+                    reactionPercentage = round((self.num_votes_for_option_idx[i] / self.num_total_votes) * 100) if \
+                        self.num_total_reactions > 0 else 0
+                    
+                    for j in range(round(reactionPercentage / 10)):
+                        if i < 7:
+                            boxesForOption[j] = f"{chr(0x1F7E5 + i)}"
+                        else:
+                            boxesForOption[j] = f"{chr(0x2B1C)}"
+
+                    boxesForOptionStr = ''.join(boxesForOption)
+
+                    description_for_option_idx[
+                        i] = f'{chr(0x1f1e6 + i)} {options[i]}\n `{boxesForOptionStr}` {self.num_votes_for_option_idx[i]} ({reactionPercentage}%)\n'
+                
+                embed = message.embeds[0] #gets the poll message embed
+                embed.description = ' '.join(description_for_option_idx)
+                await message.edit(embed=embed)
+
+                endPollButton.disabled = True
+                for button in self.buttons:
+                     button.disabled = True
+                     
+                await interaction.response.edit_message(view=self)
+
+            #get the roles for each user
+            user_roles = [role.name for role in ctx.author.roles]
+            if "Educator" in user_roles: #only educator should have access to end a poll
+                endPollButton = discord.ui.Button(label="End Poll", style=discord.ButtonStyle.danger)
+                endPollButton.callback = endPollCallback
+                self.add_item(endPollButton) 
+        
+            
+    @bot.slash_command(name='anonpoll', description='```/anon poll [topic] [option1] [option2] ... ``` - Creates a poll for users (8 max options)')
+    async def anon_poll(ctx: discord.ApplicationContext, topic: str, option1: str, option2: str, option3: str = None,
+                option4: str = None, option5: str = None, option6: str = None, option7: str = None,
+                option8: str = None):
+        
+        await ctx.defer()
+
+        options = [option1, option2]
+        if option3:
+            options.append(option3)
+        if option4:
+            options.append(option4)
+        if option5:
+            options.append(option5)
+        if option6:
+            options.append(option6)
+        if option7:
+            options.append(option7)
+        if option8:
+            options.append(option8)
+
+        #create the poll embed to show user options
+        embed = discord.Embed(title=topic, description=' '.join(
+        [f'{chr(0x1f1e6 + i)} {option}\n\n' for i, option in enumerate(options)]))
+    
+        await ctx.respond("Poll Created")
+
+        # Send the poll message and add buttons to the view
+        message = await ctx.send(embed=embed)
+        await message.edit(view=AnonPoll(options, ctx, message))
+
+        
+    @bot.slash_command(name='attendance',
+                        description='```/attendance``` - Used by students to check their attendance')
     async def attendance(ctx: discord.ApplicationContext):
         user_roles = [role.name for role in ctx.author.roles]
         guild_id = ctx.guild_id
