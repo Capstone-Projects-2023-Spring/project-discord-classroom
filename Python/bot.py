@@ -553,7 +553,7 @@ def run_discord_bot():
         else:
             await ctx.respond("Only Students can ask private questions")
 
-    @bot.slash_command(name='close', description='```/close``` deletes a private question channel')
+    @bot.slash_command(name='close', description='```/close``` - Deletes a private question channel')
     async def close(ctx: discord.ApplicationContext):
         channel_name = ctx.channel.name
         category = ctx.channel.category.name
@@ -582,7 +582,7 @@ def run_discord_bot():
         else:
             await ctx.respond("You cannot close this channel", delete_after=3)
 
-    @bot.slash_command(name='help', description='```/help``` sends command information to the user')
+    @bot.slash_command(name='help', description='```/help``` - Sends command information to the user')
     async def help(ctx, command_name: str = None):
         if command_name:
             command = bot.get_application_command(command_name)
@@ -1040,7 +1040,7 @@ def run_discord_bot():
     # update slash command
     @bot.slash_command(
         name='upcoming',
-        description="Updates the 'Upcoming' category to show all schoolwork due before the end date")
+        description="```/upcoming [end_date}''' - Updates the 'Upcoming' category to show all schoolwork due before the end date submitted")
     async def update_upcoming(ctx: discord.ApplicationContext,
                               end_date: discord.Option(str, description="End date in the format YYYY-MM-DD") = (
                                       datetime.date.today() + datetime.timedelta(days=7)).strftime('%Y-%m-%d')):
@@ -1237,8 +1237,8 @@ def run_discord_bot():
 
 
     #add user for credit in discussions
-    @bot.slash_command(name = 'discussion_grade',
-                       description = '```/discussion_grade``` - Used by Educators to grade discussions')
+    @bot.slash_command(name = 'discussion grade',
+                       description = '```/discussion_grade``` - Auto grades the current discussion text channel by participation only.')
     async def discussion_grade(ctx):
         #check that the command was used in a valid category and channel before working
         allowed_roles = ["Educator", "Assistant"]
@@ -1248,9 +1248,12 @@ def run_discord_bot():
             category = ctx.channel.category
             if category is not None and category.name == 'Discussions':
                 channel = bot.get_channel(ctx.channel.id)
+                discussionResponse = supabase.table("Discussion").select('*').eq('channelID', channel).execute()
                 grader_id = ctx.author.id
-                score = supabase.table("Discussion").select('points').eq('channelId', channel).execute()
-                taskId = supabase.table("Discussion").select('id').eq('channelId', channel).execute()
+                score = int(discussionResponse.data['points'])
+                taskId = int(discussionResponse.data['id'])
+                #score = supabase.table("Discussion").select('points').eq('channelId', channel).execute()
+                #taskId = supabase.table("Discussion").select('id').eq('channelId', channel).execute()
                 taskType = "Discussion"
 
                 #makes list of all users in channel
@@ -1263,7 +1266,7 @@ def run_discord_bot():
                 #adds the users that got credit for discussion
                 unique_users = set(users)
                 for student_id in unique_users:
-                   data = supabase.table('Grade').insert({'taskType': taskType, 'graderId' : grader_id, 'taskId' : taskId, 'studentId' : student_id, 'score' : score}).execute()
+                   supabase.table('Grade').insert({'taskType': taskType, 'graderId' : grader_id, 'taskId' : taskId, 'studentId' : student_id, 'score' : score}).execute()
             else:
                 # Return an error message if the command was used in a channel that is not under a category named "Discussions"
                 await ctx.send(f"Sorry, this command can only be used in channels under a category named Discussions.")
