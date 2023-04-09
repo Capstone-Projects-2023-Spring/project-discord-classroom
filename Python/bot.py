@@ -1105,6 +1105,18 @@ def run_discord_bot():
 
         await ctx.respond(f"Upcoming category updated")
 
+    @bot.command()
+    async def gradequiz(ctx, points: int, comments: str):
+
+        first_msg = (await ctx.channel.history(limit=1).flatten())[0]
+
+        assignment_id = first_msg.content.split(':')[1].strip()
+
+        assignment_type, assignment_num, user_id = assignment_id.split('-')
+        
+
+        await ctx.send(f"Graded {assignment_type} {assignment_num} for user {user_id}. Points: {points}. Comments: {comments}")
+
     @bot.slash_command(name='grade',
                        description='```/grade [discord_id] [task_id] [score]``` - post grades for a student')
     async def grade(ctx: discord.ApplicationContext, discord_id: str, task_id: int, score: int):
