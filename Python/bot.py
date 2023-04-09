@@ -20,6 +20,8 @@ from create_classes import Assignment, Grade
 from pptx import Presentation
 import docx
 import requests
+import secrets
+import string
 
 if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:
@@ -830,7 +832,21 @@ def run_discord_bot():
 
     @bot.slash_command(name='upload_file', description='```/upload file`` - User can follow link to upload file')
     async def upload_file(ctx):
-        await ctx.respond('https://singular-jalebi-124a92.netlify.app/')
+        
+        unique_id = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8, 51))
+
+        discord_id = ctx.author.id
+        studentId_dict = await api.get_user_id(discord_id)
+        userId = studentId_dict["id"]
+
+        submit_dict = {'userId': userId, 'unique_id': unique_id}
+
+
+        new_submit = api.Tokens(userId=submit_dict['userId'], unique_id=submit_dict['unique_id'])
+
+        await api.update_token(new_submit)
+
+        await ctx.respond(f'https://singular-jalebi-124a92.netlify.app/?token={unique_id}')
 
     tutor = bot.create_group("tutor", "AI tutor for students")
 
@@ -1220,38 +1236,38 @@ def run_discord_bot():
         return await ctx.respond("Assignment Submitted!")
 
 
-    #add user for credit in discussions
-    @bot.slash_command(name = 'discussion_grade',
-                       description = '```/discussion_grade``` - when used in a discussion channel will record and give credit to all students who participated')
-    async def discussion_grade(ctx):
-        #check that the command was used in a valid category and channel before working
-        allowed_roles = ["Educator", "Assistant"]
-        user_roles = [role.name for role in ctx.author.roles]
+    # #add user for credit in discussions
+    # @bot.slash_command(name = 'discussion_grade',
+    #                    description = '```/discussion_grade``` - when used in a discussion channel will record and give credit to all students who participated')
+    # async def discussion_grade(ctx):
+    #     #check that the command was used in a valid category and channel before working
+    #     allowed_roles = ["Educator", "Assistant"]
+    #     user_roles = [role.name for role in ctx.author.roles]
         
-        if any(role in allowed_roles for role in user_roles):
-            category = ctx.channel.category
-            if category is not None and category.name == 'Discussions':
-                channel = bot.get_channel(ctx.channel.id)
-                grader_id = ctx.author.id
-                score = supabase.table("Discussion").select('points').eq('channelId', channel).execute()
-                taskId = supabase.table("Discussion").select('id').eq('channelId', channel).execute()
-                taskType = "Discussion"
+    #     if any(role in allowed_roles for role in user_roles):
+    #         category = ctx.channel.category
+    #         if category is not None and category.name == 'Discussions':
+    #             channel = bot.get_channel(ctx.channel.id)
+    #             grader_id = ctx.author.id
+    #             score = supabase.table("Discussion").select('points').eq('channelId', channel).execute()
+    #             taskId = supabase.table("Discussion").select('id').eq('channelId', channel).execute()
+    #             taskType = "Discussion"
 
-                #makes list of all users in channel
-                users = set()
-                async for message in channel.history(limit = None):
-                    if message.author.bot:
-                        continue
-                    users.add(message.author.id)
+    #             #makes list of all users in channel
+    #             users = set()
+    #             async for message in channel.history(limit = None):
+    #                 if message.author.bot:
+    #                     continue
+    #                 users.add(message.author.id)
 
-                #adds the users that got credit for discussion
-                unique_users = set(users)
-                for student_id in unique_users:
-                   data = supabase.table('Grade').insert({'taskType': taskType, 'graderId' : grader_id, 'taskId' : taskId, 'studentId' : student_id, 'score' : score}).execute()
-            else:
-                # Return an error message if the command was used in a channel that is not under a category named "Discussions"
-                await ctx.send(f"Sorry, this command can only be used in channels under a category named Discussions.") 
-        else:
-            await ctx.send(f"You need to be an Educator or Ta for this command")
+    #             #adds the users that got credit for discussion
+    #             unique_users = set(users)
+    #             for student_id in unique_users:
+    #                data = supabase.table('Grade').insert({'taskType': taskType, 'graderId' : grader_id, 'taskId' : taskId, 'studentId' : student_id, 'score' : score}).execute()
+    #         else:
+    #             # Return an error message if the command was used in a channel that is not under a category named "Discussions"
+    #             await ctx.send(f"Sorry, this command can only be used in channels under a category named Discussions.") 
+    #     else:
+            # await ctx.send(f"You need to be an Educator or Ta for this command")
 
     bot.run(DISCORD_TOKEN)

@@ -1,3 +1,4 @@
+from sqlite3 import Timestamp
 from fastapi import FastAPI, File, UploadFile
 from storage3.utils import StorageException
 from supabase import create_client
@@ -81,6 +82,9 @@ class Section(BaseModel):
 class Message(BaseModel):
     message: str
 
+class Tokens(BaseModel):
+    userId: int
+    unique_id: str
 
 @app.get("/classrooms", response_model=List[Classroom])
 async def get_classrooms():
@@ -341,6 +345,14 @@ async def update_grade(grade: Grade):
     res = supabase.table("Grade").insert(list).execute()
 
     return {"message": "grade updated successfully"}
+
+@app.post("/Tokens/")
+async def update_token(tokens: Tokens):
+
+    list = {'created_at': 'now()', 'userId': tokens.userId, 'unique_id': tokens.unique_id}
+    res = supabase.table("Tokens").insert(list).execute()
+
+    return {"message": "upload is avaiable for 10 minutes"}
 
 
 # --------------------------- PUT Methods-------------------------------
