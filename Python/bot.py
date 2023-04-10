@@ -1109,13 +1109,24 @@ def run_discord_bot():
     async def gradequiz(ctx, points: int, comments: str):
 
         first_msg = (await ctx.channel.history(limit=1).flatten())[0]
-
         assignment_id = first_msg.content.split(':')[1].strip()
-
         assignment_type, assignment_num, user_id = assignment_id.split('-')
-        
+        grader_id = str(ctx.author.id)
 
-        await ctx.send(f"Graded {assignment_type} {assignment_num} for user {user_id}. Points: {points}. Comments: {comments}")
+        data = {
+            'user_id': user_id,
+            'assignment_id': assignment_id,
+            'score': points,
+            'comment': comments,
+            'grader_id': grader_id
+        }
+
+        result = await supabase.table('grades').insert(data).execute()
+
+        if result['error'] is not None:
+            await ctx.send(f"An error occurred while grading the assignment: {result['error']}")
+        else:
+            await ctx.send(f"Graded {assignment_type} {assignment_num} for user {user_id}. Points: {points}. Comments: {comments}")
 
     @bot.slash_command(name='grade',
                        description='```/grade [discord_id] [task_id] [score]``` - post grades for a student')
