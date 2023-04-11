@@ -14,6 +14,12 @@ import os
 import pickle
 import requests
 
+
+
+#
+# Setup
+#
+
 app = FastAPI(
     title="ClassroomBotAPI",
     version="0.0.1"
@@ -32,7 +38,11 @@ supabase = create_client(
     configData["SupaKey"]
 )
 
-# Base Models
+
+
+#
+# Models
+#
 
 class Assignment(BaseModel):
     id: Optional[int] = None
@@ -90,10 +100,16 @@ class User(BaseModel):
     id: Optional[int] = None
     name: str
     discordId: int
-    
-# ===========
+
+
+
+#
+# API Endpoints
+#
+
+# 
 # /assignment
-# ===========
+# 
 
 @app.post("/assignment")
 async def create_assignment(assignment: Assignment):
@@ -111,9 +127,9 @@ async def update_assignment(assignment: Assignment, channel_id: int):
     supabase.table("Assignment").update(dict(assignment)).eq('channelId', channel_id).execute()
     return JSONResponse(content={'message': 'assignment updated'}) 
 
-# ==========
+# 
 # /classroom
-# ==========
+# 
 
 @app.post("/classroom")
 async def create_classroom(classroom: Classroom):
@@ -142,9 +158,9 @@ async def get_classroom_attendance(server_id: int):
     classroom = await get_classroom(server_id)
     return JSONResponse(content={'attendance': classroom.attendance})
 
-# ===============
+# 
 # /classroom_user
-# ===============
+# 
 
 @app.post("/classroom_user")
 async def create_classroom_user(classroom_user: Classroom_User):
@@ -186,18 +202,18 @@ async def update_classroom_user_role(user_id: int, classroom_id: int, role: str)
     return {'message': 'role updated'}
 
 
-# ===========
+# 
 # /discussion
-# ===========
+# 
 
 @app.post("/discussion")
 async def create_discussion(discussion: Discussion):
     sb_response = supabase.table('Discussion').insert(dict(discussion)).execute()
     return JSONResponse(content={'message': 'discussion created'}) 
 
-# ======
+# 
 # /grade
-# ======
+# 
 
 @app.post("/grade")
 async def create_grade(grade: Grade):
@@ -215,9 +231,9 @@ async def update_grade(grade: Grade):
     sb_response = supabase.table("Grade").insert(dict(grade)).execute()
     return JSONResponse({"message": "grade updated"})
 
-# =====
+# 
 # /quiz
-# ===== 
+#  
 
 @app.post("/quiz")
 async def create_quiz(quiz: Quiz):
@@ -267,9 +283,9 @@ async def create_questions(questions: List[Question]):
 
     return JSONResponse(content={'url': public_url})
 
-# =====
+# 
 # /user
-# =====
+# 
 
 @app.post("/user")
 async def create_user(user: User):
@@ -291,8 +307,6 @@ async def get_user_id(discord_id: int, response_model=User, response_model_inclu
     if sb_response.data == []:
         return JSONResponse(content={'message': 'user not found'})
     return JSONResponse(content={'id': user.id})
-
-
 
 @app.put("/user/{discord_id}/nick")
 async def update_user_name(discord_id: int, name: str):
