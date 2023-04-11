@@ -1,4 +1,5 @@
 import api
+import re
 
 
 async def add_member_to_table(guild_id, role, nick, discord_id):
@@ -51,3 +52,18 @@ def get_ordinal_number(user_input: str) -> str:
             return ordinal(num)
         except ValueError:
             raise ValueError("Invalid input")
+
+def to_discord_channel_name(name: str) -> str:
+    # Convert the string to lowercase
+    name = name.lower()
+
+    name = name.replace(" ", "-")
+
+    # Replace non-alphanumeric characters (excluding '-') with dashes
+    name = re.sub(r"(?:(?<=\w)|(?<=\W))(?:(?<!:)\W(?!\w)|(?<!\w)\W(?!\w))(?:(?<=\w)|(?<=\W))", "-", name)
+
+    # Remove any leading or trailing dashes
+    name = name.strip("-")
+
+    # Discord channel names have a maximum length of 100 characters
+    return name[:100]
