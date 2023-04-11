@@ -1110,23 +1110,34 @@ def run_discord_bot():
 
         first_msg = (await ctx.channel.history(limit=1).flatten())[0]
         assignment_id = first_msg.content.split(':')[1].strip()
-        assignment_type, assignment_num, user_id = assignment_id.split('-')
-        grader_id = str(ctx.author.id)
+        assignment_type, taskId, studentId = assignment_id.split('-')
+        graderId = str(ctx.author.id)
 
-        data = {
-            'user_id': user_id,
-            'assignment_id': assignment_id,
-            'score': points,
-            'comment': comments,
-            'grader_id': grader_id
-        }
-
-        result = await supabase.table('grades').insert(data).execute()
-
-        if result['error'] is not None:
-            await ctx.send(f"An error occurred while grading the assignment: {result['error']}")
+        existing_row = await supabase.table('grades').select('id').eq('studentId', studentId).eq('taskId', taskId).single()
+        if existing_row is not None:
+            data = {
+                'score': points,
+                'comment': comments,
+                'graderId': graderId
+            }
+            result = await supabase.table('grades').update(data).eq('id', existing_row['id']).execute()
+            if result['error'] is not None:
+                await ctx.send(f"An error occurred while updating the grade: {result['error']}")
+            else:
+                await ctx.send(f"Updated grade for {assignment_type} {taskId} for user {studentId}. Points: {points}. Comments: {comments}")
         else:
-            await ctx.send(f"Graded {assignment_type} {assignment_num} for user {user_id}. Points: {points}. Comments: {comments}")
+            data = {
+                'studentId': studentId,
+                'taskId': taskId,
+                'score': points,
+                'comment': comments,
+                'graderId': graderId
+            }
+            result = await supabase.table('grades').insert(data).execute()
+            if result['error'] is not None:
+                await ctx.send(f"An error occurred while grading the assignment: {result['error']}")
+            else:
+                await ctx.send(f"Graded {assignment_type} {taskId} for user {studentId}. Points: {points}. Comments: {comments}")
 
     @bot.slash_command(name='grade',
                        description='```/grade [discord_id] [task_id] [score]``` - post grades for a student')
