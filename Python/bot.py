@@ -1106,6 +1106,40 @@ def run_discord_bot():
 
         await ctx.respond(f"Upcoming category updated")
 
+    @bot.command()
+    async def gradequiz(ctx, points: int, comments: str):
+
+        first_msg = (await ctx.channel.history(limit=1).flatten())[0]
+        assignment_id = first_msg.content.split(':')[1].strip()
+        assignment_type, taskId, studentId = assignment_id.split('-')
+        graderId = str(ctx.author.id)
+
+        existing_row = await supabase.table('grades').select('id').eq('studentId', studentId).eq('taskId', taskId).single()
+        if existing_row is not None:
+            data = {
+                'score': points,
+                'comment': comments,
+                'graderId': graderId
+            }
+            result = await supabase.table('grades').update(data).eq('id', existing_row['id']).execute()
+            if result['error'] is not None:
+                await ctx.send(f"An error occurred while updating the grade: {result['error']}")
+            else:
+                await ctx.send(f"Updated grade for {assignment_type} {taskId} for user {studentId}. Points: {points}. Comments: {comments}")
+        else:
+            data = {
+                'studentId': studentId,
+                'taskId': taskId,
+                'score': points,
+                'comment': comments,
+                'graderId': graderId
+            }
+            result = await supabase.table('grades').insert(data).execute()
+            if result['error'] is not None:
+                await ctx.send(f"An error occurred while grading the assignment: {result['error']}")
+            else:
+                await ctx.send(f"Graded {assignment_type} {taskId} for user {studentId}. Points: {points}. Comments: {comments}")
+
     @bot.slash_command(name='grade',
                        description='```/grade [discord_id] [task_id] [score]``` - post grades for a student')
     async def grade(ctx: discord.ApplicationContext, discord_id: str, task_id: int, score: int):
