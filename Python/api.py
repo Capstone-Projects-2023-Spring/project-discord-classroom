@@ -53,12 +53,12 @@ class Classroom_User(BaseModel):
     classroomId: int
     role: str
     userId: int
-    attendance: int # TODO: 0 for student, None for educator
+    attendance: Optional[int] = None
 
 class Discussion(BaseModel):
     classroomId: int
     channelId: int
-    title: str # TODO: Why varchar as opposed to text?
+    title: str
     points: int
     startDate: datetime.date
     dueDate: datetime.date
@@ -70,11 +70,17 @@ class Grade(BaseModel):
     studentId: int
     score: int
 
+class Question(BaseModel):
+    question: str
+    answer: str
+    wrong: List[str]
+    points: float
+
 class Quiz(BaseModel):
     questions: str
     channelId: int
     title: str
-    points: float # TODO: should this be float or int?
+    points: float
     startDate: datetime.date
     dueDate: datetime.date
     timeLimit: int
@@ -84,9 +90,7 @@ class User(BaseModel):
     id: Optional[int] = None
     name: str
     discordId: int
-
-# TODO: verify db response, error message if can't connect to db or data not found
-
+    
 # ===========
 # /assignment
 # ===========
@@ -101,6 +105,11 @@ async def get_assignment(channel_id:int):
     sb_response = supabase.table("Assignment").select('*').eq('channelId', channel_id).execute()
     assignment = Assignment.parse_obj(sb_response.data[0])
     return assignment
+
+@app.put("/assignment/")
+async def update_assignment(assignment: Assignment, channel_id: int):
+    supabase.table("Assignment").update(dict(assignment)).eq('channelId', channel_id).execute()
+    return JSONResponse(content={'message': 'assignment updated'}) 
 
 # ==========
 # /classroom
@@ -201,13 +210,9 @@ async def get_grades(student_id):
     grades = sb_response.data
     return grades
 
-# TODO: Update score? 
 @app.put("grade/")
 async def update_grade(grade: Grade):
-    list = {'graderId': grade.graderId, 'taskId': grade.taskId, 'studentId': grade.studentId, 'score': grade.score}
-
-    res = supabase.table("Grade").insert(list).execute()
-
+    sb_response = supabase.table("Grade").insert(dict(grade)).execute()
     return JSONResponse({"message": "grade updated"})
 
 # =====
@@ -219,12 +224,48 @@ async def create_quiz(quiz: Quiz):
     response = supabase.table('Quiz').insert(dict(quiz)).execute()
     return JSONResponse(content={'message': 'quiz created'})    
 
-# TODO: response models
-# TODO: response
+@app.put("/quiz/")
+async def update_quiz(quiz: Quiz, channel_id: int):
+    supabase.table("Quiz").update(dict(quiz)).eq('channelId', channel_id).execute()
+    return JSONResponse(content={'message': 'quiz updated'})    
+
 @app.get("/quiz/{quiz_id}/questions/")
-async def get_question(quiz_id: int):
+async def get_questions(quiz_id: int):
     response = supabase.table("Quiz").select('questions').eq('id', quiz_id).execute()
-    return response
+    return JSONResponse(content=response.data[0])
+
+@app.post("/quiz/questions/")
+async def create_questions(questions: List[Question]):
+    ques_list = []
+    for question in questions:
+        ques_list.append(dict(question))
+
+    bytes_obj = pickle.dumps(ques_list)
+    hash_object = hashlib.sha256(bytes_obj)
+    hex_dig = hash_object.hexdigest()
+
+    with open(f"{hex_dig}.json", "w") as outfile:
+        json.dump(ques_list, outfile)
+
+    outfile.close()
+
+    with open(f'{hex_dig}.json', 'r') as f:
+        data = json.load(f)
+
+    f.close()
+
+    json_string: str = json.dumps(data)
+
+    public_url = supabase.storage().from_('questions').get_public_url(f"{hex_dig}.json")
+
+    # Verify URL created
+    response = requests.get(public_url)
+    if response.status_code == 400:
+        res = supabase.storage().from_('questions').upload(f"{hex_dig}.json", json_string.encode())
+        public_url = supabase.storage().from_('questions').get_public_url(f"{hex_dig}.json")
+        os.remove(f'{hex_dig}.json')
+
+    return JSONResponse(content={'url': public_url})
 
 # =====
 # /user
@@ -238,66 +279,25 @@ async def create_user(user: User):
 @app.get("/user/{discord_id}", response_model=User)
 async def get_user(discord_id: int):
     sb_response = supabase.table('User').select('*').eq('discordId', discord_id).execute()
-    user = User.parse_obj(sb_response.data[0])
-    return user
+    if sb_response.data == []:
+        return JSONResponse(content={'message': 'user not found'})
+    else:
+        user = User.parse_obj(sb_response.data[0])
+        return user
 
 @app.get("/user/{discord_id}/id")
 async def get_user_id(discord_id: int, response_model=User, response_model_include={'id'}):
-    user = await get_user(discord_id)
+    sb_response = supabase.table('User').select('*').eq('discordId', discord_id).execute()
+    if sb_response.data == []:
+        return JSONResponse(content={'message': 'user not found'})
     return JSONResponse(content={'id': user.id})
+
+
 
 @app.put("/user/{discord_id}/nick")
 async def update_user_name(discord_id: int, name: str):
     sb_response = supabase.table('User').update({'name': name}).eq('discordId', discord_id).execute()
     return JSONResponse(content={'message': 'nickname updated'})
-
-# ===================================================================================================
-
-# TODO
-
-# @app.put("/Assignment_Update/")
-# async def update_assignment(dictionary: dict, channel_id: int):
-#     supabase.table("Assignment").update(dictionary).eq('channelId', channel_id).execute()
-
-# @app.put("/Quiz_Update/")
-# async def update_quiz(dictionary: dict, channel_id: int):
-#     supabase.table("Quiz").update(dictionary).eq('channelId', channel_id).execute()
-
-# @app.post("/questions/")
-# async def create_questions(questions: List[Question]):
-
-#     ques_list = []
-#     for question in questions:
-#         temp = {'question': question.question, 'answer': question.answer, 'wrong': question.wrong,
-#                 'points': question.points}
-#         ques_list.append(temp)
-
-#     bytes_obj = pickle.dumps(ques_list)
-#     hash_object = hashlib.sha256(bytes_obj)
-#     hex_dig = hash_object.hexdigest()
-
-#     with open(f"{hex_dig}.json", "w") as outfile:
-#         json.dump(ques_list, outfile)
-
-#     outfile.close()
-
-#     with open(f'{hex_dig}.json', 'r') as f:
-#         data = json.load(f)
-
-#     f.close()
-
-#     json_string: str = json.dumps(data)
-
-#     public_url = supabase.storage().from_('questions').get_public_url(f"{hex_dig}.json")
-
-#     response = requests.get(public_url)
-
-#     if response.status_code == 400:
-#         res = supabase.storage().from_('questions').upload(f"{hex_dig}.json", json_string.encode())
-#         public_url = supabase.storage().from_('questions').get_public_url(f"{hex_dig}.json")
-#         os.remove(f'{hex_dig}.json')
-
-#     return public_url
 
 
 
