@@ -104,8 +104,7 @@ def run_discord_bot():
         )
         student_role = await guild.create_role(name="Student", color=discord.Color(0x8affe9), permissions=student_perms,
                                                mentionable=True, hoist=True)
-        # gives discord owner the Educator role
-        await guild.owner.add_roles(educator_role)
+
         everyone_perms = discord.Permissions.none()
         everyone_perms.update(
             read_message_history=True, read_messages=True
@@ -148,6 +147,9 @@ def run_discord_bot():
         await guild.create_text_channel("Public", category=questions)
 
         await api.create_classroom(id=guild.id, name=guild.name)
+
+        # gives discord owner the Educator role
+        await guild.owner.add_roles(educator_role)
 
     # Gives new users the Student role
     @bot.event
@@ -1291,7 +1293,7 @@ def run_discord_bot():
                        description='```/submit assignment (file) (url)``` - student submit assignment')
     async def submit(ctx: discord.ApplicationContext, file: discord.Attachment = None, url: str = None):
 
-        ctx.defer()
+        await ctx.defer()
 
         student_role = discord.utils.get(ctx.guild.roles, name="Student")
         if student_role not in ctx.author.roles:

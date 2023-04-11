@@ -1,6 +1,7 @@
 from sqlite3 import Timestamp
 from fastapi import FastAPI, File, UploadFile
 from storage3.utils import StorageException
+import supabase as sb
 from supabase import create_client
 from fastapi.responses import JSONResponse
 import json
@@ -288,7 +289,12 @@ async def remove_classroom(id: int):
 @app.post("/classroom/")
 async def create_classroom(id: int, name: str):
     list = {'serverId': id, 'serverName': name}
-    supabase.table('Classroom').insert(list).execute()
+    try:
+        supabase.table('Classroom').insert(list).execute()
+
+    except sb.PostgrestAPIError as e:
+        return {'message': 'Classroom already exists'}
+
     return {'message': 'Classroom created'}
 
 
