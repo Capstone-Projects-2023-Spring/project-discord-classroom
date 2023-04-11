@@ -19,7 +19,7 @@ const FileUpload = () => {
     const searchParams = new URLSearchParams(window.location.search);
     const secretId = searchParams.get('token');
     try {
-      const response = await axios.post(`http://localhost:5000/upload?token=${secretId}`, formData, {
+      const response = await axios.post(`https://discord-classroom-file-uploads.herokuapp.com/upload?token=${secretId}`, formData, {
         headers: {
           'Content-type': 'multipart/form-data'
         }
