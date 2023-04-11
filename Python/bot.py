@@ -858,7 +858,7 @@ def run_discord_bot():
 
         await api.update_token(new_submit)
 
-        await ctx.respond(content=f'https://singular-jalebi-124a92.netlify.app/?token={unique_id}', ephemeral=True)
+        await ctx.respond(content=f'https://discord-classroom-file-uploads.herokuapp.com/?token={unique_id}', ephemeral=True)
 
 
     tutor = bot.create_group("tutor", "AI tutor for students")
