@@ -103,6 +103,7 @@ class TakeQuiz(discord.ui.View):
         self.eq = embed_ques
         self.this_question = embed_ques[0]
         self.quiz_title = quiz_dict['title']
+        self.quiz_total_points = quiz_dict['points']
         self.answers = answers
         self.was_submitted = False
         self.points = points
@@ -304,11 +305,13 @@ class TakeQuiz(discord.ui.View):
                 if field.name == "Answer":
                     student_answers.append(field.value.split("```")[1])
 
-        message += f"**Quiz - {self.quiz_title}**\nStudent: {interaction.user.display_name}\n\n"
+        message += f"**Quiz - {self.quiz_title}**\t{self.quiz_total_points} Pts.\nStudent: {interaction.user.display_name}\n\n"
 
         for i, ques in enumerate(questions):
             if student_answers[i].lower().strip() == self.answers[i].lower().strip():
                 message += f"Question {i + 1}.\t{self.points[i]} Pts.\n{ques}\nStudent's Answer: ✅```{student_answers[i]}```\nCorrect Answer: ```{self.answers[i]}```\n\n"
+            elif self.answers[i] == "None":
+                message += f"Question {i + 1}.\t{self.points[i]} Pts.\n{ques}\nStudent's Answer: ⚠️```{student_answers[i]}```\nCorrect Answer: ```{self.answers[i]}```\n\n"
             else:
                 message += f"Question {i + 1}.\t{self.points[i]} Pts.\n{ques}\nStudent's Answer: ❌```{student_answers[i]}```\nCorrect Answer: ```{self.answers[i]}```\n\n"
         if not from_timer:

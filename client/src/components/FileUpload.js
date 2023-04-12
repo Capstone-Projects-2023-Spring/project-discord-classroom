@@ -4,30 +4,29 @@ import axios from 'axios';
 const FileUpload = () => {
   const [file, setFile] = useState();
   const [message, setMessage] = useState('');
-  const [secretId, setSecretId] = useState('');
+  const [url, setUrl] = useState('');
 
   const onChange = e => {
     if (e.target.name === 'file') {
       setFile(e.target.files[0]);
-    } else if (e.target.name === 'secretId') {
-      setSecretId(e.target.value);
-    }
+    } 
   };
 
   const onSubmit = async e => {
     e.preventDefault();
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('secretId', secretId);
+    const searchParams = new URLSearchParams(window.location.search);
+    const secretId = searchParams.get('token');
     try {
-      await axios.post('/upload', formData, {
+      const response = await axios.post(`https://discord-classroom-file-uploads.herokuapp.com/upload?token=${secretId}`, formData, {
         headers: {
           'Content-type': 'multipart/form-data'
         }
       });
-
-      setMessage(`${file.name} File Uploaded Successfully`);
-
+      const publicUrl = response.data.url;
+      setMessage(`${file.name} File Uploaded Successfully.`);
+      setUrl(publicUrl);
     } catch (err) {
       if (err.response.status === 500) {
         setMessage('There was a problem with the server');
@@ -36,9 +35,12 @@ const FileUpload = () => {
       }
     }
   };
+  
+
+  
 
   const isUploadEnabled = () => {
-    return file && secretId;
+    return file;
   };
 
   return (
@@ -48,18 +50,33 @@ const FileUpload = () => {
           <input type="file" className="custom-file-input" id="customFile" name="file" onChange={onChange} />
           <label className="custom-file-label" htmlFor="customFile"> </label>
         </div>
-        <div className="form-group">
-          <label htmlFor="secretId">Secret ID</label>
-          <input type="text" className="form-control" id="secretId" name="secretId" value={secretId} onChange={onChange} />
-        </div>
-
-        <button
-          type="submit" className="btn btn-primary btn-block mt-4" disabled={!isUploadEnabled()} >
+        <button type="submit" className="btn btn-primary btn-block mt-4" disabled={!isUploadEnabled()} >
           Upload
         </button>
       </form>
-      {message && ( <div style={{ backgroundColor: 'lightgreen', padding: '10px' }}> {message} </div> )}
+      {message && (
+        <div className="upload-message">
+          <div style={{ backgroundColor: 'lightgreen', padding: '10px' }}>
+            {message}
+          </div>
+          {url && (
+            <div className="upload-url">
+              <div style={{ backgroundColor: 'lightblue', padding: '10px' }}>
+                <span>{url}</span>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(url);
+                  }}
+                >
+                Copy URL
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </Fragment>
+
   );
 };
 

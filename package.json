@@ -22,10 +22,13 @@
   "homepage": "https://github.com/Capstone-Projects-2023-Spring/project-discord-classroom#readme",
   "dependencies": {
     "@google-cloud/storage": "^6.9.4",
+    "@supabase/supabase-js": "^2.15.0",
     "bootstrap": "^5.2.3",
     "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
     "express": "^4.18.2",
-    "express-fileupload": "^1.4.0"
+    "express-fileupload": "^1.4.0",
+    "pptx": "^0.0.0"
   },
   "devDependencies": {
     "concurrently": "^7.6.0",
