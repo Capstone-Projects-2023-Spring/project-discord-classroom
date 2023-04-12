@@ -1,4 +1,4 @@
-from create_classes import Assignment, Grade
+from create_classes import Assignment, Grade, Token
 from discord.ext import commands
 from http import client
 from pptx import Presentation
@@ -147,7 +147,8 @@ def run_discord_bot():
 
         await guild.create_text_channel("Public", category=questions)
 
-        await api.create_classroom(id=guild.id, name=guild.name)
+        classroom = Classroom(attendance=0, serverId=guild.id, serverName=guild.name)
+        await api.create_classroom(classroom)
 
         # gives discord owner the Educator role
         await guild.owner.add_roles(educator_role)
@@ -164,18 +165,20 @@ def run_discord_bot():
 
     @bot.event
     async def on_member_remove(member: discord.Member):
-        if not member.bot:
+        if not member.bot: 
             res = await api.get_classroom_id(member.guild.id)
-            classroom_id = res['id']
+            classroom_id = res.content['id']
             res = await api.get_user_id(member.id)
-            user_id = res['id']
+            user_id = res.content['id']
+
+            # TODO: implement user delete
             supabase.table("Classroom_User").delete().match({"classroomId": classroom_id, "userId": user_id}).execute()
 
     @bot.event
     async def on_member_update(before: discord.Member, after: discord.Member):
         # Update member nickname in database
         if before.nick != after.nick:
-            await api.update_user_nick(after.nick, after.id)
+            await api.update_classroom_user_name(after.id, after.nick)
 
         # Update member role in database
         if before.roles != after.roles:
@@ -186,15 +189,15 @@ def run_discord_bot():
             after_member_roles = [role for role in after.roles if role.name in role_names]
             role_count = len(after_member_roles)
             res = await api.get_user_id(after.id)
-            user_id = res['id']
+            user_id = res.content['id']
             server_id = after.guild.id
             res = await api.get_classroom_id(server_id)
-            classroom_id = res['id']
+            classroom_id = res.content['id']
             if role_count == 0:
                 await after.add_roles(roles['Student'])
                 new_role = 'Student'
                 if not any(role.name == "Student" for role in before.roles):
-                    await api.update_member_role(new_role, user_id, classroom_id)
+                    await api.update_classroom_user_role(user_id, classroom_id, new_role)
             elif role_count > 1:
                 new_roles = [x for x in after_member_roles if x not in before_member_roles]
                 new_role = new_roles[0].name
@@ -204,7 +207,7 @@ def run_discord_bot():
                 for role in roles_to_remove:
                     await after.remove_roles(role)
 
-                await api.update_member_role(new_role, user_id, classroom_id)
+                await api.update_classroom_user_role(user_id, classroom_id, new_role) # TODO: API
 
     @bot.slash_command(name='syllabus',
                        description='```/syllabus [.pdf file]``` - Updates the syllabus page with the linked pdf file')
@@ -481,7 +484,7 @@ def run_discord_bot():
         res = supabase.table('User').select('id').eq('discordId', ctx.author.id).execute()
         user_id = res.data[0]['id']
         res = await api.get_classroom_id(ctx.guild_id)
-        classroom_id = res['id']
+        classroom_id = res.content['id']
         res = supabase.table('Classroom_User').select('attendance').match(
             {'userId': user_id, 'classroomId': classroom_id}).execute()
         user_attendance = res.data[0]['attendance']
@@ -851,13 +854,13 @@ def run_discord_bot():
         unique_id = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8, 51))
 
         discord_id = ctx.author.id
-        studentId_dict = await api.get_user_id(discord_id)
-        userId = studentId_dict["id"]
+        user = await api.get_user_id(discord_id)
+        userId = user.id
 
         submit_dict = {'userId': userId, 'unique_id': unique_id}
 
 
-        new_submit = api.Tokens(userId=submit_dict['userId'], unique_id=submit_dict['unique_id'])
+        new_submit = Tokens(userId=submit_dict['userId'], unique_id=submit_dict['unique_id'])
 
         await api.update_token(new_submit)
 
@@ -1179,7 +1182,7 @@ def run_discord_bot():
                 response = supabase.table('Quiz').select('*').eq('id', id_values[1]).execute()
                 quiz_data = response.data[0]
                 request = await api.get_user_id(ctx.user.id)
-                grader_id = request['id']
+                grader_id = request.content['id']
                 data = {'studentId': id_values[2], 'taskType': 'Quiz', 'taskId': id_values[1], 'score': score, 'graderId': grader_id}
                 response = supabase.table('User').select('discordId').eq('id', id_values[2]).execute()
                 student = await bot.fetch_user(response.data[0]['discordId'])
@@ -1196,7 +1199,7 @@ def run_discord_bot():
                 response = supabase.table('Assignment').select('*').eq('id', id_values[1]).execute()
                 ass_data = response.data[0]
                 request = await api.get_user_id(ctx.user.id)
-                grader_id = request['id']
+                grader_id = request.content['id']
                 data = {'studentId': id_values[2], 'taskType': 'Assignment', 'taskId': id_values[1], 'score': score,
                         'graderId': grader_id}
                 response = supabase.table('User').select('discordId').eq('id', id_values[2]).execute()
@@ -1221,7 +1224,7 @@ def run_discord_bot():
             channel_id = ctx.channel.id
             response = supabase.table("Discussion").select('*').eq('channelId', channel_id).execute()
             request = await api.get_user_id(ctx.user.id)
-            grader_id = request['id']
+            grader_id = request.content['id']
             title = response.data[0]['title']
             points = int(response.data[0]['points'])
             taskId = int(response.data[0]['id'])
@@ -1235,7 +1238,7 @@ def run_discord_bot():
 
             if student is not None:
                 request = await api.get_user_id(student.id)
-                student_id = request['id']
+                student_id = request.content['id']
                 data = {'taskType': 'Discussion', 'graderId': grader_id, 'taskId': taskId, 'studentId': student_id,
                         'score': student_score}
                 response = supabase.table('Grade').select('*').match(
@@ -1263,7 +1266,7 @@ def run_discord_bot():
             for user in users:
                 if student_role in user.roles:
                     request = await api.get_user_id(user.id)
-                    student_id = request['id']
+                    student_id = request.content['id']
                     data = {'taskType': 'Discussion', 'graderId': grader_id, 'taskId': taskId, 'studentId': student_id, 'score': student_score}
                     response = supabase.table('Grade').select('*').match(
                         {'studentId': student_id, 'taskType': 'Discussion', 'taskId': taskId}).execute()
@@ -1318,7 +1321,7 @@ def run_discord_bot():
 
         discord_id = ctx.author.id
         studentId_dict = await api.get_user_id(discord_id)
-        studentId = studentId_dict["id"]
+        studentId = studentId_dict.content["id"]
 
         chan_id = ctx.channel_id
         assignment_dict = await api.get_assignment(chan_id)
