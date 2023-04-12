@@ -55,6 +55,10 @@ class Quiz(BaseModel):
     timeLimit: int
     classroomId: int
 
+class Tokens(BaseModel):
+    userId: int
+    unique_id: int
+
 class User(BaseModel):
     id: Optional[int] = None
     name: str
