@@ -1,27 +1,28 @@
-import asyncio
-from http import client
-
-import PyPDF2
-import discord
-import json
-import os
-from supabase import create_client, Client
-from discord.ext import commands
-from typing import Optional, List
-import io
-import datetime
-from PyPDF2 import PdfReader
-import api
-import utils
-import create_quiz
-import create_quiz, create_assignment, create_discussion
-import openai
 from create_classes import Assignment, Grade
+from discord.ext import commands
+from http import client
 from pptx import Presentation
+from PyPDF2 import PdfReader
+from typing import Optional, List
+from supabase import create_client, Client
+
+import api
+import asyncio
+import create_quiz, create_assignment, create_discussion
+import datetime
+import discord
 import docx
+import io
+import json
+import openai
+import os
+import PyPDF2
 import requests
 import secrets
 import string
+import utils
+
+
 
 if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:
