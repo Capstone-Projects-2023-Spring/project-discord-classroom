@@ -111,6 +111,11 @@ async def get_classroom_attendance(server_id: int):
     classroom = await get_classroom(server_id)
     return JSONResponse(content={'attendance': classroom.attendance})
 
+@app.get("/classroom/{server_id}/attendance")
+async def get_classroom_id(server_id: int):
+    classroom = await get_classroom(server_id)
+    return JSONResponse(content={'id': classroom.id})
+
 # 
 # /classroom_user
 # 
@@ -236,6 +241,16 @@ async def create_questions(questions: List[Question]):
 
     return JSONResponse(content={'url': public_url})
 
+#
+# /tokens
+#
+@app.post("/tokens/")
+async def update_tokens(tokens: Tokens):
+    list = {'created_at': 'now()', 'userId': tokens.userId, 'unique_id': tokens.unique_id}
+    res = supabase.table("Tokens").insert(list).execute()
+
+    return {'message': 'token updated'}
+
 # 
 # /user
 # 
@@ -265,7 +280,3 @@ async def get_user_id(discord_id: int):
 async def update_user_name(discord_id: int, name: str):
     sb_response = supabase.table('User').update({'name': name}).eq('discordId', discord_id).execute()
     return JSONResponse(content={'message': 'nickname updated'})
-
-
-
-
