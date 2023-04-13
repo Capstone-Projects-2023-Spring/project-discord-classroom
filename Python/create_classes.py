@@ -1,14 +1,15 @@
 from typing import List, Any
 from pydantic import BaseModel
-
+from typing import List, Optional
+import datetime
 
 
 class Assignment(BaseModel):
     id: Optional[int] = None
     channelId: int
     points: int
-    startDate: datetime.date
-    dueDate: datetime.date
+    startDate: str
+    dueDate: str
     classroomId: int
     title: str
 
@@ -25,12 +26,13 @@ class Classroom_User(BaseModel):
     attendance: Optional[int] = None
 
 class Discussion(BaseModel):
+    id: Optional[int] = None
     classroomId: int
     channelId: int
     title: str
     points: int
-    startDate: datetime.date
-    dueDate: datetime.date
+    startDate: str
+    dueDate: str
 
 class Grade(BaseModel):
     taskType: str
@@ -46,16 +48,17 @@ class Question(BaseModel):
     points: float
 
 class Quiz(BaseModel):
+    id: Optional[int] = None
     questions: str
     channelId: int
     title: str
     points: float
-    startDate: datetime.date
-    dueDate: datetime.date
+    startDate: str
+    dueDate: str
     timeLimit: int
     classroomId: int
 
-class Tokens(BaseModel):
+class Token(BaseModel):
     userId: int
     unique_id: int
 

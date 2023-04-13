@@ -90,8 +90,8 @@ def create_discussion(bot, preset=None):
             res = await api.get_classroom_id(interaction.guild.id)
             classroom_id = res['id']
 
-            new_discussion = Discussion(title=title, start=str(start_date),
-                                        due=str(due_date), points=points,
+            new_discussion = Discussion(title=title, startDate=str(start_date),
+                                        dueDate=str(due_date), points=points,
                                         channelId=new_discussion_channel.id, classroomId=classroom_id)
 
             await api.create_discussion(new_discussion)

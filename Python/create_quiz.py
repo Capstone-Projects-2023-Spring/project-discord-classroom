@@ -366,7 +366,8 @@ class StartQuiz(discord.ui.View):
             embed = interaction.message.embeds[0]
             embed.add_field(name="", value="```diff\n- Quiz is no longer available```", inline=False)
             return await interaction.response.edit_message(embed=embed, view=self)
-        question_json = await api.get_question(quiz_id)
+        request = await api.get_questions(quiz_id)
+        question_json = request['questions']
         answers = []
         points = []
         questions_as_embed = []
@@ -725,7 +726,9 @@ def create_quiz(bot, preset=None):
 
                     await interaction.response.defer()
 
-                    url = str(await api.create_questions(question_list))
+                    request = await api.create_questions(question_list)
+
+                    url = str(request['url'])
 
                     quizzes_category = None
 
@@ -740,8 +743,8 @@ def create_quiz(bot, preset=None):
                     classroom_id = res['id']
 
                     new_quiz = Quiz(title=quiz_fields[0].value, points=float(quiz_fields[2].value),
-                                    start=quiz_fields[3].value,
-                                    due=quiz_fields[4].value, time=quiz_fields[1].value, questions=url,
+                                    startDate=quiz_fields[3].value,
+                                    dueDate=quiz_fields[4].value, timeLimit=quiz_fields[1].value, questions=url,
                                     classroomId=classroom_id, channelId=new_channel.id)
 
                     await api.create_quiz(new_quiz)
@@ -752,10 +755,10 @@ def create_quiz(bot, preset=None):
                     data = {
                         'type': 'Quiz',
                         'title': new_quiz.title,
-                        'time_limit': new_quiz.time,
+                        'time_limit': new_quiz.timeLimit,
                         'points': new_quiz.points,
-                        'start_date': new_quiz.start,
-                        'due_date': new_quiz.due,
+                        'start_date': new_quiz.startDate,
+                        'due_date': new_quiz.dueDate,
                         'questions': question_data
                     }
 
