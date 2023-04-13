@@ -610,6 +610,15 @@ def run_discord_bot():
                 if command.name == "create":
                     for create in command.walk_commands():
                         message += f"{create.description}\n\n"
+
+                if command.name == 'lecture':
+                    for lecture in command.walk_commands():
+                        message += f"{lecture.description}\n\n"
+
+                if command.name == 'tutor':
+                    for tutor in command.walk_commands():
+                        message += f"{tutor.description}\n\n"
+
                 else:
                     message += f"{command.description}\n\n"
 
@@ -844,7 +853,7 @@ def run_discord_bot():
         else:
             await ctx.respond("You need to be an Educator to use /edit", delete_after=3)
 
-    @bot.slash_command(name='upload_file', description='```/upload file`` - User can follow link to upload file')
+    @bot.slash_command(name='upload_file', description='```/upload file``` - User can follow link to upload file')
     async def upload_file(ctx):
         
         unique_id = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8, 51))
@@ -865,7 +874,7 @@ def run_discord_bot():
 
     tutor = bot.create_group("tutor", "AI tutor for students")
 
-    @tutor.command(name='quiz', description='```/tutor quiz [number_of_questions] [subject] [grade]```')
+    @tutor.command(name='quiz', description='```/tutor quiz [number_of_questions] [subject] [grade]``` - creates quiz')
     async def quiz(ctx: discord.ApplicationContext, number_of_questions: int, subject: str, grade: str):
 
         if number_of_questions > 5:
@@ -1055,7 +1064,7 @@ def run_discord_bot():
     # update slash command
     @bot.slash_command(
         name='upcoming',
-        description="```/upcoming [end_date]''' - Updates 'Upcoming' category to show all work due before the end date")
+        description="```/upcoming [end_date]``` - Updates 'Upcoming' category to show all work due before the end date")
     async def update_upcoming(ctx: discord.ApplicationContext,
                               end_date: discord.Option(str, description="End date in the format YYYY-MM-DD") = (
                                       datetime.date.today() + datetime.timedelta(days=7)).strftime('%Y-%m-%d')):
