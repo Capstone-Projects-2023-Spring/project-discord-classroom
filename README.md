@@ -47,9 +47,7 @@ commands they can use to make grading and learning easier.
 
 ## Conceptual Design 
 
-The bot will be programmed in Python 3.7+ and will connect to a SparkedHost database which uses 
-simple SQL commands to add/retrieve data from the database. To host the application, SparkedHost will 
-be used at a fee of 2$ per month.
+The bot will be programmed in Python 3.9+ utilizing multiple libraries like pycord, supabase, and fastapi. Our database will be stored on Supabase which is a cloud storage application. We will also use FastAPI to deploy the API to connect to our database. 
 
 ## Background 
 
@@ -73,9 +71,7 @@ assignments.
 
 ## Required Resources 
 
-For the entirety of this project, we will use Python3 to build the Discord bot and make use of the discord 
-API. The discord bot will be hosted on SparkedHost for 2$ a month which comes with its own database 
-(MySQL), DDoS protection, and Git support.
+For the entirety of this project, we use Python3 to build the Discord bot and creating our API to the database. The discord bot and API will be hosted on Google's Computer Engine costing about 6$ a month. Our database is hosted on Supabase for free. 
 
 ## Collaborators
 
