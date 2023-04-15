@@ -27,7 +27,7 @@ flowchart TB
     H-->|Compute Engine pulls from Main branch|F
     H-->I
     J<-->G
-    I-->J
+    I<-->J
     end
 ```
 
