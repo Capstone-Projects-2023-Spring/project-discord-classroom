@@ -620,6 +620,15 @@ def run_discord_bot():
                 if command.name == "create":
                     for create in command.walk_commands():
                         message += f"{create.description}\n\n"
+
+                if command.name == 'lecture':
+                    for lecture in command.walk_commands():
+                        message += f"{lecture.description}\n\n"
+
+                if command.name == 'tutor':
+                    for tutor in command.walk_commands():
+                        message += f"{tutor.description}\n\n"
+
                 else:
                     message += f"{command.description}\n\n"
 
@@ -855,7 +864,7 @@ def run_discord_bot():
         else:
             await ctx.respond("You need to be an Educator to use /edit", delete_after=3)
 
-    @bot.slash_command(name='upload_file', description='```/upload file`` - User can follow link to upload file')
+    @bot.slash_command(name='upload_file', description='```/upload file``` - User can follow link to upload file')
     async def upload_file(ctx):
 
         unique_id = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8, 51))
@@ -875,7 +884,7 @@ def run_discord_bot():
 
     tutor = bot.create_group("tutor", "AI tutor for students")
 
-    @tutor.command(name='quiz', description='```/tutor quiz [number_of_questions] [subject] [grade]```')
+    @tutor.command(name='quiz', description='```/tutor quiz [number_of_questions] [subject] [grade]``` - creates quiz')
     async def quiz(ctx: discord.ApplicationContext, number_of_questions: int, subject: str, grade: str):
 
         if number_of_questions > 5:
@@ -895,7 +904,7 @@ def run_discord_bot():
                         "respond with intro messages like, just respond with the questions or answers themselves"}
         ]
 
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
 
         messages.append(
             {"role": "user",
@@ -941,7 +950,7 @@ def run_discord_bot():
              "content": "You are TutorGPT, a friendly and helpful AI that assists students with learning and understanding their school work."}
         ]
 
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
 
         messages.append(
             {"role": "user",
@@ -980,7 +989,7 @@ def run_discord_bot():
             {"role": "system",
              "content": "You are TutorGPT, a friendly and helpful AI that assists students with learning and understanding their school work."}
         ]
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
         supported_files = ['docx', 'pdf', 'pptx']
         file_extension = file.filename.split('.')[-1]
         if file_extension not in supported_files:
@@ -1066,12 +1075,12 @@ def run_discord_bot():
     # update slash command
     @bot.slash_command(
         name='upcoming',
-        description="```/upcoming [end_date]''' - Updates 'Upcoming' category to show all work due before the end date")
+        description="```/upcoming [end_date]``` - Updates 'Upcoming' category to show all work due before the end date")
     async def update_upcoming(ctx: discord.ApplicationContext,
                               end_date: discord.Option(str, description="End date in the format YYYY-MM-DD") = (
                                       datetime.date.today() + datetime.timedelta(days=7)).strftime('%Y-%m-%d')):
 
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
 
         upcoming_category = discord.utils.get(ctx.guild.categories, name='Upcoming')
         if upcoming_category is None:
@@ -1131,9 +1140,9 @@ def run_discord_bot():
 
         await ctx.respond(f"Upcoming category updated")
 
-    @bot.command()
-    async def gradequiz(ctx, points: int, comments: str):
+    grade = bot.create_group("grade", "Grading commands for Educators")
 
+<<<<<<< HEAD
         first_msg = (await ctx.channel.history(limit=1).flatten())[0]
         assignment_id = first_msg.content.split(':')[1].strip()
         assignment_type, taskId, studentId = assignment_id.split('-')
@@ -1173,16 +1182,124 @@ def run_discord_bot():
     async def grade(ctx: discord.ApplicationContext, score: int = None, comments: str = None,
                     student: discord.Option(discord.User,
                                             description="use for grading a student's discussion post") = None):
+=======
+    @grade.command(name='quiz', description='```/grade quiz [score] (comments)``` - Grades a student quiz submission')
+    async def quiz(ctx: discord.ApplicationContext, score: int, comments: str = None):
+>>>>>>> main
 
         user_roles = [role.name for role in ctx.author.roles]
 
         await ctx.defer()
 
         if not any(role in ["Educator", "Assistant"] for role in user_roles):
+            return await ctx.respond("You need to be an educator/assistant to grade school work", delete_after=3)
+
+        category = ctx.channel.category.name
+
+        if category != "Submissions":
+            return await ctx.respond("This command only works in the Submissions category", delete_after=3)
+
+        message_history = ctx.channel.history(oldest_first=True)
+        first_message = await message_history.next()
+        quiz_content = await message_history.next()
+        get_id = first_message.content.split("ID: ")[1]
+        id_values = get_id.split('-')
+
+        if id_values[0] != 'Q':
+            return await ctx.respond("This is not a quiz submission", delete_after=3)
+
+        response = supabase.table('Quiz').select('*').eq('id', id_values[1]).execute()
+        quiz_data = response.data[0]
+        request = await api.get_user_id(ctx.user.id)
+        grader_id = request['id']
+        response = supabase.table('User').select('discordId').eq('id', id_values[2]).execute()
+        student = await bot.fetch_user(response.data[0]['discordId'])
+        grades_category = discord.utils.get(ctx.guild.categories, name="Grades")
+        channel_name = utils.to_discord_channel_name(f"{student.display_name} {student.id % 10000}")
+        grades_channel = discord.utils.get(grades_category.channels, name=channel_name)
+        if grades_channel:
+            message = await grades_channel.send(f"-------------------------------------------------\n"
+                                        f"```You received a {score}/{quiz_data['points']} on the Quiz: {quiz_data['title']}\n\nGrader Comments: {comments}```\n\n"
+                                      f"{quiz_content.content}")
+        else:
+            grades_channel = await ctx.guild.create_text_channel(name=channel_name, category=grades_category)
+            member = ctx.guild.get_member(student.id)
+            await grades_channel.set_permissions(member, view_channel=True)
+            message = await grades_channel.send(f"-------------------------------------------------\n"
+                f"```You received a {score}/{quiz_data['points']} on the Quiz: {quiz_data['title']}\n\nGrader Comments: {comments}```\n\n"
+                                      f"{quiz_content.content}")
+        data = {'studentId': id_values[2], 'taskType': 'Quiz', 'taskId': id_values[1], 'score': score,
+                'graderId': grader_id, 'messageId': message.id}
+        supabase.table('Grade').insert(data).execute()
+        await ctx.channel.delete()
+
+    @grade.command(name='assignment', description='```/grade assignment [score] (comments)``` - Grades a student assignment submission')
+    async def assignment(ctx: discord.ApplicationContext, score: int, comments: str = None):
+
+        user_roles = [role.name for role in ctx.author.roles]
+
+        await ctx.defer()
+
+        if not any(role in ["Educator", "Assistant"] for role in user_roles):
+            return await ctx.respond("You need to be an educator/assistant to grade school work", delete_after=3)
+
+        category = ctx.channel.category.name
+
+        if category != "Submissions":
+            return await ctx.respond("This command only works in the Submissions category", delete_after=3)
+
+        message_history = ctx.channel.history(oldest_first=True)
+        first_message = await message_history.next()
+        assignment_content = await message_history.next()
+        get_id = first_message.content.split("ID: ")[1]
+        id_values = get_id.split('-')
+
+        if id_values[0] != 'A':
+            return await ctx.respond("This is not an assignment submission", delete_after=3)
+
+        response = supabase.table('Assignment').select('*').eq('id', id_values[1]).execute()
+        ass_data = response.data[0]
+        request = await api.get_user_id(ctx.user.id)
+        grader_id = request['id']
+        response = supabase.table('User').select('discordId').eq('id', id_values[2]).execute()
+        student = await bot.fetch_user(response.data[0]['discordId'])
+        grades_category = discord.utils.get(ctx.guild.categories, name="Grades")
+        channel_name = utils.to_discord_channel_name(f"{student.display_name} {student.id % 10000}")
+        grades_channel = discord.utils.get(grades_category.channels, name=channel_name)
+        file_upload = None
+        if assignment_content.attachments:
+            attachment = assignment_content.attachments[0]
+            file = await attachment.read()
+            file_obj = io.BytesIO(file)
+            file_upload = discord.File(file_obj, filename=attachment.filename)
+        if grades_channel:
+            message = await grades_channel.send(content=f"-------------------------------------------------\n"
+                                                        f"```You received a {score}/{ass_data['points']} on the Assignment: {ass_data['title']}\n\nGrader Comments: {comments}```\n\n"
+                f"{assignment_content.content}", file=file_upload)
+        else:
+            grades_channel = await ctx.guild.create_text_channel(name=channel_name, category=grades_category)
+            member = ctx.guild.get_member(student.id)
+            await grades_channel.set_permissions(member, view_channel=True)
+            message = await grades_channel.send(f"-------------------------------------------------\n"
+                f"```You received a {score}/{ass_data['points']} on the Assignment: {ass_data['title']}\n\nGrader Comments: {comments}```\n\n"
+                f"{assignment_content.content}", file=file_upload)
+        data = {'studentId': id_values[2], 'taskType': 'Assignment', 'taskId': id_values[1], 'score': score,
+                'graderId': grader_id, 'messageId': message.id}
+        supabase.table('Grade').insert(data).execute()
+        await ctx.channel.delete()
+
+    @grade.command(name='discussion', description='```/grade assignment [score] (comments)``` - Grades a student assignment submission')
+    async def discussion(ctx: discord.ApplicationContext, score: int, comments: str = None, student: discord.Member = None):
+        user_roles = [role.name for role in ctx.author.roles]
+
+        await ctx.defer(ephemeral=True)
+
+        if not any(role in ["Educator", "Assistant"] for role in user_roles):
             return await ctx.respond("You need to be an educator to grade school work", delete_after=3)
 
         category = ctx.channel.category.name
 
+<<<<<<< HEAD
         if category == "Submissions":
             if score is None:
                 return await ctx.respond("Please input a score for the quiz", delete_after=3)
@@ -1237,32 +1354,73 @@ def run_discord_bot():
                         f"```You received a {score}/{ass_data['points']} on the Assignment: {ass_data['title']}\n\nGrader Comments: {comments}```")
                     return await ctx.respond(f"Gave {student.display_name} a grade of {score}/{ass_data['points']}",
                                              ephemeral=True)
+=======
+        if category != "Discussions":
+            return await ctx.respond("This command only works in the Discussions category", delete_after=3)
+>>>>>>> main
 
-        elif category == "Discussions":
-            channel_id = ctx.channel.id
-            response = supabase.table("Discussion").select('*').eq('channelId', channel_id).execute()
-            request = await api.get_user_id(ctx.user.id)
-            grader_id = request['id']
-            title = response.data[0]['title']
-            points = int(response.data[0]['points'])
-            taskId = int(response.data[0]['id'])
-            dueDate = response.data[0]['dueDate']
-            student_role = discord.utils.get(ctx.guild.roles, name="Student")
+        channel_id = ctx.channel.id
+        response = supabase.table("Discussion").select('*').eq('channelId', channel_id).execute()
+        request = await api.get_user_id(ctx.user.id)
+        grader_id = request['id']
+        title = response.data[0]['title']
+        points = int(response.data[0]['points'])
+        taskId = int(response.data[0]['id'])
+        dueDate = response.data[0]['dueDate']
+        student_role = discord.utils.get(ctx.guild.roles, name="Student")
+        student_score = score
+        grades_category = discord.utils.get(ctx.guild.categories, name="Grades")
 
-            if score is not None:
-                student_score = score
-            else:
-                student_score = points
+        if student:
+            request = await api.get_user_id(student.id)
+            student_id = request['id']
+            response = supabase.table('Grade').select('*').match(
+                {'studentId': student_id, 'taskType': 'Discussion', 'taskId': taskId}).execute()
+            data = {'taskType': 'Discussion', 'graderId': grader_id, 'taskId': taskId, 'studentId': student_id,
+                    'score': student_score}
+            if response.data:
+                supabase.table('Grade').update(data).eq('id', response.data[0]['id']).execute()
+                message_id = response.data[0]['messageId']
+                channel_name = utils.to_discord_channel_name(f"{student.display_name} {student.id % 10000}")
+                grades_channel = discord.utils.get(grades_category.channels, name=channel_name)
+                if grades_channel is None:
+                    grades_channel = await ctx.guild.create_text_channel(name=channel_name, category=grades_category)
+                    await grades_channel.set_permissions(student, view_channel=True)
+                grade_message = await grades_channel.fetch_message(message_id)
+                await grade_message.edit(content=f"-------------------------------------------------\n"
+                                         f"```You received a {student_score}/{points} on the Discussion: {title}\n\nGrader Comments: {comments}```")
+                return await ctx.respond(content=f"Updated Score - Gave {student.display_name} a grade of {student_score}/{points}", ephemeral=True)
+            message = await student.send(f"-------------------------------------------------\n"
+                f"```You received a {student_score}/{points} on the Discussion: {title}\n\nGrader Comments: {comments}```")
+            data['messageId'] = message.id
+            supabase.table('Grade').insert(data).execute()
+            return await ctx.respond(content=f"Gave {student.display_name} a grade of {student_score}/{points}", ephemeral=True)
 
-            if student is not None:
-                request = await api.get_user_id(student.id)
+        # makes list of all users in channel
+        users = []
+        async for message in ctx.channel.history(limit=None):
+            if message.author.bot:
+                continue
+            users.append(message.author)
+
+        # removes duplicated users
+        users = list(set(users))
+
+        for user in users:
+            if student_role in user.roles:
+                request = await api.get_user_id(user.id)
                 student_id = request['id']
-                data = {'taskType': 'Discussion', 'graderId': grader_id, 'taskId': taskId, 'studentId': student_id,
-                        'score': student_score}
+                data = {'taskType': 'Discussion', 'graderId': grader_id, 'taskId': taskId, 'studentId': student_id, 'score': student_score}
                 response = supabase.table('Grade').select('*').match(
                     {'studentId': student_id, 'taskType': 'Discussion', 'taskId': taskId}).execute()
+                channel_name = utils.to_discord_channel_name(f"{user.display_name} {user.id % 10000}")
+                grades_channel = discord.utils.get(grades_category.channels, name=channel_name)
+                if grades_channel is None:
+                    grades_channel = await ctx.guild.create_text_channel(name=channel_name, category=grades_category)
+                    await grades_channel.set_permissions(user, view_channel=True)
                 if response.data:
                     supabase.table('Grade').update(data).eq('id', response.data[0]['id']).execute()
+<<<<<<< HEAD
                     response = supabase.table('User').select('discordId').eq('id', student_id).execute()
                     student = await bot.fetch_user(response.data[0]['discordId'])
                     await student.send(
@@ -1275,17 +1433,25 @@ def run_discord_bot():
                     f"```You received a {student_score}/{points} on the Discussion: {title}\n\nGrader Comments: {comments}```")
                 return await ctx.respond(f"Gave {student.display_name} a grade of {student_score}/{points}",
                                          ephemeral=True)
+=======
+                    message_id = response.data[0]['messageId']
+                    grade_message = await grades_channel.fetch_message(message_id)
+                    await grade_message.edit(content=f"-------------------------------------------------\n"
+                                                     f"```You received a {student_score}/{points} on the Discussion: {title}\n\nGrader Comments: {comments}```")
+                else:
+                    message = await grades_channel.send(f"-------------------------------------------------\n"
+                                                        f"```You received a {student_score}/{points} on the Discussion: {title}\n\nGrader Comments: {comments}```")
+                    data['messageId'] = message.id
+                    supabase.table('Grade').insert(data).execute()
+>>>>>>> main
 
-            # makes list of all users in channel
-            users = []
-            async for message in ctx.channel.history(limit=None):
-                if message.author.bot:
-                    continue
-                users.append(message.author)
+        await ctx.respond("Graded this discussion", ephemeral=True)
 
-            # removes duplicated users
-            users = list(set(users))
+        channel = ctx.channel
+        due = datetime.datetime.strptime(dueDate, "%Y-%m-%d").date()
+        today = datetime.datetime.today().date()
 
+<<<<<<< HEAD
             for user in users:
                 if student_role in user.roles:
                     request = await api.get_user_id(user.id)
@@ -1304,23 +1470,70 @@ def run_discord_bot():
                         supabase.table('Grade').insert(data).execute()
                         await user.send(
                             f"```You received a {student_score}/{points} on the Discussion: {title}\n\nGrader Comments: {comments}```")
+=======
+        if due < today:
+            await channel.set_permissions(student_role, send_messages=False)
+>>>>>>> main
 
-            await ctx.respond("Graded this discussion", ephemeral=True)
+    @grade.command(name='edit', description='```/grade edit [link] [score] (comments)``` - Used to edit a grade')
+    async def edit(ctx: discord.ApplicationContext, link: discord.Option(str, description="Copy Message Link"), score: int, comments: str = None):
 
-            channel = ctx.channel
-            due = datetime.datetime.strptime(dueDate, "%Y-%m-%d").date()
-            today = datetime.datetime.today().date()
+        await ctx.defer(ephemeral=True)
 
-            if due < today:
-                await channel.set_permissions(student_role, send_messages=False)
-        else:
-            await ctx.respond("/grade only works on Submissions or Discussions", delete_after=3)
+        link_split = link.split('/')
+        channel_id = link_split[-2]
+        message_id = link_split[-1]
 
+<<<<<<< HEAD
+=======
+        user_roles = [role.name for role in ctx.author.roles]
+
+        if not any(role in ["Educator", "Assistant"] for role in user_roles):
+            return await ctx.respond("You need to be an educator to grade school work", delete_after=3)
+
+        category = ctx.channel.category.name
+
+        if category != "Grades":
+            return await ctx.respond("You can only edit grades in the Grades category", delete_after=3)
+
+        channel = ctx.channel
+
+        if int(channel_id) != int(channel.id):
+            print(channel_id, channel.id)
+            return await ctx.respond("That grade link does not belong to this student", delete_after=3)
+
+        try:
+            grade_message = await channel.fetch_message(message_id)
+        except discord.NotFound:
+            return await ctx.respond("Could not find message from link", delete_after=3)
+
+        grade_content = grade_message.content
+
+        response = supabase.table('Grade').select('*').eq('messageId', message_id).execute()
+        grade_obj = response.data[0]
+        table = grade_obj['taskType']
+        table_id = grade_obj['taskId']
+        response = supabase.table(table).select('*').eq('id', table_id).execute()
+        task_obj = response.data[0]
+        title = task_obj['title']
+        points = task_obj['points']
+
+        edited_message = grade_content + f"\n```UPDATED GRADE: {score}/{points} for {table}: {title}\n\nGrader Comments: {comments}```"
+
+        grade_obj['score'] = score
+
+        supabase.table('Grade').update(grade_obj).eq('messageId', message_id).execute()
+
+        await grade_message.edit(content=edited_message)
+
+        await ctx.respond("Grade Updated", delete_after=3)
+
+>>>>>>> main
     @bot.slash_command(name='submit',
                        description='```/submit assignment (file) (url)``` - student submit assignment')
     async def submit(ctx: discord.ApplicationContext, file: discord.Attachment = None, url: str = None):
 
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
 
         student_role = discord.utils.get(ctx.guild.roles, name="Student")
         if student_role not in ctx.author.roles:

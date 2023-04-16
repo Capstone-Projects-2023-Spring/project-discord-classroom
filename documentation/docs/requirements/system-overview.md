@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # System Overview
 ### Project Abstract<br/>	
-The Discord Classroom is a Discord bot that is for eduxators or companies that want to create a learning environment in Discord for teaching. Some learning environments are for school use and other video conferencing applications do not have features that can allow for teachers to create quizzes or assignments for the students in the same place that the lectures are occurring. The goal is to make a streamlined experience that helps both students and teachers without being overly complicated. 
+The Discord Classroom is a Discord bot that is for educators or companies that want to create a learning environment in Discord for teaching. Some learning environments are for school use and other video conferencing applications do not have features that can allow for teachers to create quizzes or assignments for the students in the same place that the lectures are occurring. The goal is to make a streamlined experience that helps both students and teachers without being overly complicated. 
 
 As a teacher, they will have the ability to set quizzes and assignments pertaining to their teaching topics and will allow the teacher to see how the students are doing and manage their attendance and grades if needed. As a student, they will have the ability to set their role to students and to take quizzes, submit assignments, and to leave feedback and share notes and questions with fellow students or the teacher in the same environment that they attend class. The Ta will have the ability to oversee the quiz information and assist the teacher or observe the results of students and help both the teacher or student if need be.
 
