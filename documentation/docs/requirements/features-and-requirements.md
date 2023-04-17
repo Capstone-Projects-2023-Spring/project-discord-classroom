@@ -5,24 +5,33 @@ sidebar_position: 4
 # Features and Requirements
 ##  Functional Requirements 
 
-- The Discord Classroom bot will transform the server into a learning environment. <br />
-  - Classroom bot will create and manage text and voice channels such as private channels, quiz channels, assignment channels, and homework channels. <br />
-  - Classroom bot can be utilized to assign and manage roles of members. <br />
-  - Users can perform certain action associated with their roles, such as submitting assignments and viewing grades. <br />
+- The system shall require a Discord server.
+  - Discord servers are free and require an account to make. 
+- The system shall require permissions to change the server.
+  - These changes are various text and voice channels that are used to manage the classroom aspect of the server, and the bot allows for the assignment of roles to users.
+  - The admin (educator/owner) of the server will have to give permission to allow the bot to make changes to the server.
+- The system shall have commands for performing actions.
+  - These commands will be slash commands that can be selected from Discord applications in the message UI or typed in the message UI.
+  - Commands will be straightforward in what they do and have descriptions of what they require and how to function.
+  - Educators will have the ability to use the creation commands and other management commands.
+  - Students will have the ability to use submit commands, help commands, and the creation of a private question.
+  - TAs will have the ability to adjust grades.
+  - All actions will be activated with bot commands.
+  - Bot commands will be dependent on the user's role.
+- The system shall have a database.
+  - Grades, users, assignments, quizzes, discussions, and classrooms will be saved and referenced to allow the bot to make changes to the server and to keep track of the activities happening on the server.
+- The system shall have a way for submitting assignments.
+  - In the case that the document/assignment is too large, there will be a website for students to submit their assignments.
+- The system shall allow educators to copy assignments, quizzes, and discussions to allow for ease of use in other servers.
+  - Educators can get the JSON of their created assignments, quizzes, and discussions; they can then use them in another server to make it easier to manage multiple classrooms.
+- The system shall allow editing.
+  - It will allow the assignments, discussions, and quizzes to be edited after creation.
+  - Grades will be able to be updated by the Educator or the TA roles.
 
-- Both educators and students can use simple commands to perform various tasks. <br />
-  - Students will be able to mark their attendance by issuing the command `!present`. The Discord Classroom bot will then record the attendance in its database. <br />
-  - Educators will be able to create quizzes by issuing the command `!cquiz`. This will allow them to easily create quizzes without having to navigate through multiple menus or interfaces. <br />
-  - Issuing the command `!help` will display a comprehensive manual page containing all the commands associated with the Discord Classroom bot. <br />
 
 ##  Nonfunctional Requirements
 
-- The Discord Classroom bot will function within the context of a Discord environment  <br />
-  - The bot will be added to a server using a unique invitation link. <br />
-  - Login security for the bot will leverage built-in Discord authentication. <br />
-  - The bot will execute commands issued by authorized users in the server. <br />
+- Commands should activate within 30 seconds.
+- The commands will not be confusing.
+- When using the tutor commands, the text limit is 150 characters.
 
-- The Discord Classroom bot will connect to a MySQL database for data storage and retrieval. <br />
-  - The bot will securely interact to the database using REST API with secure methods.<br />
-  - The database will store and update information such as student attendance records, quiz results, and assignment submissions in real-time. <br />
-  - The bot will retrieve and display information upon request from authorized users. <br />
