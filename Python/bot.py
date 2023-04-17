@@ -51,8 +51,12 @@ def run_discord_bot():
 
     @bot.event
     async def on_guild_remove(guild: discord.Guild):
-        pass
-        # await api.remove_classroom(guild.id)
+        await asyncio.sleep(7 * 24 * 60 * 60)
+        current_servers = [guild.id for guild in client.guilds]
+        classrooms = api.get_classrooms()
+        for classroom in classrooms:
+            if classroom.serverId not in current_servers:
+                await api.remove_classroom(guild.id)
 
     @bot.event
     async def on_guild_join(guild: discord.Guild):
