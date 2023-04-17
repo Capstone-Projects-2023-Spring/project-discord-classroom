@@ -102,8 +102,8 @@ def create_assignment(bot, file=None, preset=None):
             res = await api.get_classroom_id(interaction.guild.id)
             classroom_id = res['id']
 
-            new_assignment = Assignment(title=title, start=str(start_date),
-                                        due=str(due_date), points=points,
+            new_assignment = Assignment(title=title, startDate=str(start_date),
+                                        dueDate=str(due_date), points=points,
                                         classroomId=classroom_id, channelId=new_assignment_channel.id)
 
             await api.create_assignment(new_assignment)

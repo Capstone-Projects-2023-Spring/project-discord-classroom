@@ -22,11 +22,11 @@ async def increment_attendance(discord_user_id: int, discord_server_id: int):
     user_id = request['id']
     request = await api.get_classroom_id(discord_server_id)
     classroom_id = request['id']
-    request = await api.get_user_attendance(user_id, classroom_id)
+    request = await api.get_classroom_user_attendance(user_id, classroom_id)
     current_attendance = request['attendance']
     # print(current_attendance)
     if current_attendance is not None:
-        await api.update_user_attendance(current_attendance, user_id, classroom_id)
+        await api.update_user_attendance(user_id, classroom_id)
 
 
 def ordinal(n: int) -> str:

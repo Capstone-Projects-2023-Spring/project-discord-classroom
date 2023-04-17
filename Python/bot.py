@@ -1,27 +1,26 @@
-import asyncio
-from http import client
-
-import PyPDF2
-import discord
-import json
-import os
-from supabase import create_client, Client
+from create_classes import Assignment, Grade, Token, Classroom
 from discord.ext import commands
-from typing import Optional, List
-import io
-import datetime
-from PyPDF2 import PdfReader
-import api
-import utils
-import create_quiz
-import create_quiz, create_assignment, create_discussion
-import openai
-from create_classes import Assignment, Grade
+from http import client
 from pptx import Presentation
+from PyPDF2 import PdfReader
+from typing import Optional, List
+from supabase import create_client, Client
+
+import api
+import asyncio
+import create_quiz, create_assignment, create_discussion
+import datetime
+import discord
 import docx
+import io
+import json
+import openai
+import os
+import PyPDF2
 import requests
 import secrets
 import string
+import utils
 
 if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:
@@ -134,7 +133,8 @@ def run_discord_bot():
         await guild.create_text_channel("General", category=general)
         attendance_channel = await guild.create_text_channel("Attendance", category=general)
         await attendance_channel.set_permissions(everyone, view_channel=False)
-        await attendance_channel.set_permissions(student_role, view_channel=True, send_messages=False, add_reactions=False)
+        await attendance_channel.set_permissions(student_role, view_channel=True, send_messages=False,
+                                                 add_reactions=False)
         syllabus_channel = await guild.create_text_channel("Syllabus", category=general)
         await syllabus_channel.set_permissions(student_role, send_messages=False)
         await guild.create_voice_channel("Lecture", category=general)
@@ -146,7 +146,8 @@ def run_discord_bot():
 
         await guild.create_text_channel("Public", category=questions)
 
-        await api.create_classroom(id=guild.id, name=guild.name)
+        classroom = Classroom(attendance=0, serverId=guild.id, serverName=guild.name)
+        await api.create_classroom(classroom)
 
         # gives discord owner the Educator role
         await guild.owner.add_roles(educator_role)
@@ -165,16 +166,18 @@ def run_discord_bot():
     async def on_member_remove(member: discord.Member):
         if not member.bot:
             res = await api.get_classroom_id(member.guild.id)
-            classroom_id = res['id']
+            classroom_id = res.content['id']
             res = await api.get_user_id(member.id)
-            user_id = res['id']
+            user_id = res.content['id']
+
+            # TODO: implement user delete
             supabase.table("Classroom_User").delete().match({"classroomId": classroom_id, "userId": user_id}).execute()
 
     @bot.event
     async def on_member_update(before: discord.Member, after: discord.Member):
         # Update member nickname in database
         if before.nick != after.nick:
-            await api.update_user_nick(after.nick, after.id)
+            await api.update_classroom_user_name(after.nick, after.id)
 
         # Update member role in database
         if before.roles != after.roles:
@@ -193,7 +196,7 @@ def run_discord_bot():
                 await after.add_roles(roles['Student'])
                 new_role = 'Student'
                 if not any(role.name == "Student" for role in before.roles):
-                    await api.update_member_role(new_role, user_id, classroom_id)
+                    await api.update_classroom_user_role(user_id, classroom_id, new_role)
             elif role_count > 1:
                 new_roles = [x for x in after_member_roles if x not in before_member_roles]
                 new_role = new_roles[0].name
@@ -203,7 +206,7 @@ def run_discord_bot():
                 for role in roles_to_remove:
                     await after.remove_roles(role)
 
-                await api.update_member_role(new_role, user_id, classroom_id)
+                await api.update_classroom_user_role(user_id, classroom_id, new_role)  # TODO: API
 
     @bot.slash_command(name='syllabus',
                        description='```/syllabus [.pdf file]``` - Updates the syllabus page with the linked pdf file')
@@ -253,12 +256,13 @@ def run_discord_bot():
             else:
                 await ctx.send("Invalid file format, only PDF files are accepted.")
 
-    @bot.slash_command(name='delete', description ='```/delete ``` - Deletes a quiz, assignment, or discussion')
+    @bot.slash_command(name='delete', description='```/delete ``` - Deletes a quiz, assignment, or discussion')
     async def delete(ctx: discord.ApplicationContext):
         user_roles = [role.name for role in ctx.author.roles]
 
         if "Educator" not in user_roles:
-            await ctx.respond("You do not have permission to use this command. Only an educator can use /delete", delete_after=10) 
+            await ctx.respond("You do not have permission to use this command. Only an educator can use /delete",
+                              delete_after=10)
         else:
             channel = ctx.channel
             embed = discord.Embed(title="Delete this channel?", color=0x00FF00)
@@ -273,7 +277,7 @@ def run_discord_bot():
 
             while True:
                 reaction, user = await bot.wait_for('reaction_add', check=check)
-            
+
                 if reaction.emoji == "✅":
                     await channel.delete()
                 elif reaction.emoji == "❌":
@@ -368,17 +372,18 @@ def run_discord_bot():
         bot.add_listener(on_reaction_add, 'on_reaction_add')
         bot.add_listener(on_reaction_remove, 'on_reaction_remove')
 
-    class AnonPoll(discord.ui.View): #class is created for the discord view of the poll with buttons
-        def __init__(self, options: List[str], ctx: discord.ApplicationContext, message: discord.Message, user: discord.User):
+    class AnonPoll(discord.ui.View):  # class is created for the discord view of the poll with buttons
+        def __init__(self, options: List[str], ctx: discord.ApplicationContext, message: discord.Message,
+                     user: discord.User):
             super().__init__()
             self.creator = user
             self.options = options
             self.buttons = [None] * len(options)
-            self.num_votes_for_option_idx = [0] * len(options) #number of votes for each option
+            self.num_votes_for_option_idx = [0] * len(options)  # number of votes for each option
             self.num_total_votes = 0
             self.votes = {}
 
-            def makeOptionCallback(idx): #callback function for when user presses button to select an option
+            def makeOptionCallback(idx):  # callback function for when user presses button to select an option
                 async def optionCallback(interaction: discord.Interaction):
                     if interaction.user.id in self.votes[idx]:
                         self.votes[idx].remove(interaction.user.id)
@@ -390,26 +395,31 @@ def run_discord_bot():
                         self.num_votes_for_option_idx[idx] += 1
                         self.num_total_votes += 1
                         await interaction.response.send_message(f'You voted for {self.options[idx]}', ephemeral=True)
+
                 return optionCallback
 
-            for i in range(len(self.options)): #each option is created to be a button
-                button = discord.ui.Button(label=self.options[i], style=discord.ButtonStyle.secondary, emoji=chr(0x1f1e6 + i))
+            for i in range(len(self.options)):  # each option is created to be a button
+                button = discord.ui.Button(label=self.options[i], style=discord.ButtonStyle.secondary,
+                                           emoji=chr(0x1f1e6 + i))
                 self.buttons[i] = button
                 self.votes[i] = []
                 button.callback = makeOptionCallback(i)
                 self.add_item(button)
 
-            async def endPollCallback(interaction: discord.Interaction): #callback function to display results when poll ends
+            async def endPollCallback(
+                    interaction: discord.Interaction):  # callback function to display results when poll ends
                 if interaction.user != self.creator:
-                    return await interaction.response.send_message("Only the creator of the poll can end it", ephemeral=True)
+                    return await interaction.response.send_message("Only the creator of the poll can end it",
+                                                                   ephemeral=True)
 
                 description_for_option_idx = [None] * len(options)
 
-                for i in range(len(options)): #disply the poll results for each option
+                for i in range(len(options)):  # disply the poll results for each option
                     boxesForOption = ["⬛"] * 10
 
-                    reactionPercentage = round((self.num_votes_for_option_idx[i] / self.num_total_votes) * 100) if self.num_total_votes > 0 else 0
-                    
+                    reactionPercentage = round((self.num_votes_for_option_idx[
+                                                    i] / self.num_total_votes) * 100) if self.num_total_votes > 0 else 0
+
                     for j in range(round(reactionPercentage / 10)):
                         if i < 7:
                             boxesForOption[j] = f"{chr(0x1F7E5 + i)}"
@@ -418,30 +428,31 @@ def run_discord_bot():
 
                     boxesForOptionStr = ''.join(boxesForOption)
 
-                    description_for_option_idx[i] = f'{chr(0x1f1e6 + i)} {options[i]}\n `{boxesForOptionStr}` {self.num_votes_for_option_idx[i]} ({reactionPercentage}%)\n'
-                
-                embed = message.embeds[0] #gets the poll message embed
+                    description_for_option_idx[
+                        i] = f'{chr(0x1f1e6 + i)} {options[i]}\n `{boxesForOptionStr}` {self.num_votes_for_option_idx[i]} ({reactionPercentage}%)\n'
+
+                embed = message.embeds[0]  # gets the poll message embed
                 embed.description = ' '.join(description_for_option_idx)
                 await message.edit(embed=embed)
 
                 endPollButton.disabled = True
                 for button in self.buttons:
-                     button.disabled = True
+                    button.disabled = True
 
                 await interaction.response.edit_message(view=self)
 
-            #get the roles for each user
+            # get the roles for each user
             user_roles = [role.name for role in ctx.author.roles]
             endPollButton = discord.ui.Button(label="End Poll", style=discord.ButtonStyle.danger)
             endPollButton.callback = endPollCallback
             self.add_item(endPollButton)
-        
-            
-    @bot.slash_command(name='anonpoll', description='```/anon poll [topic] [option1] [option2] ... ``` - Creates a poll for users (8 max options)')
+
+    @bot.slash_command(name='anonpoll',
+                       description='```/anon poll [topic] [option1] [option2] ... ``` - Creates a poll for users (8 max options)')
     async def anon_poll(ctx: discord.ApplicationContext, topic: str, option1: str, option2: str, option3: str = None,
-                option4: str = None, option5: str = None, option6: str = None, option7: str = None,
-                option8: str = None):
-        
+                        option4: str = None, option5: str = None, option6: str = None, option7: str = None,
+                        option8: str = None):
+
         await ctx.defer()
 
         options = [option1, option2]
@@ -458,19 +469,18 @@ def run_discord_bot():
         if option8:
             options.append(option8)
 
-        #create the poll embed to show user options
+        # create the poll embed to show user options
         embed = discord.Embed(title=topic, description=' '.join(
-        [f'{chr(0x1f1e6 + i)} {option}\n\n' for i, option in enumerate(options)]))
-    
+            [f'{chr(0x1f1e6 + i)} {option}\n\n' for i, option in enumerate(options)]))
+
         await ctx.respond("Poll Created")
 
         # Send the poll message and add buttons to the view
         message = await ctx.send(embed=embed)
         await message.edit(view=AnonPoll(options, ctx, message, ctx.user))
 
-        
     @bot.slash_command(name='attendance',
-                        description='```/attendance``` - Used by students to check their attendance')
+                       description='```/attendance``` - Used by students to check their attendance')
     async def attendance(ctx: discord.ApplicationContext):
         user_roles = [role.name for role in ctx.author.roles]
         guild_id = ctx.guild_id
@@ -480,7 +490,7 @@ def run_discord_bot():
         res = supabase.table('User').select('id').eq('discordId', ctx.author.id).execute()
         user_id = res.data[0]['id']
         res = await api.get_classroom_id(ctx.guild_id)
-        classroom_id = res['id']
+        classroom_id = res.content['id']
         res = supabase.table('Classroom_User').select('attendance').match(
             {'userId': user_id, 'classroomId': classroom_id}).execute()
         user_attendance = res.data[0]['attendance']
@@ -784,9 +794,10 @@ def run_discord_bot():
         rooms = []
 
         for i in range(number_of_rooms):
-            rooms.append(await ctx.guild.create_voice_channel(f"Breakout Room {i+1}", category=general_category))
+            rooms.append(await ctx.guild.create_voice_channel(f"Breakout Room {i + 1}", category=general_category))
 
-        interaction = await ctx.respond(f"{number_of_rooms} Breakout rooms created, react with ❌ to remove them when done.")
+        interaction = await ctx.respond(
+            f"{number_of_rooms} Breakout rooms created, react with ❌ to remove them when done.")
         message = await interaction.original_response()
         await message.add_reaction('❌')
 
@@ -795,7 +806,7 @@ def run_discord_bot():
 
         while True:
             try:
-                reaction, user = await bot.wait_for('reaction_add', check=check, timeout=number_of_minutes*60)
+                reaction, user = await bot.wait_for('reaction_add', check=check, timeout=number_of_minutes * 60)
                 for room in rooms:
                     await room.delete()
                 break
@@ -855,22 +866,21 @@ def run_discord_bot():
 
     @bot.slash_command(name='upload_file', description='```/upload file``` - User can follow link to upload file')
     async def upload_file(ctx):
-        
+
         unique_id = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8, 51))
 
         discord_id = ctx.author.id
-        studentId_dict = await api.get_user_id(discord_id)
-        userId = studentId_dict["id"]
+        user = await api.get_user_id(discord_id)
+        userId = user.id
 
         submit_dict = {'userId': userId, 'unique_id': unique_id}
 
-
-        new_submit = api.Tokens(userId=submit_dict['userId'], unique_id=submit_dict['unique_id'])
+        new_submit = Token(userId=submit_dict['userId'], unique_id=submit_dict['unique_id'])
 
         await api.update_token(new_submit)
 
-        await ctx.respond(content=f'https://discord-classroom-file-uploads.herokuapp.com/?token={unique_id}', ephemeral=True)
-
+        await ctx.respond(content=f'https://discord-classroom-file-uploads.herokuapp.com/?token={unique_id}',
+                          ephemeral=True)
 
     tutor = bot.create_group("tutor", "AI tutor for students")
 
@@ -916,7 +926,8 @@ def run_discord_bot():
         await user.send(f"TutorGPT:\n {reply}")
 
         messages.append(
-            {"role": 'user', 'content': "Now give your answers to the questions above, I won't be able to see your answers so don't worry about cheating."}
+            {"role": 'user',
+             'content': "Now give your answers to the questions above, I won't be able to see your answers so don't worry about cheating."}
         )
 
         chat = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages, max_tokens=150)
@@ -1131,8 +1142,50 @@ def run_discord_bot():
 
     grade = bot.create_group("grade", "Grading commands for Educators")
 
+<<<<<<< HEAD
+        first_msg = (await ctx.channel.history(limit=1).flatten())[0]
+        assignment_id = first_msg.content.split(':')[1].strip()
+        assignment_type, taskId, studentId = assignment_id.split('-')
+        graderId = str(ctx.author.id)
+
+        existing_row = await supabase.table('grades').select('id').eq('studentId', studentId).eq('taskId',
+                                                                                                 taskId).single()
+        if existing_row is not None:
+            data = {
+                'score': points,
+                'comment': comments,
+                'graderId': graderId
+            }
+            result = await supabase.table('grades').update(data).eq('id', existing_row['id']).execute()
+            if result['error'] is not None:
+                await ctx.send(f"An error occurred while updating the grade: {result['error']}")
+            else:
+                await ctx.send(
+                    f"Updated grade for {assignment_type} {taskId} for user {studentId}. Points: {points}. Comments: {comments}")
+        else:
+            data = {
+                'studentId': studentId,
+                'taskId': taskId,
+                'score': points,
+                'comment': comments,
+                'graderId': graderId
+            }
+            result = await supabase.table('grades').insert(data).execute()
+            if result['error'] is not None:
+                await ctx.send(f"An error occurred while grading the assignment: {result['error']}")
+            else:
+                await ctx.send(
+                    f"Graded {assignment_type} {taskId} for user {studentId}. Points: {points}. Comments: {comments}")
+
+    @bot.slash_command(name='grade',
+                       description='```/grade [score]``` - Grades a Student\'s school work')
+    async def grade(ctx: discord.ApplicationContext, score: int = None, comments: str = None,
+                    student: discord.Option(discord.User,
+                                            description="use for grading a student's discussion post") = None):
+=======
     @grade.command(name='quiz', description='```/grade quiz [score] (comments)``` - Grades a student quiz submission')
     async def quiz(ctx: discord.ApplicationContext, score: int, comments: str = None):
+>>>>>>> main
 
         user_roles = [role.name for role in ctx.author.roles]
 
@@ -1246,8 +1299,65 @@ def run_discord_bot():
 
         category = ctx.channel.category.name
 
+<<<<<<< HEAD
+        if category == "Submissions":
+            if score is None:
+                return await ctx.respond("Please input a score for the quiz", delete_after=3)
+            first_message = await ctx.channel.history(oldest_first=True, limit=1).next()
+            get_id = first_message.content.split("ID: ")[1]
+            id_values = get_id.split('-')
+            if id_values[0] == 'Q':
+                response = supabase.table('Quiz').select('*').eq('id', id_values[1]).execute()
+                quiz_data = response.data[0]
+                request = await api.get_user_id(ctx.user.id)
+                grader_id = request['id']
+                data = {'studentId': id_values[2], 'taskType': 'Quiz', 'taskId': id_values[1], 'score': score,
+                        'graderId': grader_id}
+                response = supabase.table('User').select('discordId').eq('id', id_values[2]).execute()
+                student = await bot.fetch_user(response.data[0]['discordId'])
+                response = supabase.table('Grade').select('*').match(
+                    {'studentId': id_values[2], 'taskType': 'Quiz', 'taskId': id_values[1]}).execute()
+                if response.data:
+                    supabase.table('Grade').update(data).eq('id', response.data[0]['id']).execute()
+                    await student.send(
+                        f"```SCORE UPDATED\nYou received a {score}/{quiz_data['points']} on the Quiz: {quiz_data['title']}\n\nGrader Comments: {comments}```")
+                    return await ctx.respond(
+                        f"Updated Score - Gave {student.display_name} a grade of {score}/{quiz_data['points']}",
+                        ephemeral=True)
+                else:
+                    supabase.table('Grade').insert(data).execute()
+                    await student.send(
+                        f"```You received a {score}/{quiz_data['points']} on the Quiz: {quiz_data['title']}\n\nGrader Comments: {comments}```")
+                    return await ctx.respond(f"Gave {student.display_name} a grade of {score}/{quiz_data['points']}",
+                                             ephemeral=True)
+            if id_values[0] == 'A':
+                response = supabase.table('Assignment').select('*').eq('id', id_values[1]).execute()
+                ass_data = response.data[0]
+                request = await api.get_user_id(ctx.user.id)
+                grader_id = request['id']
+                data = {'studentId': id_values[2], 'taskType': 'Assignment', 'taskId': id_values[1], 'score': score,
+                        'graderId': grader_id}
+                response = supabase.table('User').select('discordId').eq('id', id_values[2]).execute()
+                student = await bot.fetch_user(response.data[0]['discordId'])
+                response = supabase.table('Grade').select('*').match(
+                    {'studentId': id_values[2], 'taskType': 'Assignment', 'taskId': id_values[1]}).execute()
+                if response.data:
+                    supabase.table('Grade').update(data).eq('id', response.data[0]['id']).execute()
+                    await student.send(
+                        f"```SCORE UPDATED\nYou received a {score}/{ass_data['points']} on the Assignment: {ass_data['title']}\n\nGrader Comments: {comments}```")
+                    return await ctx.respond(
+                        f"Updated Score - Gave {student.display_name} a grade of {score}/{ass_data['points']}",
+                        ephemeral=True)
+                else:
+                    supabase.table('Grade').insert(data).execute()
+                    await student.send(
+                        f"```You received a {score}/{ass_data['points']} on the Assignment: {ass_data['title']}\n\nGrader Comments: {comments}```")
+                    return await ctx.respond(f"Gave {student.display_name} a grade of {score}/{ass_data['points']}",
+                                             ephemeral=True)
+=======
         if category != "Discussions":
             return await ctx.respond("This command only works in the Discussions category", delete_after=3)
+>>>>>>> main
 
         channel_id = ctx.channel.id
         response = supabase.table("Discussion").select('*').eq('channelId', channel_id).execute()
@@ -1310,6 +1420,20 @@ def run_discord_bot():
                     await grades_channel.set_permissions(user, view_channel=True)
                 if response.data:
                     supabase.table('Grade').update(data).eq('id', response.data[0]['id']).execute()
+<<<<<<< HEAD
+                    response = supabase.table('User').select('discordId').eq('id', student_id).execute()
+                    student = await bot.fetch_user(response.data[0]['discordId'])
+                    await student.send(
+                        f"```SCORE UPDATED\nYou received a {student_score}/{points} on the Discussion: {title}\n\nGrader Comments: {comments}```")
+                    return await ctx.respond(
+                        f"Updated Score - Gave {student.display_name} a grade of {student_score}/{points}",
+                        ephemeral=True)
+                supabase.table('Grade').insert(data).execute()
+                await student.send(
+                    f"```You received a {student_score}/{points} on the Discussion: {title}\n\nGrader Comments: {comments}```")
+                return await ctx.respond(f"Gave {student.display_name} a grade of {student_score}/{points}",
+                                         ephemeral=True)
+=======
                     message_id = response.data[0]['messageId']
                     grade_message = await grades_channel.fetch_message(message_id)
                     await grade_message.edit(content=f"-------------------------------------------------\n"
@@ -1319,6 +1443,7 @@ def run_discord_bot():
                                                         f"```You received a {student_score}/{points} on the Discussion: {title}\n\nGrader Comments: {comments}```")
                     data['messageId'] = message.id
                     supabase.table('Grade').insert(data).execute()
+>>>>>>> main
 
         await ctx.respond("Graded this discussion", ephemeral=True)
 
@@ -1326,8 +1451,29 @@ def run_discord_bot():
         due = datetime.datetime.strptime(dueDate, "%Y-%m-%d").date()
         today = datetime.datetime.today().date()
 
+<<<<<<< HEAD
+            for user in users:
+                if student_role in user.roles:
+                    request = await api.get_user_id(user.id)
+                    student_id = request['id']
+                    data = {'taskType': 'Discussion', 'graderId': grader_id, 'taskId': taskId, 'studentId': student_id,
+                            'score': student_score}
+                    response = supabase.table('Grade').select('*').match(
+                        {'studentId': student_id, 'taskType': 'Discussion', 'taskId': taskId}).execute()
+                    if response.data:
+                        supabase.table('Grade').update(data).eq('id', response.data[0]['id']).execute()
+                        response = supabase.table('User').select('discordId').eq('id', student_id).execute()
+                        student = await bot.fetch_user(response.data[0]['discordId'])
+                        await student.send(
+                            f"```SCORE UPDATED\nYou received a {student_score}/{points} on the Discussion: {title}\n\nGrader Comments: {comments}```")
+                    else:
+                        supabase.table('Grade').insert(data).execute()
+                        await user.send(
+                            f"```You received a {student_score}/{points} on the Discussion: {title}\n\nGrader Comments: {comments}```")
+=======
         if due < today:
             await channel.set_permissions(student_role, send_messages=False)
+>>>>>>> main
 
     @grade.command(name='edit', description='```/grade edit [link] [score] (comments)``` - Used to edit a grade')
     async def edit(ctx: discord.ApplicationContext, link: discord.Option(str, description="Copy Message Link"), score: int, comments: str = None):
@@ -1338,6 +1484,8 @@ def run_discord_bot():
         channel_id = link_split[-2]
         message_id = link_split[-1]
 
+<<<<<<< HEAD
+=======
         user_roles = [role.name for role in ctx.author.roles]
 
         if not any(role in ["Educator", "Assistant"] for role in user_roles):
@@ -1380,6 +1528,7 @@ def run_discord_bot():
 
         await ctx.respond("Grade Updated", delete_after=3)
 
+>>>>>>> main
     @bot.slash_command(name='submit',
                        description='```/submit assignment (file) (url)``` - student submit assignment')
     async def submit(ctx: discord.ApplicationContext, file: discord.Attachment = None, url: str = None):
@@ -1398,7 +1547,8 @@ def run_discord_bot():
             return await ctx.respond("Please provide either a file or a URL, not both.")
 
         if not file and not url:
-            return await ctx.respond("Please provide either a file or a URL.\nIf the file you are trying to upload is too large is the `/upload_file` command")
+            return await ctx.respond(
+                "Please provide either a file or a URL.\nIf the file you are trying to upload is too large is the `/upload_file` command")
 
         first_message = await ctx.channel.history(oldest_first=True, limit=1).next()
         embed = first_message.embeds[0]
@@ -1412,8 +1562,8 @@ def run_discord_bot():
 
         chan_id = ctx.channel_id
         assignment_dict = await api.get_assignment(chan_id)
-        assignmentId = assignment_dict['Assignment']['id']
-        assignmentTitle = assignment_dict['Assignment']['title']
+        assignmentId = assignment_dict['Assignment'].id
+        assignmentTitle = assignment_dict['Assignment'].title
 
         # Check if a Submission category already exists
         submission_category = discord.utils.get(ctx.guild.categories, name="Submissions")
@@ -1423,7 +1573,7 @@ def run_discord_bot():
             submission_category = await ctx.guild.create_category("Submissions")
 
         # Create the text channel with the name "📝assignmenttitle-studentname" under the Submission category
-        channel_name = f"📝{assignment_dict['Assignment']['title']}-{ctx.author.name}"
+        channel_name = f"📝{assignment_dict['Assignment'].title}-{ctx.author.name}"
         # channel = await ctx.guild.create_text_channel(channel_name, category=submission_category)
         existing_channel = discord.utils.get(submission_category.text_channels, name=channel_name)
         for channel in submission_category.channels:
@@ -1436,9 +1586,12 @@ def run_discord_bot():
         if today > due_date:
             await channel.send(f"```diff\n- THIS SUBMISSION IS {abs((today - due_date).days)} DAY(S) LATE```")
         if file:
-            await channel.send(content=f"**Assignment - {assignmentTitle}**\t{assignment_dict['Assignment']['points']} Pts.\nStudent: {ctx.author.display_name}\n", file=await file.to_file())
+            await channel.send(
+                content=f"**Assignment - {assignmentTitle}**\t{assignment_dict['Assignment'].points} Pts.\nStudent: {ctx.author.display_name}\n",
+                file=await file.to_file())
         else:
-            await channel.send(content=f"**Assignment - {assignmentTitle}**\t{assignment_dict['Assignment']['points']} Pts.\nStudent: {ctx.author.display_name}\n\nSubmission: {url}")
+            await channel.send(
+                content=f"**Assignment - {assignmentTitle}**\t{assignment_dict['Assignment'].points} Pts.\nStudent: {ctx.author.display_name}\n\nSubmission: {url}")
 
         return await ctx.respond("Assignment Submitted!")
 
