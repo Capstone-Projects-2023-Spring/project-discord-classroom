@@ -611,7 +611,7 @@ def run_discord_bot():
             await ctx.respond("You cannot close this channel", delete_after=3)
 
     @bot.slash_command(name='help', description='```/help``` - Sends command information to the user')
-    async def help(ctx, command_name: str = None):
+    async def help(ctx: discord.ApplicationContext, command_name: str = None):
         if command_name:
             command = bot.get_application_command(command_name)
             if not command:
@@ -619,20 +619,39 @@ def run_discord_bot():
                 return
             await ctx.respond(f"**{command_name}:**\n{command.description}")
         else:
-            message = "**Available Commands:**\n\n"
+            everyone_commands = ['tutor', 'help', 'poll', 'anonpoll', 'close']
+            student_commands = ['submit',  'attendance', 'private', 'upload_file'] + everyone_commands
+            educator_commands = ['create', 'grade', 'lecture', 'delete', 'edu', 'ta', 'syllabus', 'upcoming', 'edit'] + everyone_commands
+            assistant_commands = ['grade', 'edit', 'lecture', 'delete', 'upcoming'] + everyone_commands
+            user_roles = [role.name for role in ctx.user.roles]
+            my_commands = []
+            if 'Student' in user_roles:
+                my_commands = student_commands
+            elif 'Educator' in user_roles:
+                my_commands = educator_commands
+            elif 'Assistant' in user_roles:
+                my_commands = assistant_commands
+            else:
+                my_commands = everyone_commands
+            message = f"**Available Commands for {user_roles[1]} role:**\n\n"
             for command in bot.application_commands:
-                if command.name == "create":
+                if command.name not in my_commands:
+                    continue
+
+                if command.name == "create" and 'Educator' in user_roles:
                     for create in command.walk_commands():
                         message += f"{create.description}\n\n"
 
-                if command.name == 'lecture':
+                elif command.name == 'lecture' and ('Educator' in user_roles or 'Assistant' in user_roles):
                     for lecture in command.walk_commands():
                         message += f"{lecture.description}\n\n"
 
-                if command.name == 'tutor':
+                elif command.name == 'grade' and ('Educator' in user_roles or 'Assistant' in user_roles):
+                    for grade in command.walk_commands():
+                        message += f"{grade.description}\n\n"
+                elif command.name == 'tutor':
                     for tutor in command.walk_commands():
                         message += f"{tutor.description}\n\n"
-
                 else:
                     message += f"{command.description}\n\n"
 
