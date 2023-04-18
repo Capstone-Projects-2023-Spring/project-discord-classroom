@@ -89,9 +89,15 @@ async def update_assignment(dictionary: dict, channel_id: int):
 @app.post("/classroom")
 async def create_classroom(classroom: create_classes.Classroom):
     try:
-        sb_response = supabase.table('Classroom').insert(classroom.dict()).execute()
+        classroom_dict = classroom.dict()
+        print(classroom)
+        del classroom_dict['id']
+        sb_response = supabase.table('Classroom').insert(classroom_dict).execute()
+        print(sb_response)
     except sb.PostgrestAPIError as e:
+        print(e)
         return {'message': 'Classroom already exists'}
+    print(sb_response)
     return {'message': 'Classroom created'}
     # return JSONResponse(content={'message': 'quiz created'})
     
