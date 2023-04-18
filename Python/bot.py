@@ -1165,50 +1165,8 @@ def run_discord_bot():
 
     grade = bot.create_group("grade", "Grading commands for Educators")
 
-<<<<<<< HEAD
-        first_msg = (await ctx.channel.history(limit=1).flatten())[0]
-        assignment_id = first_msg.content.split(':')[1].strip()
-        assignment_type, taskId, studentId = assignment_id.split('-')
-        graderId = str(ctx.author.id)
-
-        existing_row = await supabase.table('grades').select('id').eq('studentId', studentId).eq('taskId',
-                                                                                                 taskId).single()
-        if existing_row is not None:
-            data = {
-                'score': points,
-                'comment': comments,
-                'graderId': graderId
-            }
-            result = await supabase.table('grades').update(data).eq('id', existing_row['id']).execute()
-            if result['error'] is not None:
-                await ctx.send(f"An error occurred while updating the grade: {result['error']}")
-            else:
-                await ctx.send(
-                    f"Updated grade for {assignment_type} {taskId} for user {studentId}. Points: {points}. Comments: {comments}")
-        else:
-            data = {
-                'studentId': studentId,
-                'taskId': taskId,
-                'score': points,
-                'comment': comments,
-                'graderId': graderId
-            }
-            result = await supabase.table('grades').insert(data).execute()
-            if result['error'] is not None:
-                await ctx.send(f"An error occurred while grading the assignment: {result['error']}")
-            else:
-                await ctx.send(
-                    f"Graded {assignment_type} {taskId} for user {studentId}. Points: {points}. Comments: {comments}")
-
-    @bot.slash_command(name='grade',
-                       description='```/grade [score]``` - Grades a Student\'s school work')
-    async def grade(ctx: discord.ApplicationContext, score: int = None, comments: str = None,
-                    student: discord.Option(discord.User,
-                                            description="use for grading a student's discussion post") = None):
-=======
     @grade.command(name='quiz', description='```/grade quiz [score] (comments)``` - Grades a student quiz submission')
     async def quiz(ctx: discord.ApplicationContext, score: int, comments: str = None):
->>>>>>> main
 
         user_roles = [role.name for role in ctx.author.roles]
 
@@ -1322,65 +1280,8 @@ def run_discord_bot():
 
         category = ctx.channel.category.name
 
-<<<<<<< HEAD
-        if category == "Submissions":
-            if score is None:
-                return await ctx.respond("Please input a score for the quiz", delete_after=3)
-            first_message = await ctx.channel.history(oldest_first=True, limit=1).next()
-            get_id = first_message.content.split("ID: ")[1]
-            id_values = get_id.split('-')
-            if id_values[0] == 'Q':
-                response = supabase.table('Quiz').select('*').eq('id', id_values[1]).execute()
-                quiz_data = response.data[0]
-                request = await api.get_user_id(ctx.user.id)
-                grader_id = request['id']
-                data = {'studentId': id_values[2], 'taskType': 'Quiz', 'taskId': id_values[1], 'score': score,
-                        'graderId': grader_id}
-                response = supabase.table('User').select('discordId').eq('id', id_values[2]).execute()
-                student = await bot.fetch_user(response.data[0]['discordId'])
-                response = supabase.table('Grade').select('*').match(
-                    {'studentId': id_values[2], 'taskType': 'Quiz', 'taskId': id_values[1]}).execute()
-                if response.data:
-                    supabase.table('Grade').update(data).eq('id', response.data[0]['id']).execute()
-                    await student.send(
-                        f"```SCORE UPDATED\nYou received a {score}/{quiz_data['points']} on the Quiz: {quiz_data['title']}\n\nGrader Comments: {comments}```")
-                    return await ctx.respond(
-                        f"Updated Score - Gave {student.display_name} a grade of {score}/{quiz_data['points']}",
-                        ephemeral=True)
-                else:
-                    supabase.table('Grade').insert(data).execute()
-                    await student.send(
-                        f"```You received a {score}/{quiz_data['points']} on the Quiz: {quiz_data['title']}\n\nGrader Comments: {comments}```")
-                    return await ctx.respond(f"Gave {student.display_name} a grade of {score}/{quiz_data['points']}",
-                                             ephemeral=True)
-            if id_values[0] == 'A':
-                response = supabase.table('Assignment').select('*').eq('id', id_values[1]).execute()
-                ass_data = response.data[0]
-                request = await api.get_user_id(ctx.user.id)
-                grader_id = request['id']
-                data = {'studentId': id_values[2], 'taskType': 'Assignment', 'taskId': id_values[1], 'score': score,
-                        'graderId': grader_id}
-                response = supabase.table('User').select('discordId').eq('id', id_values[2]).execute()
-                student = await bot.fetch_user(response.data[0]['discordId'])
-                response = supabase.table('Grade').select('*').match(
-                    {'studentId': id_values[2], 'taskType': 'Assignment', 'taskId': id_values[1]}).execute()
-                if response.data:
-                    supabase.table('Grade').update(data).eq('id', response.data[0]['id']).execute()
-                    await student.send(
-                        f"```SCORE UPDATED\nYou received a {score}/{ass_data['points']} on the Assignment: {ass_data['title']}\n\nGrader Comments: {comments}```")
-                    return await ctx.respond(
-                        f"Updated Score - Gave {student.display_name} a grade of {score}/{ass_data['points']}",
-                        ephemeral=True)
-                else:
-                    supabase.table('Grade').insert(data).execute()
-                    await student.send(
-                        f"```You received a {score}/{ass_data['points']} on the Assignment: {ass_data['title']}\n\nGrader Comments: {comments}```")
-                    return await ctx.respond(f"Gave {student.display_name} a grade of {score}/{ass_data['points']}",
-                                             ephemeral=True)
-=======
         if category != "Discussions":
             return await ctx.respond("This command only works in the Discussions category", delete_after=3)
->>>>>>> main
 
         channel_id = ctx.channel.id
         response = supabase.table("Discussion").select('*').eq('channelId', channel_id).execute()
@@ -1443,20 +1344,6 @@ def run_discord_bot():
                     await grades_channel.set_permissions(user, view_channel=True)
                 if response.data:
                     supabase.table('Grade').update(data).eq('id', response.data[0]['id']).execute()
-<<<<<<< HEAD
-                    response = supabase.table('User').select('discordId').eq('id', student_id).execute()
-                    student = await bot.fetch_user(response.data[0]['discordId'])
-                    await student.send(
-                        f"```SCORE UPDATED\nYou received a {student_score}/{points} on the Discussion: {title}\n\nGrader Comments: {comments}```")
-                    return await ctx.respond(
-                        f"Updated Score - Gave {student.display_name} a grade of {student_score}/{points}",
-                        ephemeral=True)
-                supabase.table('Grade').insert(data).execute()
-                await student.send(
-                    f"```You received a {student_score}/{points} on the Discussion: {title}\n\nGrader Comments: {comments}```")
-                return await ctx.respond(f"Gave {student.display_name} a grade of {student_score}/{points}",
-                                         ephemeral=True)
-=======
                     message_id = response.data[0]['messageId']
                     grade_message = await grades_channel.fetch_message(message_id)
                     await grade_message.edit(content=f"-------------------------------------------------\n"
@@ -1466,7 +1353,6 @@ def run_discord_bot():
                                                         f"```You received a {student_score}/{points} on the Discussion: {title}\n\nGrader Comments: {comments}```")
                     data['messageId'] = message.id
                     supabase.table('Grade').insert(data).execute()
->>>>>>> main
 
         await ctx.respond("Graded this discussion", ephemeral=True)
 
@@ -1474,29 +1360,8 @@ def run_discord_bot():
         due = datetime.datetime.strptime(dueDate, "%Y-%m-%d").date()
         today = datetime.datetime.today().date()
 
-<<<<<<< HEAD
-            for user in users:
-                if student_role in user.roles:
-                    request = await api.get_user_id(user.id)
-                    student_id = request['id']
-                    data = {'taskType': 'Discussion', 'graderId': grader_id, 'taskId': taskId, 'studentId': student_id,
-                            'score': student_score}
-                    response = supabase.table('Grade').select('*').match(
-                        {'studentId': student_id, 'taskType': 'Discussion', 'taskId': taskId}).execute()
-                    if response.data:
-                        supabase.table('Grade').update(data).eq('id', response.data[0]['id']).execute()
-                        response = supabase.table('User').select('discordId').eq('id', student_id).execute()
-                        student = await bot.fetch_user(response.data[0]['discordId'])
-                        await student.send(
-                            f"```SCORE UPDATED\nYou received a {student_score}/{points} on the Discussion: {title}\n\nGrader Comments: {comments}```")
-                    else:
-                        supabase.table('Grade').insert(data).execute()
-                        await user.send(
-                            f"```You received a {student_score}/{points} on the Discussion: {title}\n\nGrader Comments: {comments}```")
-=======
         if due < today:
             await channel.set_permissions(student_role, send_messages=False)
->>>>>>> main
 
     @grade.command(name='edit', description='```/grade edit [link] [score] (comments)``` - Used to edit a grade')
     async def edit(ctx: discord.ApplicationContext, link: discord.Option(str, description="Copy Message Link"), score: int, comments: str = None):
@@ -1507,8 +1372,6 @@ def run_discord_bot():
         channel_id = link_split[-2]
         message_id = link_split[-1]
 
-<<<<<<< HEAD
-=======
         user_roles = [role.name for role in ctx.author.roles]
 
         if not any(role in ["Educator", "Assistant"] for role in user_roles):
@@ -1551,7 +1414,6 @@ def run_discord_bot():
 
         await ctx.respond("Grade Updated", delete_after=3)
 
->>>>>>> main
     @bot.slash_command(name='submit',
                        description='```/submit assignment (file) (url)``` - student submit assignment')
     async def submit(ctx: discord.ApplicationContext, file: discord.Attachment = None, url: str = None):
