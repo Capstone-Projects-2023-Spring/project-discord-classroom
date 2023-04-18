@@ -61,7 +61,7 @@ teachers and TAs are not involved in the discussion. Having the learning environ
 will help both the students connect with each other and allow the teachers and TAs to be part of the 
 conversation. 
 
-There is a similar Discord Bot as the one proposed called “StudyLion” (https://top.gg/bot/889078613817831495). 
+There is a similar Discord Bot as the one proposed called [“StudyLion”](https://top.gg/bot/889078613817831495). 
 This bot promotes the idea of study communities where students gather 
 together in rooms and study with each other. There are cool features like timers, achievements, and 
 personal profiles for users to feel more engaged. Since StudyLion is mainly just for students to connect 
