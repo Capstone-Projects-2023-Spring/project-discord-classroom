@@ -137,12 +137,14 @@ def run_discord_bot():
         await guild.create_text_channel("General", category=general)
         attendance_channel = await guild.create_text_channel("Attendance", category=general)
         await attendance_channel.set_permissions(everyone, view_channel=False)
-        await attendance_channel.set_permissions(student_role, view_channel=True, send_messages=False,
-                                                 add_reactions=False)
+        await attendance_channel.set_permissions(student_role, view_channel=True, send_messages=False, add_reactions=False)
         syllabus_channel = await guild.create_text_channel("Syllabus", category=general)
         await syllabus_channel.set_permissions(student_role, send_messages=False)
         await guild.create_voice_channel("Lecture", category=general)
         await guild.create_voice_channel("Chill", category=general)
+        files_channel = await guild.create_text_channel("Files", category=general)
+        await files_channel.set_permissions(everyone, view_channel=False)
+        await files_channel.set_permissions(student_role, view_channel=True, send_messages=False, add_reactions=False)
 
         await guild.create_text_channel("Educators-Assistants", category=lounge)
         await guild.create_text_channel("Terminal", category=lounge)
@@ -154,7 +156,16 @@ def run_discord_bot():
         await api.create_classroom(classroom)
 
         # gives discord owner the Educator role
+        await utils.add_member_to_table(guild_id=guild.id, role="Educator", nick=guild.owner.display_name,
+                                        discord_id=guild.owner.id)
         await guild.owner.add_roles(educator_role)
+
+        # gives all other members Student role
+        for member in guild.members:
+            if member != guild.owner and not member.bot:
+                await utils.add_member_to_table(guild_id=guild.id, role="Student", nick=member.display_name,
+                                                discord_id=member.id)
+                await member.add_roles(student_role)
 
     # Gives new users the Student role
     @bot.event
@@ -180,6 +191,9 @@ def run_discord_bot():
     @bot.event
     async def on_member_update(before: discord.Member, after: discord.Member):
         # Update member nickname in database
+        if before.bot:
+            return
+
         if before.nick != after.nick:
             await api.update_classroom_user_name(after.nick, after.id)
 
@@ -293,7 +307,7 @@ def run_discord_bot():
                    option4: str = None, option5: str = None, option6: str = None, option7: str = None,
                    option8: str = None):
 
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
 
         options = [option1, option2]
         if option3:
@@ -457,7 +471,7 @@ def run_discord_bot():
                         option4: str = None, option5: str = None, option6: str = None, option7: str = None,
                         option8: str = None):
 
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
 
         options = [option1, option2]
         if option3:
@@ -576,6 +590,8 @@ def run_discord_bot():
             private_channel = await ctx.guild.create_text_channel(f"Private-{student_id}", category=q, overwrites=ow)
 
             await ctx.respond("Private question created", delete_after=3)
+
+            await private_channel.send(f"This is a private text-channel between {ctx.user} and Educators")
 
             await private_channel.send(f"{user_mention} asked: {question}")
         else:
@@ -894,7 +910,7 @@ def run_discord_bot():
 
         discord_id = ctx.author.id
         user = await api.get_user_id(discord_id)
-        userId = user.id
+        userId = user['id']
 
         submit_dict = {'userId': userId, 'unique_id': unique_id}
 
@@ -1170,7 +1186,7 @@ def run_discord_bot():
 
         user_roles = [role.name for role in ctx.author.roles]
 
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
 
         if not any(role in ["Educator", "Assistant"] for role in user_roles):
             return await ctx.respond("You need to be an educator/assistant to grade school work", delete_after=3)
@@ -1219,7 +1235,7 @@ def run_discord_bot():
 
         user_roles = [role.name for role in ctx.author.roles]
 
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
 
         if not any(role in ["Educator", "Assistant"] for role in user_roles):
             return await ctx.respond("You need to be an educator/assistant to grade school work", delete_after=3)
@@ -1479,5 +1495,39 @@ def run_discord_bot():
                 content=f"**Assignment - {assignmentTitle}**\t{assignment_dict['Assignment'].points} Pts.\nStudent: {ctx.author.display_name}\n\nSubmission: {url}")
 
         return await ctx.respond("Assignment Submitted!")
+
+    @bot.slash_command(name='leave', description='Kicks the bot from the server')
+    async def leave(ctx: discord.ApplicationContext):
+
+        if ctx.user != ctx.guild.owner:
+            return await ctx.respond("Only the Server Owner can use the /leave command")
+
+        message = await ctx.send(
+            f"Warning: {ctx.guild.owner.mention} Kicking the Classroom Bot will cause all school work to be lost."
+            f"Are you sure you want to remove it? React with ✅ to confirm or ❌ to cancel.")
+        await message.add_reaction('✅')
+        await message.add_reaction('❌')
+
+        def check(reaction, user):
+            return user == ctx.guild.owner and reaction.message.id == message.id and str(reaction.emoji) in ['✅', '❌']
+
+        while True:
+            reaction, user = await bot.wait_for('reaction_add', check=check)
+
+            # Assign role to user who reacted
+            if reaction.emoji == "✅":
+                roles = ctx.guild.roles
+                for role in roles:
+                    try:
+                        await role.delete()
+                    except discord.Forbidden:
+                        print(f"Failed to delete role {role.name}: Forbidden")
+                    except discord.HTTPException as e:
+                        print(f"Failed to delete role {role.name}: {e}")
+                return await ctx.guild.leave()
+            if reaction.emoji == "❌":
+                break
+
+        await message.delete()
 
     bot.run(DISCORD_TOKEN)

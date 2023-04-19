@@ -1,5 +1,6 @@
 import api
 import re
+import create_classes
 
 
 async def add_member_to_table(guild_id, role, nick, discord_id):
@@ -10,11 +11,18 @@ async def add_member_to_table(guild_id, role, nick, discord_id):
     # Query 'User' table for member and create row if member is not found
     response = await api.get_user_id(discord_id=discord_id)
     if 'message' in response:
-        response = await api.create_user(nick=nick, discord_id=discord_id)
+        user = create_classes.User(name=nick, discordId=discord_id)
+        response = await api.create_user(user)
     user_id = response['id']
 
+    attendance=None
+    if role == 'Student':
+        attendance = 0
+
+    classroom_user = create_classes.Classroom_User(classroomId=classroom_id, role=role, userId=user_id, attendance=attendance)
+
     # Create new row for member in 'Classroom User' table
-    await api.create_classroom_user(classroom_id=classroom_id, user_id=user_id, name=nick, role=role)
+    await api.create_classroom_user(classroom_user)
 
 
 async def increment_attendance(discord_user_id: int, discord_server_id: int):

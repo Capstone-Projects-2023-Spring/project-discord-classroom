@@ -301,7 +301,9 @@ async def update_token(token: create_classes.Token):
 
 @app.post("/user")
 async def create_user(user: create_classes.User):
-    sb_response = supabase.table('User').insert(user.dict()).execute()
+    user_dict = user.dict()
+    del user_dict['id']
+    sb_response = supabase.table('User').insert(user_dict).execute()
     return {'message': 'user created'}
 
 @app.get("/user/{discord_id}", response_model=create_classes.User)
