@@ -11,10 +11,28 @@ sidebar_position: 1
 title: Class Diagram
 ---
 classDiagram
-    bot <-- main
-    FastAPI <-- bot
-    supabase <-- bot
-    discord <-- bot
+    main --> bot
+    bot --> api
+    api --> supabase
+    bot --> discord
+    create_classes --> Assignment
+    create_classes --> Classroom
+    create_classes -->  Classroom_user
+    create_classes --> Discussion
+    create_classes -->  Grade
+    create_classes --> Question
+    create_classes --> Quiz
+    create_classes --> Token
+    create_classes --> User
+    api --> create_classes
+    bot --> create_assignment
+    bot --> create_discussion
+    bot --> create_quiz
+    create_assignment --> create_classes
+    create_discussion --> create_classes
+    create_quiz --> create_classes
+
+
     class main{
         +run_bot()
     }
@@ -33,7 +51,7 @@ classDiagram
         -syllabus(ctx: context)
         -poll(ctx: context, arg1: string, arg2: string)
     }
-    class FastAPI{
+    class api{
         +FastAPI(): App
     }
     class supabase{
@@ -42,8 +60,89 @@ classDiagram
     class discord{
         +commands.Bot(): Bot
     }
+    class Assignment{
+        -id: int
+        -channelId: int
+        -points: int
+        -startDate: str
+        -dueDate: str
+        -classroomId: int
+        -title: str 
+    }
+    class Classroom{
+	    -id: int
+        -attendace: int
+        -serverId: int
+	    -serverName: str
+    }
+    class Classroom_user{
+	classroomId: int
+	role: str
+	userId: int
+	attendance: int
+    }
+    class Discussion{
+        id: int
+        classroomId: int
+        channelId: int
+        title: str
+        points: int
+        startDate: str
+        dueDate: str
+    }
+    class Grade{
+        taskType: str
+        graderId: int
+        taskId: int
+        studentId: int
+        score: int
+    }
+    class Question{
+        question: str
+        answer: str
+        wrong: List[str]
+        points: float
+    }
+    class Quiz{
+        id: int
+        questions: str
+        channelId: int
+        title: str
+        points: float
+        startDate: str
+        dueDate: str
+        timeLimit: int
+        classroomId: int
+    }
+    class Token{
+        userId: int
+        unique_id: str
+    }
+
+    class User{
+        id: int
+        name: str
+        discordId: int
+    }
+    class create_quiz{
+        +EditModal: class
+        +InputModal: class
+        +TakeQuiz: class
+        +StartQuiz: class
+        -QuizModal: class
+        +create_quiz(): QuizModal
+    }
+    class create_assignment{
+        -AssignmentModal: class
+        create_assignment(): AssignmentModal
+    }
+    class create_discussion{
+        -DiscussionModal: class
+        create_discussion(): DiscussionModal
+    }
 ```
-The class diagram is made up of two python files, main.py and bot.py. Main's only purpose is to run bot.py. bot.py uses three seperate, non-native libraries: supabase, discord, and fastapi. The supabase library is used to connect with the database that is on supabase. It is connected through a URL and KEY pair and creates a Client object when connected. The discord library is used to connect with the Discord Bot through a Discord Token. Also, when creating the bot it needs to know the PREFIX for the commands which is "!" in our case. Finally, FastAPI is used to simplify our API calls to supabase. First we create an App object then give that object methods that are used for the API. 
+
+The class diagram shows the structure of our project in Python. First, the main.py file calls run_bot() from bot.py. bot.py is connected directly to the discord library to start up the bot. Also it uses the api.py file to connect to the Supabase database. The api.py uses the create_classes.py to create a struct of the values inside of the database. Also, in bot.py there are three classes: create_assignment, create_discussion, and create_quiz which are responsible for sending Modals to users to fill out to generate school work. These modals incorperate the structs from create_classes to easily add to the database.
 
 ## Database Design
 
@@ -106,6 +205,14 @@ erDiagram
         int studentId FK
         int graderId FK
         int score
+        int messageId
+    }
+    TOKENS {
+        int id PK
+        int userId FK
+        time created_at
+        time expire_at
+        string unique_id
     }
     CLASSROOM ||--|{ CLASSROOM_USER : has
     CLASSROOM_USER }|--|| USER : has
@@ -113,6 +220,7 @@ erDiagram
     CLASSROOM }|--|| QUIZ : is
     CLASSROOM }|--|| DISCUSSION : is
     USER ||--o{ GRADE : has
+    USER ||--o| TOKENS : has
 ```
 
 Each time the bot is added to a Discord server a new row is added to the CLASSROOM table. This table holds discord server name and the total attendance and grade used to calculate student's grades and attendance scores. Each CLASSROOM contains one or more EDUCATORS and one or more STUDENTS. The STUDENT table holds the student's username, the classroom they belong to, their grade, and their attendance score. Their total grade will equal their grade divided by the CLASSROOM totalGrade. Next we have the ASSIGNMENT, QUIZ, and DISCUSSION tables. The ASSIGNMENT table keeps track of the assignments the EDUCATOR creates which includes the name of the assignment, when to make it available, and when its due. The QUIZ table keeps track of EDUCATOR created quizzes which holds the max score of the quiz, the start/due date, and an optional time limit for the quiz. Each QUIZ is made up of QUESTIONS which contain a prompt, a correct answer, and optional wrong answers depending on the type of question. (If no wrong answers then its a open-ended question or fill-in-the-blank, if one wrong answer could be a True/False, and if all wrong answers are given then its multiple choice). The DISCUSSION table is used to keep track of the Discussions within the Discord server. These will only include max scores and start/due dates. Finally the GRADES table holds all of the grades for the students.
