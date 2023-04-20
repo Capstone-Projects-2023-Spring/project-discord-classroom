@@ -60,7 +60,7 @@ class Quiz(BaseModel):
 
 class Token(BaseModel):
     userId: int
-    unique_id: int
+    unique_id: str
 
 class User(BaseModel):
     id: Optional[int] = None
