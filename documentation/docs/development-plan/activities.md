@@ -58,7 +58,10 @@ Another step to gathering resources is looking at popular virtual education envi
 ## Testing
 - Unit Test
   - The team will conduct unit tests for testing individual components during the software development cycle. The unit tests will cover aspects such as command parsing, the expected output of functions, error handling, etc.
-
+  - The unit testing will be done using Pytest. 
 
 - Functional Testing
   - The team will conduct tests to verify that the Discord bot and FastAPI behave as expected. Functional testing will cover aspects such as the behavior of the bot with various commands, API responses, etc.
+
+- Acceptance Test
+  - Our team will create a document containing our non-functional and functional requirements that will be used to verify and check that our bot is both easy to use and is functioning as expected.
