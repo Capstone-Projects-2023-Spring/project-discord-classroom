@@ -6,13 +6,14 @@ sidebar_position: 2
 
 ### Initial Commands and Dependencies<br/>
 
-1.1. Command to create the classroom and to make the channels.<br/>
-1.2. Role assignments for various positions.<br/>
-1.3. Initialize Help command.<br/>
-1.4. Initialize Question command.<br/>
-1.5. Initialize Poll command.<br/>
-1.6. Integrate the Database with the Classroom Bot.<br/>
-1.7. Integrate Fast Api with the Classroom Bot.<br/>
+1.1. Create an account for the bot and make the initial test server.<br/>
+1.2. Command to create the classroom and to make the channels.<br/>
+1.3. Role assignments for various positions.<br/>
+1.4. Initialize Help command.<br/>
+1.5. Initialize Question command.<br/>
+1.6. Initialize Poll command.<br/>
+1.7. Integrate the Database with the Classroom Bot.<br/>
+1.8. Integrate Fast Api with the Classroom Bot.<br/>
 
 
 ### Creation Commands and Further Development<br/>
