@@ -1230,6 +1230,35 @@ def run_discord_bot():
         supabase.table('Grade').insert(data).execute()
         await ctx.channel.delete()
 
+    @bot.command(name='getgrade', description='Retrieves grades for the user')
+    async def get_grade(ctx, task_id: str = None):
+        user_id = ctx.author.id
+        if task_id:
+            response = supabase.table('Grade').select('taskType', 'taskId', 'score').eq('studentId', user_id).eq('taskId', task_id).execute()
+            grades_data = response.data
+        else:
+            response = supabase.table('Grade').select('taskType', 'taskId', 'score').eq('studentId', user_id).execute()
+            grades_data = response.data
+
+        if not grades_data:
+            return await ctx.author.send("You have no grades.")
+
+        if task_id:
+            if not grades_data:
+                return await ctx.author.send(f"You have no grade for Task ID: {task_id}")
+            else:
+                grade = grades_data[0]
+                grade_table = f"{'Task Type':<15}{'Task ID':<15}{'Score':<10}\n{grade['taskType']:<15}{grade['taskId']:<15}{grade['score']:<10}"
+        
+        # If no taskId is provided, create a formatted table with all the retrieved grades
+        else:
+            grade_table = f"{'Task Type':<15}{'Task ID':<15}{'Score':<10}\n"
+            for grade in grades_data:
+                grade_table += f"{grade['taskType']:<15}{grade['taskId']:<15}{grade['score']:<10}\n"
+
+        await ctx.author.send(f"Your Grades:\n```{grade_table}```")
+
+
     @grade.command(name='assignment', description='```/grade assignment [score] (comments)``` - Grades a student assignment submission')
     async def assignment(ctx: discord.ApplicationContext, score: int, comments: str = None):
 
