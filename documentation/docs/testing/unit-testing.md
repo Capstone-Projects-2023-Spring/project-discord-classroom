@@ -4,24 +4,24 @@ sidebar_position: 1
 
 # Unit tests
 
-Unit tests will be written with pytest for Discord Classroom to test correct functionality of bot and API.
+Unit tests will be written with pytest for Discord Classroom to test correct functionality of bot and the database.
 
-# testPing()
+# test_add_member_to_table()
 
-Test: If the bot returns the string "pong" in response to "ping" command<br/>
-Return: Will return true if the bot returns the string "pong, otherwise returns false.
+Test: Tests whether a member was added to the database table related to their role.<br/>
+Return: True if the student's attendance is 0, otherwise false
 
-# testHelp()
+# test_increment_attendance()
 
-Test: Whether a list of commands is sucessfully returned by the bot.<br/>
-Return: True if a string containing the list of commands is returned, otherwise false.
+Test: Tests whether a student's attendance field was incremented by one.<br/>
+Return: True if the current attendance + 1 is equal to expected amount, otherwise false.
 
-# testDatabaseConnection()
+# test_ordinal()
 
-Test: Tests whether the database is able to be connected to.<br/>
-Return: True if database connection was successful, otherwise returns false
+Test: Tests whether a number is converted to its ordinal string.<br/>
+Return: True if the string of the ordinal matches the expected string, otherwise false.
 
-# testInsert()
+# test_get_ordinal_number()
 
-Test: Whether the bot successfuly inserted a user into the database.<br/>
-Return: True if the string "Inserted new student" is returned, else false.
+Test: Tests Whether the get_ordinalnumber function returns the correct string.<br/>
+Return: True if the string response matches the expected string, otherwise false..
