@@ -1230,6 +1230,22 @@ def run_discord_bot():
         supabase.table('Grade').insert(data).execute()
         await ctx.channel.delete()
 
+    @bot.command(name='getGrade', description='Retrieves grades for the user')
+    async def get_grade(ctx):
+        user_id = ctx.author.id
+
+        response = supabase.table('Grade').select('taskType', 'taskId', 'score').eq('studentId', user_id).execute()
+        grades_data = response.data
+
+        if not grades_data:
+            return await ctx.author.send("You have no grades.")
+
+        table = f"{'Task Type':<15}{'Task ID':<15}{'Score':<10}\n"
+        for grade in grades_data:
+            table += f"{grade['taskType']:<15}{grade['taskId']:<15}{grade['score']:<10}\n"
+
+        await ctx.author.send(f"Your Grades:\n```{table}```")
+
     @grade.command(name='assignment', description='```/grade assignment [score] (comments)``` - Grades a student assignment submission')
     async def assignment(ctx: discord.ApplicationContext, score: int, comments: str = None):
 
