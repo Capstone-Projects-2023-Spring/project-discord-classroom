@@ -26,9 +26,9 @@ Section 704, Discord Bot, Python 3.7+, Database, Teaching Environment
 
 ## Project Abstract 
 
-This document proposes a Discord Application that allows users to create a learning environment. A 
-teacher can use the bot to set up features scheduling, setting up assignments, quizzes, and discussions, 
-grading, attendance, polling, and role management. Teachers can add TAs and students to the discord to 
+This document proposes a Discord Application that allows users to create a learning environment. An 
+educator can use the bot to set up features scheduling, setting up assignments, quizzes, and discussions, 
+grading, attendance, polling, and role management. Educators can add TAs and students to the discord to 
 and give them roles through the bot. Students will be able to access their grades, submit assignments, 
 and connect with their fellow classmates. Additional Features to implement include: a channel dedicated 
 for students to share notes with each other, a trivia session for students to test their knowledge against 
@@ -40,9 +40,9 @@ command for personal reminders.
 
 First the user will add the application to their Discord channel. Then the bot will fully customize the 
 channel adding text and voice channels for general topics like assignments, discussions, syllabus, and so 
-on. Then in a private channel the discord bot will display commands available to the teacher that they can 
+on. Then in a private channel the discord bot will display commands available to the educator that they can 
 use to customize the channel and add content like assignments and quizzes. Through these commands 
-is how the user (the teacher) interacts with the bot. Also, teacher assistants and students will have 
+is how the user (the teacher) interacts with the bot. Also, TAs and students will have 
 commands they can use to make grading and learning easier.
 
 ## Conceptual Design 
@@ -52,8 +52,8 @@ The bot will be programmed in Python 3.9+ utilizing multiple libraries like pyco
 ## Background 
 
 With the recent pandemic, online learning has become essential for students to continue their learning in 
-a safe environment for both teachers and students. This product would be used to make teaching from 
-home an easier, less stressful activity. The main way teachers are connecting with their students is 
+a safe environment for both educators and students. This product would be used to make teaching from 
+home an easier, less stressful activity. The main way educators are connecting with their students is 
 through applications like canvas and blackboard. Although these sites do a great job with allowing 
 educators to post assignments, quizzes, and grades, students rarely will use the site to connect with each 
 other. Instead, students usually create discord channels to communicate with each other where the 
@@ -75,4 +75,49 @@ For the entirety of this project, we use Python3 to build the Discord bot and cr
 
 ## Collaborators
 
-Tim Lopes, Kiran Nixon, Tanvir Alam, Ben Baldino, Steven Altemose, Ryan Klein
+<table>
+<tr>
+    <td align="center">
+        <a href="https://github.com/timlopes17">
+            <img src="https://avatars.githubusercontent.com/u/15525152?v=4" width="100;" alt="timlopes17"/>
+            <br />
+            <sub><b>Tim Lopes</b></sub>
+        </a>
+    </td>
+    <td align="center">
+        <a href="https://github.com/tuj83407">
+            <img src="https://avatars.githubusercontent.com/u/70284955?v=4" width="100;" alt="tuj83407"/>
+            <br />
+            <sub><b>Kiran Nixon</b></sub>
+        </a>
+    </td>
+    <td align="center">
+        <a href="https://github.com/tun31876">
+            <img src="https://avatars.githubusercontent.com/u/97766696?v=4" width="100;" alt="tun31876"/>
+            <br />
+            <sub><b>Tanvir Alam</b></sub>
+        </a>
+    </td>
+    <td align="center">
+        <a href="https://github.com/BenBaldino">
+            <img src="https://avatars.githubusercontent.com/u/112522605?v=4" width="100;" alt="BenBaldino"/>
+            <br />
+            <sub><b>Ben Baldino</b></sub>
+        </a>
+    </td>
+    <td align="center">
+        <a href="https://github.com/Salte8">
+            <img src="https://avatars.githubusercontent.com/u/63520132?v=4" width="100;" alt="Salte8"/>
+            <br />
+            <sub><b>Steven Altemose</b></sub>
+        </a>
+    </td>
+    <td align="center">
+        <a href="https://github.com/rk2357">
+            <img src="https://avatars.githubusercontent.com/u/91990873?v=4" width="100;" alt="natesymer"/>
+            <br />
+            <sub><b>Ryan Klein</b></sub>
+        </a>
+    </td>
+</tr>
+</table>
