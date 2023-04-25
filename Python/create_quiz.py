@@ -1,8 +1,6 @@
 import asyncio
 import discord
 import json
-import os
-from discord.ext import commands
 from typing import Optional, List
 import datetime
 import api
@@ -361,8 +359,10 @@ class StartQuiz(discord.ui.View):
         quiz_id = quiz['quiz']['id']
         due = quiz['quiz']['dueDate']
         start_button = self.get_item("start")
+        refresh_button = self.get_item("refresh")
         if datetime.datetime.strptime(due, '%Y-%m-%d') < datetime.datetime.now():
             self.remove_item(start_button)
+            self.remove_item(refresh_button)
             embed = interaction.message.embeds[0]
             embed.add_field(name="", value="```diff\n- Quiz is no longer available```", inline=False)
             return await interaction.response.edit_message(embed=embed, view=self)
