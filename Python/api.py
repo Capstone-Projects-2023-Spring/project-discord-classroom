@@ -70,7 +70,7 @@ tags_metadata = [
     },
     {
         "name": "classroom user",
-        "description": "Manange user classroom information including their roles and attendance".",
+        "description": "Manange user classroom information including their roles and attendance",
     },
     {
         "name": "discussion",
@@ -104,7 +104,7 @@ tags_metadata = [
 
 @app.post(
     "/assignment",
-    tags=["assignment"]
+    tags=["assignment"],
     summary="Create a new assignment in the database"
 )
 async def create_assignment(assignment: create_classes.Assignment):
@@ -178,7 +178,7 @@ async def create_classroom(classroom: create_classes.Classroom):
 @app.get(
     "/classroom", 
     tags=["classroom"],
-    response_model=List[create_classes.Classroom]
+    response_model=List[create_classes.Classroom],
     summary="Gets a list of all classrooms in the database"
 )
 async def get_all_classrooms():
@@ -207,7 +207,7 @@ async def delete_classroom(server_id: int):
 @app.get(
     "/classroom/{server_id}", 
     tags=["classroom"],
-    response_model=create_classes.Classroom
+    response_model=create_classes.Classroom,
     summary="Gets a specific classroom from the database"
 )
 async def get_classroom(server_id: int):
