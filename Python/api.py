@@ -62,7 +62,10 @@ supabase = create_client(
 # /assignment
 # 
 
-@app.post("/assignment")
+@app.post(
+    "/assignment"
+    summary="Create a new assignment in the database"
+)
 async def create_assignment(assignment: create_classes.Assignment):
     dictionary = assignment.dict()
     del dictionary['id']
@@ -70,13 +73,19 @@ async def create_assignment(assignment: create_classes.Assignment):
     return {'message': 'assignment created'}
     # return JSONResponse(content={'message': 'assignment created'})
 
-@app.get("/assignment", response_model=create_classes.Assignment)
+@app.get("/assignment", 
+        response_model=create_classes.Assignment,
+        summary="Gets an assignment from the database"
+)
 async def get_assignment(channel_id:int):
     sb_response = supabase.table("Assignment").select('*').eq('channelId', channel_id).execute()
     assignment = create_classes.Assignment.parse_obj(sb_response.data[0])
     return {'Assignment': assignment}
 
-@app.put("/assignment/")
+@app.put(
+    "/assignment/",
+    summary="Updates assignment in the database",
+)
 async def update_assignment(dictionary: dict, channel_id: int):
     supabase.table("Assignment").update(dictionary).eq('channelId', channel_id).execute()
     return {'message': 'assignment updated'}
@@ -86,7 +95,10 @@ async def update_assignment(dictionary: dict, channel_id: int):
 # /classroom
 # 
 
-@app.post("/classroom")
+@app.post(
+    "/classroom",
+    summary="Creates a new classroom in the database"
+)
 async def create_classroom(classroom: create_classes.Classroom):
     try:
         classroom_dict = classroom.dict()
@@ -97,31 +109,48 @@ async def create_classroom(classroom: create_classes.Classroom):
     return {'message': 'Classroom created'}
     # return JSONResponse(content={'message': 'quiz created'})
     
-@app.get("/classroom", response_model=List[create_classes.Classroom])
+@app.get(
+    "/classroom", 
+    response_model=List[create_classes.Classroom]
+    summary="Gets a list of all classrooms in the database"
+)
 async def get_all_classrooms():
     sb_response = supabase.table('Classroom').select('*').execute()
     classrooms = sb_response.data
     return {'classrooms': classrooms}
 
-@app.delete("/classroom/")
+@app.delete(
+    "/classroom/",
+    summary="Deletes a classroom from the database"
+)
 async def delete_classroom(server_id: int):
     sb_resposne = supabase.table('Classroom').delete().eq('serverId', server_id).execute()
     return {'message': 'classroom deleted'}
     # return JSONResponse({'message': 'classroom deleted'})
 
-@app.get("/classroom/{server_id}", response_model=create_classes.Classroom)
+@app.get(
+    "/classroom/{server_id}", 
+    response_model=create_classes.Classroom
+    summary="Gets a specific classroom from the database"
+)
 async def get_classroom(server_id: int):
     sb_response = supabase.table('Classroom').select('*').eq('serverId', server_id).execute()
     classroom = create_classes.Classroom.parse_obj(sb_response.data[0])
     return {'classroom': classroom}
 
-@app.get("/classroom/{server_id}/attendance")
+@app.get(
+    "/classroom/{server_id}/attendance",
+    summary="Gets the attendance information of a specific classroom from the database"
+)
 async def get_classroom_attendance(server_id: int):
     classroom = await get_classroom(server_id)
     return {'attendance': classroom['classroom'].attendance}
     # return JSONResponse(content={'attendance': classroom.attendance})
 
-@app.get("/classroom/{server_id}/attendance")
+@app.get(
+    "/classroom/{server_id}/id",
+    summary="Gets the ID of a specific classroom from the database"
+    )
 async def get_classroom_id(server_id: int):
     classroom = await get_classroom(server_id)
     return {'id': classroom['classroom'].id}
@@ -131,33 +160,50 @@ async def get_classroom_id(server_id: int):
 # /classroom_user
 # 
 
-@app.post("/classroom_user")
+@app.post(
+    "/classroom_user",
+    summary="Creates a new classroom user in the database"
+)
 async def create_classroom_user(classroom_user: create_classes.Classroom_User):
     sb_response = supabase.table('Classroom_User').insert(classroom_user.dict()).execute()
     return {'message': 'classroom user create'}
     # return JSONResponse(content={'message': 'classroom user created'})
 
-@app.get("/classroom_user/{classroom_id}/student", response_model=List[create_classes.Classroom_User])
+@app.get(
+    "/classroom_user/{classroom_id}/student", 
+    response_model=List[create_classes.Classroom_User],
+    summary="Gets a list of students of a specific classroom from the database"
+)
 async def get_students(classroom_id: int):
     sb_response = supabase.table('Classroom_User').select('*').match({'classroomId': classroom_id, 'role': "Student"}).execute()
     students = sb_response.data
     return {'students': students}
     # return student
 
-@app.get("/classroom_user/{classroom_id}/educator", response_model=List[create_classes.Classroom_User])
+@app.get(
+    "/classroom_user/{classroom_id}/educator",
+    response_model=List[create_classes.Classroom_User],
+    summary="Gets a list of educators of a specific classroom from the database"
+)
 async def get_educators(classroom_id: int):
     sb_response = supabase.table('Classroom_User').select('*').match({'classroomId': classroom_id, 'role': "Educator"}).execute()
     educators = sb_response.data
     return {'educators': educators}
 
-@app.get("/classroom_user/{user_id}/{classroom_id}/attendance")
+@app.get(
+    "/classroom_user/{user_id}/{classroom_id}/attendance",
+    summary="Gets the attendance information of a specific student from the database"
+)
 async def get_classroom_user_attendance(user_id: int, classroom_id: int):
     sb_response = supabase.table('Classroom_User').select('attendance').match({'classroomId': classroom_id, 'userId': user_id}).execute()
     classroom_user = sb_response.data
     return {'attendance': classroom_user[0]['attendance']}
     # return JSONResponse(content={'attendance': classroom_user.attendance})
 
-@app.put("/classroom_user/{user_id}/{classroom_id}/attendance")
+@app.put(
+    "/classroom_user/{user_id}/{classroom_id}/attendance",
+    summary="Updates the attendance information of a specifc student in the database"
+)
 async def update_user_attendance(user_id: int, classroom_id: int):
     response = await get_classroom_user_attendance(user_id, classroom_id)
     attendance = response['attendance']
@@ -165,7 +211,10 @@ async def update_user_attendance(user_id: int, classroom_id: int):
     return {'message': 'attendance updated'}
     # return JSONResponse(content={'message': 'attendance updated'})
 
-@app.put("/classroom_user/{user_id}/{classroom_id}/role")
+@app.put(
+    "/classroom_user/{user_id}/{classroom_id}/role",
+    summary="Updates the role of a specific user in the database"
+)
 async def update_classroom_user_role(user_id: int, classroom_id: int, role: str):
     if role == 'Student':
         attendance = 0
@@ -174,7 +223,10 @@ async def update_classroom_user_role(user_id: int, classroom_id: int, role: str)
     sb_response = supabase.table('Classroom_User').update({'role': role, 'attendance': attendance}).eq('userId', user_id).eq('classroomId', classroom_id).execute()
     return {'message': 'role updated'}
 
-@app.put("/classroom_user/{user_id}/{classroom_id}/role")
+@app.put(
+    "/classroom_user/{user_id}/{classroom_id}/role",
+    summary="Updates the username of a specific user in the database"
+)
 async def update_classroom_user_name(new_name: str, discord_id: int):
     response = supabase.table('User').update({'name': new_name}).eq('discordId', discord_id).execute()
     return {'message': 'name updated'}
@@ -186,7 +238,10 @@ async def update_classroom_user_name(new_name: str, discord_id: int):
 # /discussion
 # 
 
-@app.post("/discussion")
+@app.post(
+    "/discussion",
+    summary="Creates a new discussion board in the database"
+)
 async def create_discussion(discussion: create_classes.Discussion):
     dictionary = discussion.dict()
     del dictionary['id']
@@ -198,19 +253,29 @@ async def create_discussion(discussion: create_classes.Discussion):
 # /grade
 # 
 
-@app.post("/grade")
+@app.post(
+    "/grade",
+    summary="Creates a new grade in the database"
+)
 async def create_grade(grade: create_classes.Grade):
     sb_response = supabase.table('Grade').insert(grade.dict()).execute()
     return {'message': 'grade created'}
     # return JSONResponse(content={'message': 'grade created'})
 
-@app.get("/grade/{student_id}", response_model=List[create_classes.Grade])
+@app.get(
+    "/grade/{student_id}", 
+    response_model=List[create_classes.Grade],
+    summary="Gets a list of all grades of a specific student from the database"
+)
 async def get_grades(student_id):
     sb_response = supabase.table('Grade').select('score', 'taskId').eq('studentId', student_id).execute()
     grades = sb_response.data
     return {'grades': grades}
 
-@app.put("grade/")
+@app.put(
+    "grade/",
+    summary="Updates a grade in the database"
+)
 async def update_grade(grade: create_classes.Grade):
     # This makes no sense we are inserting instead of updating
     sb_response = supabase.table("Grade").insert(grade.dict()).execute()
@@ -221,12 +286,18 @@ async def update_grade(grade: create_classes.Grade):
 # /quiz
 #
 
-@app.get("/quiz/")
+@app.get(
+    "/quiz/",
+    summary="Gets a specific quiz from the database"
+)
 async def get_quiz(channel_id: int):
     response = supabase.table("Quiz").select('*').eq('channelId', channel_id).execute()
     return {'quiz': response.data[0]}
 
-@app.post("/quiz")
+@app.post(
+    "/quiz",
+    summary="Creates a new quiz in the database"
+)
 async def create_quiz(quiz: create_classes.Quiz):
     dictionary = quiz.dict()
     del dictionary['id']
@@ -234,13 +305,19 @@ async def create_quiz(quiz: create_classes.Quiz):
     return {'message': 'quiz created'}
     # return JSONResponse(content={'message': 'quiz created'})
 
-@app.put("/quiz/")
+@app.put(
+    "/quiz/",
+    summary="Updates a quiz in the database"
+)
 async def update_quiz(dictionary: dict, channel_id: int):
     supabase.table("Quiz").update(dictionary).eq('channelId', channel_id).execute()
     return {'message': 'quiz updated'}
     # return JSONResponse(content={'message': 'quiz updated'})
 
-@app.get("/quiz/{quiz_id}/questions/")
+@app.get(
+    "/quiz/{quiz_id}/questions/",
+    summary="Gets the URL containing the questions of a specific quiz from the database"
+)
 async def get_questions(quiz_id: int):
     response = supabase.table("Quiz").select('questions').eq('id', quiz_id).execute()
     url = response.data[0]['questions']
@@ -252,7 +329,10 @@ async def get_questions(quiz_id: int):
         return {'message': 'Error retrieving questions'}
     # return JSONResponse(content=response.data[0])
 
-@app.post("/quiz/questions/")
+@app.post(
+    "/quiz/questions/",
+    summary="Creates URL containing questions for a quiz"
+)
 async def create_questions(questions: List[create_classes.Question]):
     ques_list = []
     for question in questions:
@@ -288,7 +368,10 @@ async def create_questions(questions: List[create_classes.Question]):
 #
 # /tokens
 #
-@app.post("/token/")
+@app.post(
+    "/token/",
+    summary="Updates a token in the database"
+)
 async def update_token(token: create_classes.Token):
     list = {'created_at': 'now()', 'userId': token.userId, 'unique_id': token.unique_id}
     res = supabase.table("Tokens").insert(list).execute()
@@ -299,14 +382,21 @@ async def update_token(token: create_classes.Token):
 # /user
 # 
 
-@app.post("/user")
+@app.post(
+    "/user",
+    summary="Creates a new user in the database"
+)
 async def create_user(user: create_classes.User):
     user_dict = user.dict()
     del user_dict['id']
     sb_response = supabase.table('User').insert(user_dict).execute()
     return {'message': 'user created'}
 
-@app.get("/user/{discord_id}", response_model=create_classes.User)
+@app.get(
+    "/user/{discord_id}",
+    response_model=create_classes.User,
+    summary="Gets a specific user from the database"
+)
 async def get_user(discord_id: int):
     sb_response = supabase.table('User').select('*').eq('discordId', discord_id).execute()
     if not sb_response.data:
@@ -315,14 +405,20 @@ async def get_user(discord_id: int):
         user = create_classes.User.parse_obj(sb_response.data[0])
         return {'user': user}
 
-@app.get("/user/{discord_id}/id")
+@app.get(
+    "/user/{discord_id}/id",
+    summary="Gets the ID of a specific user from the database",
+)
 async def get_user_id(discord_id: int):
     sb_response = supabase.table('User').select('*').eq('discordId', discord_id).execute()
     if not sb_response.data:
         return {'message': 'user not found'}
     return {'id': sb_response.data[0]['id']}
 
-@app.put("/user/{discord_id}/nick")
+@app.put(
+    "/user/{discord_id}/nick",
+    summary="Updates the username of a user in the database"
+)
 async def update_user_name(discord_id: int, name: str):
     sb_response = supabase.table('User').update({'name': name}).eq('discordId', discord_id).execute()
     return {'message': 'nickname updated'}
