@@ -54,6 +54,46 @@ supabase = create_client(
     configData["SupaKey"]
 )
 
+
+#
+# API Tags
+#
+
+tags_metadata = [
+    {
+        "name": "assignment",
+        "description": "Manage assignments.",
+    },
+    {
+        "name": "classroom",
+        "description": "Manage classrooms, and retrieve classroom attendance.",
+    },
+    {
+        "name": "classroom_user",
+        "description": "Manange user classroom information including their roles and attendance".",
+    },
+    {
+        "name": "discussion",
+        "description": "Manage discussion board.",
+    },
+    {
+        "name": "grade",
+        "description": "Manage grades.",
+    },
+    {
+        "name": "quiz",
+        "description": "Manage quizzes and their questions.",
+    },
+    {
+        "name": "token",
+        "description": "Manage tokens for file submission.",
+    },
+    {
+        "name": "user",
+        "description": "Manage user's Discord information.",
+    },
+]
+
 #
 # API Endpoints
 #
