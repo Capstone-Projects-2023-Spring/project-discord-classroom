@@ -69,7 +69,7 @@ tags_metadata = [
         "description": "Manage classrooms, and retrieve classroom attendance.",
     },
     {
-        "name": "classroom_user",
+        "name": "classroom user",
         "description": "Manange user classroom information including their roles and attendance".",
     },
     {
@@ -103,7 +103,8 @@ tags_metadata = [
 # 
 
 @app.post(
-    "/assignment"
+    "/assignment",
+    tags=["assignment"]
     summary="Create a new assignment in the database"
 )
 async def create_assignment(assignment: create_classes.Assignment):
@@ -118,9 +119,11 @@ async def create_assignment(assignment: create_classes.Assignment):
     return {'message': 'assignment created'}
     # return JSONResponse(content={'message': 'assignment created'})
 
-@app.get("/assignment", 
-        response_model=create_classes.Assignment,
-        summary="Gets an assignment from the database"
+@app.get(
+    "/assignment", 
+    tags=["assignment"],
+    response_model=create_classes.Assignment,
+    summary="Gets an assignment from the database"
 )
 async def get_assignment(channel_id:int):
     """
@@ -134,7 +137,8 @@ async def get_assignment(channel_id:int):
 
 @app.put(
     "/assignment/",
-    summary="Updates assignment in the database",
+    tags=["assignment"],
+    summary="Updates assignment in the database"
 )
 async def update_assignment(dictionary: dict, channel_id: int):
     """
@@ -153,6 +157,7 @@ async def update_assignment(dictionary: dict, channel_id: int):
 
 @app.post(
     "/classroom",
+    tags=["classroom"],
     summary="Creates a new classroom in the database"
 )
 async def create_classroom(classroom: create_classes.Classroom):
@@ -172,6 +177,7 @@ async def create_classroom(classroom: create_classes.Classroom):
     
 @app.get(
     "/classroom", 
+    tags=["classroom"],
     response_model=List[create_classes.Classroom]
     summary="Gets a list of all classrooms in the database"
 )
@@ -185,6 +191,7 @@ async def get_all_classrooms():
 
 @app.delete(
     "/classroom/",
+    tags=["classroom"],
     summary="Deletes a specific classroom from the database"
 )
 async def delete_classroom(server_id: int):
@@ -199,6 +206,7 @@ async def delete_classroom(server_id: int):
 
 @app.get(
     "/classroom/{server_id}", 
+    tags=["classroom"],
     response_model=create_classes.Classroom
     summary="Gets a specific classroom from the database"
 )
@@ -214,6 +222,7 @@ async def get_classroom(server_id: int):
 
 @app.get(
     "/classroom/{server_id}/attendance",
+    tags=["classroom"],
     summary="Gets the attendance information of a specific classroom from the database"
 )
 async def get_classroom_attendance(server_id: int):
@@ -228,8 +237,9 @@ async def get_classroom_attendance(server_id: int):
 
 @app.get(
     "/classroom/{server_id}/id",
+    tags=["classroom"],
     summary="Gets the ID of a specific classroom from the database"
-    )
+)
 async def get_classroom_id(server_id: int):
     """
     Gets the database ID of the classroom associated with 'server_id' from the database
@@ -246,6 +256,7 @@ async def get_classroom_id(server_id: int):
 
 @app.post(
     "/classroom_user",
+    tags=["classroom user"],
     summary="Creates a new classroom user in the database"
 )
 async def create_classroom_user(classroom_user: create_classes.Classroom_User):
@@ -260,6 +271,7 @@ async def create_classroom_user(classroom_user: create_classes.Classroom_User):
 
 @app.get(
     "/classroom_user/{classroom_id}/student", 
+    tags=["classroom user"],
     response_model=List[create_classes.Classroom_User],
     summary="Gets a list of students of a specific classroom from the database"
 )
@@ -276,6 +288,7 @@ async def get_students(classroom_id: int):
 
 @app.get(
     "/classroom_user/{classroom_id}/educator",
+    tags=["classroom user"],
     response_model=List[create_classes.Classroom_User],
     summary="Gets a list of educators of a specific classroom from the database"
 )
@@ -291,6 +304,7 @@ async def get_educators(classroom_id: int):
 
 @app.get(
     "/classroom_user/{user_id}/{classroom_id}/attendance",
+    tags=["classroom user"],
     summary="Gets the attendance information of a specific student from the database"
 )
 async def get_classroom_user_attendance(user_id: int, classroom_id: int):
@@ -307,6 +321,7 @@ async def get_classroom_user_attendance(user_id: int, classroom_id: int):
 
 @app.put(
     "/classroom_user/{user_id}/{classroom_id}/attendance",
+    tags=["classroom user"],
     summary="Updates the attendance information of a specifc student in the database"
 )
 async def update_user_attendance(user_id: int, classroom_id: int):
@@ -324,6 +339,7 @@ async def update_user_attendance(user_id: int, classroom_id: int):
 
 @app.put(
     "/classroom_user/{user_id}/{classroom_id}/role",
+    tags=["classroom user"],
     summary="Updates the role of a specific user in the database"
 )
 async def update_classroom_user_role(user_id: int, classroom_id: int, role: str):
@@ -343,6 +359,7 @@ async def update_classroom_user_role(user_id: int, classroom_id: int, role: str)
 
 @app.put(
     "/classroom_user/{user_id}/{classroom_id}/role",
+    tags=["classroom user"],
     summary="Updates the username of a specific user in the database"
 )
 async def update_classroom_user_name(new_name: str, discord_id: int):
@@ -364,6 +381,7 @@ async def update_classroom_user_name(new_name: str, discord_id: int):
 
 @app.post(
     "/discussion",
+    tags=["discussion"],
     summary="Creates a new discussion board in the database"
 )
 async def create_discussion(discussion: create_classes.Discussion):
@@ -384,6 +402,7 @@ async def create_discussion(discussion: create_classes.Discussion):
 
 @app.post(
     "/grade",
+    tags=["grade"],
     summary="Creates a new grade in the database"
 )
 async def create_grade(grade: create_classes.Grade):
@@ -398,6 +417,7 @@ async def create_grade(grade: create_classes.Grade):
 
 @app.get(
     "/grade/{student_id}", 
+    tags=["grade"],
     response_model=List[create_classes.Grade],
     summary="Gets a list of all grades of a specific student from the database"
 )
@@ -413,6 +433,7 @@ async def get_grades(student_id):
 
 @app.put(
     "grade/",
+    tags=["grade"],
     summary="Updates a grade in the database"
 )
 async def update_grade(grade: create_classes.Grade):
@@ -432,6 +453,7 @@ async def update_grade(grade: create_classes.Grade):
 
 @app.get(
     "/quiz/",
+    tags=["quiz"],
     summary="Gets a specific quiz from the database"
 )
 async def get_quiz(channel_id: int):
@@ -445,6 +467,7 @@ async def get_quiz(channel_id: int):
 
 @app.post(
     "/quiz",
+    tags=["quiz"],
     summary="Creates a new quiz in the database"
 )
 async def create_quiz(quiz: create_classes.Quiz):
@@ -461,6 +484,7 @@ async def create_quiz(quiz: create_classes.Quiz):
 
 @app.put(
     "/quiz/",
+    tags=["quiz"],
     summary="Updates a quiz in the database"
 )
 async def update_quiz(dictionary: dict, channel_id: int):
@@ -476,6 +500,7 @@ async def update_quiz(dictionary: dict, channel_id: int):
 
 @app.get(
     "/quiz/{quiz_id}/questions/",
+    tags=["quiz"],
     summary="Gets the URL containing the questions of a specific quiz from the database"
 )
 async def get_questions(quiz_id: int):
@@ -496,6 +521,7 @@ async def get_questions(quiz_id: int):
 
 @app.post(
     "/quiz/questions/",
+    tags=["quiz"],
     summary="Creates URL containing questions for a quiz"
 )
 async def create_questions(questions: List[create_classes.Question]):
@@ -540,6 +566,7 @@ async def create_questions(questions: List[create_classes.Question]):
 #
 @app.post(
     "/token/",
+    tags=["token"],
     summary="Updates a token in the database"
 )
 async def update_token(token: create_classes.Token):
@@ -559,6 +586,7 @@ async def update_token(token: create_classes.Token):
 
 @app.post(
     "/user",
+    tags=["user"],
     summary="Creates a new user in the database"
 )
 async def create_user(user: create_classes.User):
@@ -574,6 +602,7 @@ async def create_user(user: create_classes.User):
 
 @app.get(
     "/user/{discord_id}",
+    tags=["user"],
     response_model=create_classes.User,
     summary="Gets a specific user from the database"
 )
@@ -592,6 +621,7 @@ async def get_user(discord_id: int):
 
 @app.get(
     "/user/{discord_id}/id",
+    tags=["user"],
     summary="Gets the ID of a specific user from the database",
 )
 async def get_user_id(discord_id: int):
@@ -607,6 +637,7 @@ async def get_user_id(discord_id: int):
 
 @app.put(
     "/user/{discord_id}/nick",
+    tags=["user"],
     summary="Updates the username of a specific user in the database",
 )
 async def update_user_name(discord_id: int, name: str):
