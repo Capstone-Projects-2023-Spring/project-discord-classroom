@@ -1,17 +1,9 @@
-import discord
 from create_classes import Assignment
 import io
-import asyncio
 import discord
 import json
-import os
-from discord.ext import commands
-from typing import Optional, List
 import datetime
 import api
-from create_classes import Quiz, Question
-import random
-import time
 
 
 def create_assignment(bot, file=None, preset=None):

@@ -1,26 +1,28 @@
-from create_classes import Assignment, Grade, Token, Classroom
-from discord.ext import commands
+import asyncio
+import datetime
+import io
+import json
+import os
+import secrets
+import string
 from http import client
-from pptx import Presentation
+from typing import List
+
+import PyPDF2
+import discord
+import docx
+import openai
 from PyPDF2 import PdfReader
-from typing import Optional, List
+from discord.ext import commands
+from pptx import Presentation
 from supabase import create_client, Client
 
 import api
-import asyncio
-import create_quiz, create_assignment, create_discussion
-import datetime
-import discord
-import docx
-import io
-import json
-import openai
-import os
-import PyPDF2
-import requests
-import secrets
-import string
+import create_assignment
+import create_discussion
+import create_quiz
 import utils
+from create_classes import Token, Classroom
 
 if os.path.exists(os.getcwd() + "/config.json"):
     with open("./config.json") as f:
@@ -636,7 +638,7 @@ def run_discord_bot():
             await ctx.respond(f"**{command_name}:**\n{command.description}")
         else:
             everyone_commands = ['tutor', 'help', 'poll', 'anonpoll', 'close']
-            student_commands = ['submit',  'attendance', 'private', 'upload_file'] + everyone_commands
+            student_commands = ['submit',  'attendance', 'private', 'upload_file', 'grades'] + everyone_commands
             educator_commands = ['create', 'grade', 'lecture', 'delete', 'edu', 'ta', 'syllabus', 'upcoming', 'edit'] + everyone_commands
             assistant_commands = ['grade', 'edit', 'lecture', 'delete', 'upcoming'] + everyone_commands
             user_roles = [role.name for role in ctx.user.roles]
@@ -1182,7 +1184,7 @@ def run_discord_bot():
     grade = bot.create_group("grade", "Grading commands for Educators")
 
     @grade.command(name='quiz', description='```/grade quiz [score] (comments)``` - Grades a student quiz submission')
-    async def quiz(ctx: discord.ApplicationContext, score: int, comments: str = None):
+    async def quiz(ctx: discord.ApplicationContext, score: float, comments: str = None):
 
         user_roles = [role.name for role in ctx.author.roles]
 
@@ -1229,34 +1231,6 @@ def run_discord_bot():
                 'graderId': grader_id, 'messageId': message.id}
         supabase.table('Grade').insert(data).execute()
         await ctx.channel.delete()
-
-    @bot.command(name='getgrade', description='Retrieves grades for the user')
-    async def get_grade(ctx, task_id: str = None):
-        user_id = ctx.author.id
-        if task_id:
-            response = supabase.table('Grade').select('taskType', 'taskId', 'score').eq('studentId', user_id).eq('taskId', task_id).execute()
-            grades_data = response.data
-        else:
-            response = supabase.table('Grade').select('taskType', 'taskId', 'score').eq('studentId', user_id).execute()
-            grades_data = response.data
-
-        if not grades_data:
-            return await ctx.author.send("You have no grades.")
-
-        if task_id:
-            if not grades_data:
-                return await ctx.author.send(f"You have no grade for Task ID: {task_id}")
-            else:
-                grade = grades_data[0]
-                grade_table = f"{'Task Type':<15}{'Task ID':<15}{'Score':<10}\n{grade['taskType']:<15}{grade['taskId']:<15}{grade['score']:<10}"
-        
-        # If no taskId is provided, create a formatted table with all the retrieved grades
-        else:
-            grade_table = f"{'Task Type':<15}{'Task ID':<15}{'Score':<10}\n"
-            for grade in grades_data:
-                grade_table += f"{grade['taskType']:<15}{grade['taskId']:<15}{grade['score']:<10}\n"
-
-        await ctx.author.send(f"Your Grades:\n```{grade_table}```")
 
 
     @grade.command(name='assignment', description='```/grade assignment [score] (comments)``` - Grades a student assignment submission')
@@ -1458,6 +1432,86 @@ def run_discord_bot():
         await grade_message.edit(content=edited_message)
 
         await ctx.respond("Grade Updated", delete_after=3)
+
+    @bot.slash_command(name='grades', description='Retrieves grades for the student')
+    async def grades(ctx: discord.ApplicationContext):
+
+        await ctx.defer(ephemeral=True)
+
+        student_role = discord.utils.get(ctx.guild.roles, name="Student")
+
+        if student_role not in ctx.author.roles:
+            return await ctx.respond("Only Students can use /grades command")
+
+        response = await api.get_user_id(ctx.author.id)
+        user_id = response['id']
+        response = await api.get_classroom_id(ctx.guild.id)
+        classroom_id = response['id']
+        response = supabase.table('Grade').select('taskType', 'taskId', 'score').eq('studentId', user_id).execute()
+        all_grades = response.data
+        quizzes = []
+        assignments = []
+        discussions = []
+        # Only gets grades within that classroom
+        for grade in all_grades:
+            response = supabase.table(grade['taskType']).select('*').eq('id', grade['taskId']).execute()
+            task_info = response.data[0]
+            grade_classroom_id = task_info['classroomId']
+            grade['dueDate'] = task_info['dueDate']
+            grade['points'] = task_info['points']
+            grade['title'] = task_info['title']
+            if grade_classroom_id == classroom_id:
+                if grade['taskType'] == 'Quiz':
+                    quizzes.append(grade)
+                elif grade['taskType'] == 'Assignment':
+                    assignments.append(grade)
+                else:
+                    discussions.append(grade)
+
+        # Calculate the length of the longest title in each section
+        max_quiz_title_length = max(len(quiz['title']) for quiz in quizzes)
+        max_ass_title_length = max(len(ass['title']) for ass in assignments)
+        max_disc_title_length = max(len(disc['title']) for disc in discussions)
+
+        max_length = max(max_ass_title_length, max_quiz_title_length, max_disc_title_length)
+
+        # Set the header for the table
+        grades_table = "Name".ljust(max_length + 4) + "Due".ljust(20) + "Score"
+
+        total_points = 0
+        total_score = 0
+
+        # Add the quizzes section
+        grades_table += "\n\nQuizzes\n"
+        for quiz in quizzes:
+            score_percentage = quiz['score'] / quiz['points'] * 100
+            total_points += quiz['points']
+            total_score += quiz['score']
+            grades_table += f"{quiz['title']}".ljust(max_length + 4) + f"{quiz['dueDate']}".ljust(
+                20) + f"{quiz['score']}/{quiz['points']}" + f" ({score_percentage:.0f}%)" + "\n"
+
+        # Add the assignments section
+        grades_table += "\nAssignments\n"
+        for ass in assignments:
+            score_percentage = ass['score'] / ass['points'] * 100
+            total_points += ass['points']
+            total_score += ass['score']
+            grades_table += f"{ass['title']}".ljust(max_length + 4) + f"{ass['dueDate']}".ljust(
+                20) + f"{ass['score']}/{ass['points']}" + f" ({score_percentage:.0f}%)" + "\n"
+
+        # Add the discussions section
+        grades_table += "\nDiscussions\n"
+        for disc in discussions:
+            total_points += disc['points']
+            total_score += disc['score']
+            score_percentage = disc['score'] / disc['points'] * 100
+            grades_table += f"{disc['title']}".ljust(max_length + 4) + f"{disc['dueDate']}".ljust(
+                20) + f"{disc['score']}/{disc['points']}" + f" ({score_percentage:.0f}%)" + "\n"
+
+        total = "Total" + ' '*max_length + ' '*19 + f"{total_score}/{total_points} ({(total_score/total_points * 100):.2f})%"
+
+        await ctx.respond("Check DMs for Grades", delete_after=3)
+        await ctx.author.send(f"```{grades_table}```\n```{total}```")
 
     @bot.slash_command(name='submit',
                        description='```/submit assignment (file) (url)``` - student submit assignment')
