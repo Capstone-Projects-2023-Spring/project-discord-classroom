@@ -114,10 +114,18 @@ For the entirety of this project, we use Python3 to build the Discord bot and cr
     </td>
     <td align="center">
         <a href="https://github.com/rk2357">
-            <img src="https://avatars.githubusercontent.com/u/91990873?v=4" width="100;" alt="natesymer"/>
+            <img src="https://avatars.githubusercontent.com/u/91990873?v=4" width="100;" alt="rk2357"/>
             <br />
             <sub><b>Ryan Klein</b></sub>
         </a>
     </td>
+    <td align="center">
+        <a href="https://github.com/ApplebaumIan">
+            <img src="https://avatars.githubusercontent.com/u/9451941?v=4" width="100;" alt="ApplebaumIan"/>
+            <br />
+            <sub><b>Ian Tyler Applebaum</b></sub>
+        </a>
+    </td>
+    
 </tr>
 </table>
