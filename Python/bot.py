@@ -1469,9 +1469,9 @@ def run_discord_bot():
                     discussions.append(grade)
 
         # Calculate the length of the longest title in each section
-        max_quiz_title_length = max(len(quiz['title']) for quiz in quizzes)
-        max_ass_title_length = max(len(ass['title']) for ass in assignments)
-        max_disc_title_length = max(len(disc['title']) for disc in discussions)
+        max_quiz_title_length = max(len(quiz['title']) for quiz in quizzes) if quizzes else 0
+        max_ass_title_length = max(len(ass['title']) for ass in assignments) if assignments else 0
+        max_disc_title_length = max(len(disc['title']) for disc in discussions) if discussions else 0
 
         max_length = max(max_ass_title_length, max_quiz_title_length, max_disc_title_length)
 
