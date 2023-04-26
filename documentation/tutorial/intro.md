@@ -2,46 +2,42 @@
 sidebar_position: 1
 ---
 
-# Tutorial Intro
-
-Let's discover **Docusaurus in less than 5 minutes**.
-
 ## Getting Started
 
-Get started by **creating a new site**.
-
-Or **try Docusaurus immediately** with **[docusaurus.new](https://docusaurus.new)**.
+Get started by cloning the **[repository](https://github.com/Capstone-Projects-2023-Spring/project-discord-classroom)**.
 
 ### What you'll need
 
-- [Node.js](https://nodejs.org/en/download/) version 14 or above:
-  - When installing Node.js, you are recommended to check all checkboxes related to dependencies.
+- [Python](https://www.python.org/downloads/) version 3.8 or above
 
-## Generate a new site
+- [Discord Bot Token](https://discord.com/developers/applications)
+  - For a guide to create a discord application [click here](https://discordjs.guide/preparations/setting-up-a-bot-application.html#creating-your-bot)
 
-Generate a new Docusaurus site using the **classic template**.
+- [Supabase Token](https://supabase.com/)
+  - For a guide to create a supabase project [click here](https://egghead.io/lessons/supabase-create-a-new-supabase-project)
 
-The classic template will automatically be added to your project after you run the command:
+- [OpenAI API Token](https://openai.com/)
+  - For a guide to generate an OpenAI Token [click here](https://www.howtogeek.com/885918/how-to-get-an-openai-api-key/)
 
-```bash
-npm init docusaurus@latest my-website classic
-```
+## Setting up the enviornment
 
-You can type this command into Command Prompt, Powershell, Terminal, or any other integrated terminal of your code editor.
+**Navigate to the Python folder**
 
-The command also installs all necessary dependencies you need to run Docusaurus.
+Install requirements with
+`pip install -r requirements.txt`
 
-## Start your site
+**Create a file instead of the Python folder called config.json**
 
-Run the development server:
+The config.json should contain five values: DiscordToken, Prefix, SupaUrl, SupaKey, GPTKey
 
-```bash
-cd my-website
-npm run start
-```
+For example: {"DiscordToken": "xxx", "Prefix": "x", "SupaUrl": "xxx", "SupaKey": "xxx", "GPTKey": "xxx"}
 
-The `cd` command changes the directory you're working with. In order to work with your newly created Docusaurus site, you'll need to navigate the terminal there.
+DiscordToken is the Discord Bot Token, Prefix is any character use for bot commands, SupaUrl is the Supabase project URL, SupaKey is the Supabase project key, and GPTKey is the OpenAI API token.
 
-The `npm run start` command builds your website locally and serves it through a development server, ready for you to view at http://localhost:3000/.
 
-Open `docs/intro.md` (this page) and edit some lines: the site **reloads automatically** and displays your changes.
+## Start up the bot
+
+In the Python directory run:
+`python3 main.py`
+
+Congradulations! Your Classroom Bot is now running!
