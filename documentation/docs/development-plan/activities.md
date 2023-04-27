@@ -32,7 +32,7 @@ Another step to gathering resources is looking at popular virtual education envi
 2. Develop attendance functionality that allows users to take and report attendance
     1. Implement educator command that starts attendance process
     2. Implement student command that records their attendance
-    3. Integrate with database for storage and access of attendance records
+    3. Integrate with database for storage and access to attendance records
     4. Implement educator command that retrieves attendance records
 3. Develop poll functionality that allows users to create and respond to polls
     1. Implement educator command that creates a poll
@@ -60,8 +60,8 @@ Another step to gathering resources is looking at popular virtual education envi
   - The team will conduct unit tests for testing individual components during the software development cycle. The unit tests will cover aspects such as command parsing, the expected output of functions, error handling, etc.
   - The unit testing will be done using Pytest. 
 
-- Functional Testing
-  - The team will conduct tests to verify that the Discord bot and FastAPI behave as expected. Functional testing will cover aspects such as the behavior of the bot with various commands, API responses, etc.
+- Integration Test
+  - The team will conduct tests to verify that the Discord bot behaves as expected. Integration testing will cover aspects such as the behavior of the bot with various commands, API responses, etc.
 
 - Acceptance Test
   - Our team will create a document containing our non-functional and functional requirements that will be used to verify and check that our bot is both easy to use and is functioning as expected.

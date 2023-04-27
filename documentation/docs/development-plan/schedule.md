@@ -77,19 +77,19 @@ gantt
     
     * Allows students to pick their sections within the "role" text channel
     
-    * When the bot joins the discord server, it automatically sets up seperate channels for the users
+    * When the bot joins the discord server, it automatically sets up separate channels for the users
     
-    * Educator can use !ta command to give users the Assistant role
+    * Educator can use `/ta` command to give users the Assistant role
 
-* Educator uses the !syllabus command to upload the syllabus to the dsicord server
+* Educator uses the `/syllabus` command to upload the syllabus to the dsicord server
 
-    * Bot reads the pdf file attachment with the !syllabus command
+    * Bot reads the pdf file attachment with the `/syllabus` command
     
     * Bot parses through the PDF to print a text version of the syllabus to discord
 
 * Help command for users to know how certain commands work
 
-    * Discord command for !help with optional arguments
+    * Discord command for `/help` with optional arguments
     
     * If an argument is given, it returns the syntax for that argument
 
@@ -105,11 +105,11 @@ gantt
 
 * Educator can create content for the classroom such as Assignments, Quizzes, and Discussions
 
-    * !assignment command available to educators
+    * `/assignment` command available to educators
 
-    * !quiz command available to educators
+    * `/quiz` command available to educators
 
-    * !discussion command available to educators
+    * `/discussion` command available to educators
 
 * Educators can start lectures within the Discord voice channel
 
@@ -119,17 +119,17 @@ gantt
 
 ## Milestone Demo 3
 
-* Students can submit classroom work such as Assigmnets, Quizzes, and Discussions
+* Students can submit classroom work such as Assignments, Quizzes, and Discussions
 
-    * !submit command for assignments
+    * `/submit` command for assignments
 
-    * !start command for quizzes
+    * `/start` command for quizzes
 
 * Teachers can look at the work students submitted and grade them
 
-    * !grade command for educators
+    * `/grade` command for educators
 
-    * !grades command for students to check their grade
+    * `/grades` command for students to check their grade
 
 ## Milestone Demo FINAL
 
