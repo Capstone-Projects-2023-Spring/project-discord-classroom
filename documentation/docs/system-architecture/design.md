@@ -231,18 +231,18 @@ Each time the bot is added to a Discord server a new row is added to the CLASSRO
     
 <summary>
 
-### Use Case #1: Teacher !attendance command
+### Use Case #1: Educator /attendance command
 
 ```mermaid
 sequenceDiagram
-    actor Teacher
+    actor Educator
     actor Student1
     actor Student2
     participant Discord
     participant ClassroomBot
     participant Supabase DB
-    Teacher->>Discord: User sends "!attendance" command
-    activate Teacher
+    Educator->>Discord: User sends "/attendance" command
+    activate Educator
     activate Discord
     activate Student1
     activate Student2
@@ -252,28 +252,28 @@ sequenceDiagram
     ClassroomBot->>Discord: message to react to for attendance
     Student1->>Discord: reacts to message
     Student2->>Discord: reacts to message
-    Teacher->>Discord: command to close attendance
+    Educator->>Discord: command to close attendance
     Discord->>ClassroomBot: Attendance metrics
     ClassroomBot ->> Supabase DB: Record attendance for current message/session
     ClassroomBot ->> Discord: Session attendance summary
-    Discord->> Teacher: Summary of the sessions attendance, + list of missing names
+    Discord->> Educator: Summary of the sessions attendance, + list of missing names
     deactivate Discord
-    deactivate Teacher
+    deactivate Educator
     deactivate ClassroomBot
 ```
 
 </summary>
 <div>
-<div>As a teacher user I want to record attendance of a lecture.</div>
+<div>As an educator, I want to record the attendance of a lecture.</div>
 <br/>
 
-1. Teacher types `!attendance` command
-2. The Bot reads the command and sends a attendance message to the discord
+1. Educator types `/attendance` command
+2. The Bot reads the command and sends an attendance message to the discord
 3. The students are able to react to the message
-4. The teacher sends a command to close the attendance 
+4. The educator sends a command to close the attendance 
 5. The bot checks the attendance metrics (by checking the reactions)
 6. The bot sends the metrics to the Supabase Database
-7. The bot sends the attendance summary to the teacher, with a list of missing students
+7. The bot sends the attendance summary to the educator, with a list of missing students
     
 </div>
     
@@ -283,7 +283,7 @@ sequenceDiagram
     
 <summary>
 
-### Use Case #2: Student !grades command
+### Use Case #2: Student /grades command
 
 ```mermaid
 sequenceDiagram
@@ -292,7 +292,7 @@ sequenceDiagram
     participant ClassroomBot
     participant FastAPI
     participant Supabase DB
-    Student->>Discord: User sends "!grades" command
+    Student->>Discord: User sends "/grades" command
     activate Student
     activate Discord
     Discord->>ClassroomBot: ClassroomBot reads command from Discord
@@ -317,7 +317,7 @@ sequenceDiagram
 <div>As a student user I want to check my grades for the class.</div>
 <br/>
 
-1. The student types "!grades" command within the classroom discord server.
+1. The student types `/grades` command within the classroom discord server.
 2. The ClassroomBot reads the command from the server
 3. Using FastAPI an API GET request is made for the grades
 4. The request is forwarded to the Supabase Database
@@ -345,7 +345,7 @@ participant c as ClassroomBot
 participant f as FastAPI
 participant s as Supabase DB
 
-u->>d: Student types !pquiz in Quiz text channel
+u->>d: Student types /pquiz in Quiz text channel
 d->>c: Reads command from Discord
 c->>f: GET list of current practice quizes from DataBase
 f->>s: API request from DataBase
@@ -353,7 +353,7 @@ s-->>f: Return list of Practice Quizes
 f-->>c: Sends list from DataBase to ClassRoom Bot
 c-->>d: The Bot lists the available Practice Quizes
 d-->>u: Student reads the list of Quizes they can take
-u->>d: Student types !pquiz 2 in Quiz text channel
+u->>d: Student types /pquiz 2 in Quiz text channel
 d->>c: Reads command from Discord
 c->>f: GET Practice Quiz 2 from the DataBase
 f->>s: API request from DataBase
@@ -376,17 +376,17 @@ d-->>u: Student knows where they stand on the topic by the results
 <div>This Diagram shows the process of a student wanting to take a Practice Quiz.</div>
 <br/>
 
-1. Student types !pquiz
+1. Student types `/pquiz`
 2. The Bot reads the command and sends a request for the list of quizzes available to the API.
 3. The API gets the data from the database and returns it to the Bot.
 4. The Bot lists the available quizzes.
-5. The Student reads the available quizzes and types !pquiz 2 to take the quiz they want.
-6. The bot reads the command and send the request for the specific quiz to the API.
+5. The Student reads the available quizzes and types `/pquiz` 2 to take the quiz they want.
+6. The bot reads the command and sends the request for the specific quiz to the API.
 7. The API gets the questions from the database and returns them to the Bot.
 8. The Bot DMs the student the questions.
 9. The Student answers the questions.
 10. The Bot reads the answers and pushes them to the API.
-11. The API pushes the answers to the Database to be saved and then returns the answers key for the quiz and the student answers.
+11. The API pushes the answers to the Database to be saved and then returns the answers key for the quiz and the student's answers.
 12. The API compares the two and returns the incorrect and correct answers to the Bot.
 13. The Bot messages the Student their results.
 14. The student knows where they stand on the topic due to their results.
@@ -400,31 +400,31 @@ d-->>u: Student knows where they stand on the topic by the results
     
 <summary>
 
-### Use Case #4: Student wants to ask the teacher a question
+### Use Case #4: Student wants to ask the educator a question
 
 ```mermaid
 
 sequenceDiagram
     actor Student
-    actor Teacher
+    actor Educator
     participant Discord
     participant ClassroomBot
-    Student->>Discord: User sends "!ticketcreate" command
+    Student->>Discord: User sends "/ticketcreate" command
     activate Student
     activate Discord
     Discord->>ClassroomBot: ClassroomBot reads command from Discord
     activate ClassroomBot
     ClassroomBot->>Discord: creates a new private chat
     deactivate ClassroomBot
-    activate Teacher
-    Discord->>Teacher: Teacher is added to private chat
+    activate Educator
+    Discord->>Educator: Educator is added to private chat
     Discord->>Student: Student is added to private chat
     Student->>Discord: Student asks question in chat
-    Discord->>Teacher: Teacher receives question
-    Teacher->>Discord: Teacher responds to question
-    Discord->>Student: Student receives teacher's response
+    Discord->>Educator: Educator receives question
+    Educator->>Discord: Educator responds to question
+    Discord->>Student: Student receives educator's response
     deactivate Discord
-    deactivate Teacher
+    deactivate Educator
     deactivate Student
     
 ```
@@ -432,16 +432,16 @@ sequenceDiagram
 
 </summary>
 <div>
-<div>This diagram shows a student asking a question to the teacher by creating a ticket for a private chat</div>
+<div>This diagram shows a student asking a question to the educator by creating a ticket for a private chat</div>
 <br/>
 
-1. Student types "!ticketCreate" command
+1. Student types `/ticketCreate` command
 2. ClassroomBot reads the command from discord
 3. The bot creates a new private chat
-4. The teacher and student are added to the private chat
-5. Student can message the question to the teacher
-6. Teacher responds to the students question
-7. Student receives the teacher's response
+4. The educator and student are added to the private chat
+5. Student can message the question to the educator
+6. Educator responds to the students question
+7. Student receives the educator's response
     
 </div>
     
@@ -451,24 +451,24 @@ sequenceDiagram
     
 <summary>
 
-### Use Case #5: Educator creates poll with !poll
+### Use Case #5: Educator creates poll with /poll
 
 ```mermaid
 
 sequenceDiagram
-    actor Teacher
+    actor Educator
     participant Discord
     participant ClassroomBot
-    Teacher->>Discord: User sends "!pollcreate" command
+    Educator->>Discord: User sends "/pollcreate" command
     activate Discord
     Discord->>ClassroomBot: ClassroomBot reads command from Discord
     activate ClassroomBot
     ClassroomBot->>Discord: ClassroomBot prompts user for poll options
-    Discord->>Teacher: Teacher receives poll prompt
-    Teacher->>Discord: Teacher replies with poll question and options
+    Discord->>Educator: Educator receives poll prompt
+    Educator->>Discord: Educator replies with poll question and options
     Discord->>ClassroomBot: ClassroomBot reads response from Discord
-    ClassroomBot->>Discord: ClassroomBot publishes poll to Discord and sends confirmation to teacher
-    Discord->>Teacher: Teacher receives confirmation that poll was created
+    ClassroomBot->>Discord: ClassroomBot publishes poll to Discord and sends confirmation to educator
+    Discord->>Educator: Educator receives confirmation that poll was created
     deactivate ClassroomBot
     deactivate Discord
     
@@ -480,13 +480,13 @@ sequenceDiagram
 <br/>
 
 
-1. The teacher enters the `!poll` command
+1. The educator enters the `/poll` command
 2. The ClassroomBot reads the command from Discord
 3. The bot prompts the user for the poll question and options
-4. The teacher enters the specified information on Discord
+4. The educator enters the specified information on Discord
 5. The ClassroomBot reads the data from Discord
 6. The ClassroomBot formats the poll message and publishes it to Discord
-7. The teacher receives confirmation that their poll was created
+7. The educator receives confirmation that their poll was created
     
 </div>
     
@@ -496,7 +496,7 @@ sequenceDiagram
     
 <summary>
 
-### Use Case #6: Educator takes attendance with !attendance command
+### Use Case #6: Educator takes attendance with /attendance command
 
 ```mermaid 
 
@@ -509,7 +509,7 @@ sequenceDiagram
     participant FastAPI
     participant Database
 
-    User->>Discord: !attendance
+    User->>Discord: /attendance
     activate Discord
 
     Discord->>ClassroomBot: attendance()
@@ -519,13 +519,13 @@ sequenceDiagram
     ClassroomBot->>ClassroomBot: timerOn()
     
     loop
-        ClassroomBot->> Student1: asks for an input (!present)
+        ClassroomBot->> Student1: asks for an input (/present)
         activate Student1
         ClassroomBot->>Student1: remainingTime(5 minute)
-        Student1-->>Discord: !present
+        Student1-->>Discord: /present
         deactivate Student1
-        Discord->>ClassroomBot: !present
-        ClassroomBot->> Student2: asks for an input (!present)
+        Discord->>ClassroomBot: /present
+        ClassroomBot->> Student2: asks for an input (/present)
         ClassroomBot->>Student2: remainingTime(5 minute)
     end
 
@@ -564,10 +564,10 @@ sequenceDiagram
 <div>This diagram shows the process of recording students attendance. </div>
 <br/>
 
-1. User sends a command to the Discord server to initiate attendance tracking by typing `!attendance`.
+1. User sends a command to the Discord server to initiate attendance tracking by typing `/attendance`.
 2. The Discord server then passes the attendance request to the ClassroomBot.
 3. The ClassroomBot starts a timer and begins a loop asking students in the classroom if they are present or not.
-4. Student1  responds with a `"!present"` whereas Student2 does not.
+4. Student1  responds with a `"/present"` whereas Student2 does not.
 5. Once loop is complete, the ClassroomBot deactivates and sends a request to FastAPI to mark the attendance.
 6. The FastAPI stores the attendance data in a Database.
 7. The FastAPI service then retrieves the list of students who were marked absent in the database and sends it back to the ClassroomBot.

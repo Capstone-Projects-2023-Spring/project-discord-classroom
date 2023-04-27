@@ -9,7 +9,7 @@ sidebar_position: 2
     Test: Tests whether the bot can successfully record attendance for a teacher in a Discord channel, 
     then send the attendance metrics to a database, along with posting a summary of the attendance to the teacher
 
-    Returns: Returns True if all the steps were met whereby teacher recieves a summary of the attendance, otherwise False, if encountered any error
+    Returns: Returns True if all the steps were met whereby the teacher receives a summary of the attendance, otherwise False, if encountered any error
 
     Uses:
     Discord bot component, database component, and discord component
@@ -19,7 +19,7 @@ sidebar_position: 2
 
     Test: Tests whether the bot can successfully pull the user's grade from the database and send it as a private message to the user upon request
 
-    Returns: Returns True if a user is able to recieve their correct grade, otherwise False
+    Returns: Returns True if a user is able to receive their correct grade, otherwise False
 
     Uses:
     Discord bot component, API component, database component, and discord component
@@ -29,7 +29,7 @@ sidebar_position: 2
 
     Test: Tests whether the bot can successfully list the available practice quizzes, send quiz questions to the user, check the answers, and return the user's results
 
-    Returns: Returns True if user is able to retrieve, post, and recieve a grade for the practice quiz, otherwise False, if encountered any error
+    Returns: Returns True if user is able to retrieve, post, and receive a grade for the practice quiz, otherwise False, if encountered any error
 
     Uses:
     Discord bot component, API component, database component, and discord component
@@ -49,7 +49,7 @@ sidebar_position: 2
 
     Test: Tests whether the teacher is able to create a poll for their class
 
-    Returns: Returns True if the poll creation is successfull, otherwise False
+    Returns: Returns True if the poll creation is successful, otherwise False
 
     Uses:
     Discord bot component, database component, and discord component
@@ -57,9 +57,9 @@ sidebar_position: 2
     
 ** Use Case #6 &harr; test_taking_attendance: **
 
-    Test: Tests whether the teacher can successfully initiate attendance tracking whereby students input will be saved to the database afterward the discord bot will send teacher the summary of the absentees. 
+    Test: Tests whether the teacher can successfully initiate attendance tracking whereby students' input will be saved to the database afterward the discord bot will send teacher the summary of the absentees. 
 
-    Returns: Returns True if the students attendence capture was successfull, otherwise False
+    Returns: Returns True if the students' attendance capture was successful, otherwise False
 
     Uses:
     Discord bot component, API component, database component, and discord component

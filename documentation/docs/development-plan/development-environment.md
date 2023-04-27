@@ -11,12 +11,15 @@ sidebar_position: 4
   - Python
   - Discord.py
   - SQL
+  - Supabase
+  - Google Cloud Bucket
 - Documentation tools:
   - Jira
   - Microsoft Word
 - Testing Tools:
   - Discord
   - Pytest
+  - Selenium
 - Deployment Platform:
-  - SupaBase 
   - Google Computer Engine
+  - Heroku

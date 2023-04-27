@@ -24,4 +24,4 @@ Return: True if the string of the ordinal matches the expected string, otherwise
 # test_get_ordinal_number()
 
 Test: Tests Whether the get_ordinalnumber function returns the correct string.<br/>
-Return: True if the string response matches the expected string, otherwise false..
+Return: True if the string response matches the expected string, otherwise false.
