@@ -997,9 +997,8 @@ def run_discord_bot():
             {"role": "user",
              "content": f"In less than 150 words, can you create 3 flash cards for the following topic or information with the following format:\n"
                         f"Question: INSERT QUESTION HERE\n||Answer: INSERT ANSWER HERE|| for each flashcard. Please do not forget the || before"
-                        f"and after the answer, it is very important. If can't finish a flashcards because of the word limit, do not create the"
-                        f"flashcard. Here is the topic or information, to"
-                        f"save words write the answer as short as possible: {topic}"}
+                        f"and after the answer, it is very important. If you can't finish a flashcard because of the word limit, do not create the"
+                        f"flashcard. To save space, write the answer as short as possible. Here is the topic or information: {topic}"}
         )
 
         while True:
