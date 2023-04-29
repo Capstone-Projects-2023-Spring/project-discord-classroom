@@ -6,11 +6,8 @@
 [![Deploy Docs](https://github.com/ApplebaumIan/tu-cis-4398-docs-template/actions/workflows/deploy.yml/badge.svg)](https://github.com/Capstone-Projects-2023-Spring/project-discord-classroom/actions/workflows/deploy.yml)
 [![Documentation Website Link](https://img.shields.io/badge/-Documentation%20Website-brightgreen)](https://capstone-projects-2023-spring.github.io/project-discord-classroom/)
 </div>
-[![Discord Classroom Demo]          // Title
-(https://img.youtube.com/vi/spUYv7YRjcU/0.jpg)] // Thumbnail
-(https://youtu.be/spUYv7YRjcU?t=2418 "Discord Classroom Demo")    // Video Link
 
-
+[![Discord Classroom Demo](https://img.youtube.com/vi/spUYv7YRjcU/0.jpg)](https://youtu.be/spUYv7YRjcU?t=2444)
 
 
 ## Keywords 
