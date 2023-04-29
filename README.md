@@ -8,7 +8,9 @@
 
 
 </div>
-<iframe width="1419" height="807" src="https://www.youtube.com/embed/spUYv7YRjcU" title="Capstone Projects in Computer Science Spring 2023 Section 704" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+[![Discord Classroom Demo]          // Title
+(https://cdn.discordapp.com/attachments/1068281069587136603/1101202262707150951/image.png)] // Thumbnail
+(https://youtu.be/spUYv7YRjcU?t=2449 "Discord Classroom")  
 
 ## Keywords 
 
