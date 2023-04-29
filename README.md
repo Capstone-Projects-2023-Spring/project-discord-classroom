@@ -8,7 +8,7 @@
 
 
 </div>
-https://www.youtube.com/live/spUYv7YRjcU?feature=share&t=2418
+<iframe width="1419" height="807" src="https://www.youtube.com/embed/spUYv7YRjcU" title="Capstone Projects in Computer Science Spring 2023 Section 704" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
 ## Keywords 
 
