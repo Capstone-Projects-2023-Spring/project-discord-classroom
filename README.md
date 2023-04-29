@@ -7,7 +7,7 @@
 [![Documentation Website Link](https://img.shields.io/badge/-Documentation%20Website-brightgreen)](https://capstone-projects-2023-spring.github.io/project-discord-classroom/)
 </div>
 
-[![Discord Classroom Demo](https://img.youtube.com/vi/spUYv7YRjcU/0.jpg)](https://www.youtube.com/watch?v=spUYv7YRjcU&t=2650s)
+[![Discord Classroom Demo](https://cdn.discordapp.com/attachments/1068281069587136603/1101202262707150951/image.png)](https://www.youtube.com/watch?v=spUYv7YRjcU&t=2650s)
 
 
 
