@@ -3,6 +3,6 @@
   "position": 4,
   "link": {
     "type": "generated-index",
-    "description": "The requirements specifications document defines the features and requirements for Discord Classroom. Discord Classroom will allow users to set up a virtual classroom within a discord channel."
+    "description": "The requirements specifications document defines the features and requirements for Discord Classroom which allow users to set up a virtual classroom environment within a Discord server."
   }
 }
