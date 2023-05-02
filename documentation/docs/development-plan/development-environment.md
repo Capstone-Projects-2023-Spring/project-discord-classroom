@@ -6,10 +6,10 @@ sidebar_position: 4
 
 - Editors and IDEs:
   - VS Code
-  - MySQL Workbench
+  - PyCharm
 - Languages, Frameworks, and Management Systems:
   - Python
-  - Discord.py
+  - Py-cord
   - SQL
   - Supabase
   - Google Cloud Bucket
