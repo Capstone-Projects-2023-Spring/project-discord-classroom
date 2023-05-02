@@ -28,24 +28,11 @@ Section 704, Discord Bot, Python 3.7+, Database, Teaching Environment
 
 ## Project Abstract 
 
-This document proposes a Discord Application that allows users to create a learning environment. An 
-educator can use the bot to set up features scheduling, setting up assignments, quizzes, and discussions, 
-grading, attendance, polling, and role management. Educators can add TAs and students to the discord to 
-and give them roles through the bot. Students will be able to access their grades, submit assignments, 
-and connect with their fellow classmates. Additional Features to implement include: a channel dedicated 
-for students to share notes with each other, a trivia session for students to test their knowledge against 
-each other, a ticket system to ask the TA or professor questions, a section for educators to 
-create/schedule announcements, allow students to “raise hand” when they have a question, and a 
-command for personal reminders.
+This document proposes a Discord Application designed to facilitate a comprehensive learning environment for educators. With this bot, educators can schedule assignments, quizzes, discussions, manage grading, attendance, polling, and role assignments. The bot allows educators to add TAs and students to the Discord server and assign roles through the bot. Students can access their grades, submit assignments, and communicate with their classmates. Additional features to be implemented include a dedicated channel for sharing notes, AI tools for studying, a ticket system for asking questions, a section for creating and scheduling announcements, and lecture tools.
 
 ## High Level Requirement 
 
-First the user will add the application to their Discord channel. Then the bot will fully customize the 
-channel adding text and voice channels for general topics like assignments, discussions, syllabus, and so 
-on. Then in a private channel the discord bot will display commands available to the educator that they can 
-use to customize the channel and add content like assignments and quizzes. Through these commands 
-is how the user (the teacher) interacts with the bot. Also, TAs and students will have 
-commands they can use to make grading and learning easier.
+To begin using the Discord Classroom Bot, the user must first add the application to their Discord server. The bot will then fully customize the server by adding text and voice channels for general topics, such as assignments, discussions, syllabus, and more. In a private channel, the Discord bot will display available commands for the educator to customize the server and add content like assignments and quizzes. These commands are how the user (the teacher) interacts with the bot. TAs and students will also have access to specific commands that make grading and learning more manageable.
 
 ## Conceptual Design 
 
@@ -53,23 +40,9 @@ The bot will be programmed in Python 3.9+ utilizing multiple libraries like pyco
 
 ## Background 
 
-With the recent pandemic, online learning has become essential for students to continue their learning in 
-a safe environment for both educators and students. This product would be used to make teaching from 
-home an easier, less stressful activity. The main way educators are connecting with their students is 
-through applications like canvas and blackboard. Although these sites do a great job with allowing 
-educators to post assignments, quizzes, and grades, students rarely will use the site to connect with each 
-other. Instead, students usually create discord channels to communicate with each other where the 
-teachers and TAs are not involved in the discussion. Having the learning environment be on Discord itself 
-will help both the students connect with each other and allow the teachers and TAs to be part of the 
-conversation. 
+The recent pandemic has made online learning essential for students to continue their education in a safe environment for both educators and students. This product aims to make teaching from home easier and less stressful. While applications like Canvas and Blackboard allow educators to post assignments, quizzes, and grades, students seldom use these sites to connect with one another. Instead, they often create Discord channels to communicate with each other, where teachers and TAs are not involved in the discussion. Moving the learning environment to Discord itself will enable students to connect with one another and teachers and TAs to be part of the conversation.
 
-There is a similar Discord Bot as the one proposed called [“StudyLion”](https://top.gg/bot/889078613817831495). 
-This bot promotes the idea of study communities where students gather 
-together in rooms and study with each other. There are cool features like timers, achievements, and 
-personal profiles for users to feel more engaged. Since StudyLion is mainly just for students to connect 
-with each other, my application will be different since it will allow teachers to be in control of the discord 
-environment. Also, StudyLion does not support services such as hosting quizzes and submitting 
-assignments. 
+A similar Discord bot to the proposed one is [“StudyLion”](https://top.gg/bot/889078613817831495). StudyLion promotes study communities where students gather in rooms to study together, with features such as timers, achievements, and personal profiles to engage users. However, StudyLion is mainly for students to connect with one another, while the proposed application allows teachers to control the Discord environment. Additionally, StudyLion does not support features such as hosting quizzes and submitting assignments, which this application aims to provide.
 
 ## Required Resources 
 

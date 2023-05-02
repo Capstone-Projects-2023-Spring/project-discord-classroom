@@ -3,34 +3,20 @@ sidebar_position: 1
 ---
 
 # System Overview
-### Project Abstract<br/>	
-The Classroom Bot is a Discord bot that is for educators or companies that want to utilize Discord servers as a learning environment. Some learning environments that are for school use and other video conferencing applications do not have features that can allow educators to create quizzes or assignments for the students in the same place that the lectures are occurring. Our goal is to create a streamlined experience that helps both students and educators without being overly complicated or requiring multiple web applications.
+### Project Abstract
+The Classroom Bot is a Discord bot designed for educators or companies that want to create a learning environment using Discord servers. Many learning environments for schools and other video conferencing applications lack features that enable educators to create quizzes or assignments in the same place as the lectures. Our goal is to create a simple, streamlined experience that benefits both students and educators without the need for multiple web applications or a complicated setup.
 
-Educators will have the ability to create quizzes, discussions, polls, and assignments related to their instructional topics. This will allow the educator to assess student performance and classroom attendance. The owner of the server is the default educator for the classroom. Students will have the ability to take quizzes, submit assignments, participate in discussions, and leave feedback. They can share notes and questions with fellow students, the educator, or TAs in the same environment that they attend class. The TA, which must be set by the educator, will have the ability to input grades and assist the educator with responding to student questions or other issues.
+Educators can use the bot to create quizzes, discussions, polls, and assignments related to their instructional topics. This feature allows educators to assess student performance and classroom attendance. The server owner is the default educator for the classroom. Students can take quizzes, submit assignments, participate in discussions, and provide feedback. They can share notes and questions with their peers, educators, or TAs in the same environment where they attend class. The TA, who must be assigned by the educator, can enter grades and assist with responding to student questions or other issues.
 
-The bot will be useful for any learning environment and is not limited to just schooling, but the initial idea originated with a school environment in mind. A company may also take advantage of the learning space for training and familiarizing new employees with their systems or procedures. By making it simple and including various commands, the idea is to have a ready-to-go classroom by simply adding the bot to a server. By having the class be held in the same place as the discussions, assignments, and quizzes, the hope is that the learning environment feels open and easy to access. Students will have a quick and easy way of communicating with the educator or fellow students to help promote their learning and find answers to questions or problems they may have in short periods of time.
+While the initial idea originated with a school environment in mind, the bot is useful for any learning environment. A company can also utilize the learning space to train and familiarize new employees with their systems or procedures. By making it simple and including various commands, the bot is ready to use, and adding it to a server creates a classroom instantly. By having class held in the same space as discussions, assignments, and quizzes, the learning environment feels open and easy to access. Students can communicate easily with educators or their peers, promoting their learning and enabling them to find answers to questions or problems quickly.
 
 ## Conceptual Design
 The bot will be programmed with Python 3.7 and will connect to a Supabase database. The bot will use simple SQL commands to add/retrieve data from the database. The bot will be hosted through Google Computer Engine.
 
-### Background<br/>
-With the recent pandemic, online learning has become essential for students to continue their learning in 
-a safe environment for both teachers and students. This product would be used to make teaching from 
-home an easier, less stressful activity. The main way teachers are connecting with their students is 
-through applications like canvas and blackboard. Although these sites do a great job with allowing 
-educators to post assignments, quizzes, and grades, students rarely will use the site to connect with each 
-other. Instead, students usually create discord channels to communicate with each other where the 
-teachers and TAs are not involved in the discussion. Having the learning environment be on Discord itself 
-will help both the students connect with each other and allow the teachers and TAs to be part of the 
-conversation. 
+### Background
+The recent pandemic has made online learning essential for students to continue their education in a safe environment for both educators and students. This product aims to make teaching from home easier and less stressful. While applications like Canvas and Blackboard allow educators to post assignments, quizzes, and grades, students seldom use these sites to connect with one another. Instead, they often create Discord channels to communicate with each other, where teachers and TAs are not involved in the discussion. Moving the learning environment to Discord itself will enable students to connect with one another and teachers and TAs to be part of the conversation.
 
-There is a similar Discord Bot as the one proposed called [“StudyLion”](https://top.gg/bot/889078613817831495). 
-This bot promotes the idea of study communities where students gather 
-together in rooms and study with each other. It includes features such as timers, achievements, and 
-personal profiles for users to feel more engaged. While StudyLion is mainly just for students to connect 
-with each other, the Classroom bot will be different since it will allow teachers to be in control of the discord 
-environment. Also, StudyLion does not support services such as hosting quizzes and submitting 
-assignments. 
+A similar Discord bot to the proposed one is [“StudyLion”](https://top.gg/bot/889078613817831495). StudyLion promotes study communities where students gather in rooms to study together, with features such as timers, achievements, and personal profiles to engage users. However, StudyLion is mainly for students to connect with one another, while the proposed application allows teachers to control the Discord environment. Additionally, StudyLion does not support features such as hosting quizzes and submitting assignments, which this application aims to provide.
 
-### Required Resources<br/>
+### Required Resources
 For the entirety of this project, we have use Python3 to build the Discord bot and the API to connect to the database. The discord bot and API will be hosted on Google's Computer Engine, costing approximately $6 per month. Our database is hosted for free on Supabase.
