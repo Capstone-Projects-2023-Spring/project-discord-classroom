@@ -75,6 +75,18 @@ time.sleep(5)
 message_field.send_keys(Keys.ENTER)
 time.sleep(5)
 
+
+
+#ask to retrieve a prerecord grade :
+# ask tutor gpt to create a practice quiz
+message_field.click()
+message_field.send_keys("/grades")
+time.sleep(5)
+message_field.send_keys(Keys.ENTER)
+time.sleep(5) 
+message_field.send_keys(Keys.ENTER)
+time.sleep(5)
+
 # navigate to dm to check/answer quiz and receive feedback
 driver.get(BOT_DM)
 time.sleep(5)
