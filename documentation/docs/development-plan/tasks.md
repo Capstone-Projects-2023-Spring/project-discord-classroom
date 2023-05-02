@@ -40,11 +40,3 @@ sidebar_position: 2
 4.2. Quiz game for studying.<br/>
 4.3. Timed Announcement command.<br/>
 4.4. Important message log report sent to Teacher.<br/>
-
-
-### Quiz Webpage (need further discussion)<br/>
-
-5.1. Frontend Pages and Interactions.<br/>
-5.2. Backend Structure.<br/>
-5.3. Bot integration.<br/>
-5.4. Bot information Page.<br/>

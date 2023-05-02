@@ -223,7 +223,7 @@ erDiagram
     USER ||--o| TOKENS : has
 ```
 
-Each time the bot is added to a Discord server a new row is added to the CLASSROOM table. This table holds discord server name and the total attendance and grade used to calculate student's grades and attendance scores. Each CLASSROOM contains one or more EDUCATORS and one or more STUDENTS. The STUDENT table holds the student's username, the classroom they belong to, their grade, and their attendance score. Their total grade will equal their grade divided by the CLASSROOM totalGrade. Next we have the ASSIGNMENT, QUIZ, and DISCUSSION tables. The ASSIGNMENT table keeps track of the assignments the EDUCATOR creates which includes the name of the assignment, when to make it available, and when its due. The QUIZ table keeps track of EDUCATOR created quizzes which holds the max score of the quiz, the start/due date, and an optional time limit for the quiz. Each QUIZ is made up of QUESTIONS which contain a prompt, a correct answer, and optional wrong answers depending on the type of question. (If no wrong answers then its a open-ended question or fill-in-the-blank, if one wrong answer could be a True/False, and if all wrong answers are given then its multiple choice). The DISCUSSION table is used to keep track of the Discussions within the Discord server. These will only include max scores and start/due dates. Finally the GRADES table holds all of the grades for the students.
+Each time the bot is added to a Discord server a new row is added to the CLASSROOM table. This table holds discord server name and the total attendance and grade used to calculate student's grades and attendance scores. Each CLASSROOM contains one or more EDUCATORS and one or more STUDENTS. The STUDENT table holds the student's username, the classroom they belong to, their grade, and their attendance score. Their total grade will equal their grade divided by the CLASSROOM totalGrade. Next we have the ASSIGNMENT, QUIZ, and DISCUSSION tables. The ASSIGNMENT table keeps track of the assignments the EDUCATOR creates which includes the name of the assignment, when to make it available, and when its due. The QUIZ table keeps track of EDUCATOR created quizzes which holds the max score of the quiz, the start/due date, and an optional time limit for the quiz. Each QUIZ is made up of QUESTIONS which contain a prompt, a correct answer, and optional wrong answers depending on the type of question. (If no wrong answers then its a open-ended question or fill-in-the-blank, if one wrong answer could be a True/False, and if all wrong answers are given then its multiple choice). The DISCUSSION table is used to keep track of the Discussions within the Discord server. These will only include max scores and start/due dates. Finally the GRADES table holds all of the grades for the students. TOKENS are used to allow users to upload to the website and have a time limit to prevent misuse. 
 
 ## Sequence Diagrams
 
@@ -231,7 +231,7 @@ Each time the bot is added to a Discord server a new row is added to the CLASSRO
     
 <summary>
 
-### Use Case #1: Educator /attendance command
+### Use Case #1: Educator /lecture attendance command
 
 ```mermaid
 sequenceDiagram
@@ -241,7 +241,7 @@ sequenceDiagram
     participant Discord
     participant ClassroomBot
     participant Supabase DB
-    Educator->>Discord: User sends "/attendance" command
+    Educator->>Discord: User sends "/lecture attendance" command
     activate Educator
     activate Discord
     activate Student1
@@ -267,7 +267,7 @@ sequenceDiagram
 <div>As an educator, I want to record the attendance of a lecture.</div>
 <br/>
 
-1. Educator types `/attendance` command
+1. Educator types `/lecture attendance` command
 2. The Bot reads the command and sends an attendance message to the discord
 3. The students are able to react to the message
 4. The educator sends a command to close the attendance 
@@ -345,7 +345,7 @@ participant c as ClassroomBot
 participant f as FastAPI
 participant s as Supabase DB
 
-u->>d: Student types /pquiz in Quiz text channel
+u->>d: Student types /tutor quiz in Quiz text channel
 d->>c: Reads command from Discord
 c->>f: GET list of current practice quizes from DataBase
 f->>s: API request from DataBase
@@ -376,11 +376,11 @@ d-->>u: Student knows where they stand on the topic by the results
 <div>This Diagram shows the process of a student wanting to take a Practice Quiz.</div>
 <br/>
 
-1. Student types `/pquiz`
+1. Student types `/tutor quiz`
 2. The Bot reads the command and sends a request for the list of quizzes available to the API.
 3. The API gets the data from the database and returns it to the Bot.
 4. The Bot lists the available quizzes.
-5. The Student reads the available quizzes and types `/pquiz` 2 to take the quiz they want.
+5. The Student reads the available quizzes and types `/tutor quiz` 2 to take the quiz they want.
 6. The bot reads the command and sends the request for the specific quiz to the API.
 7. The API gets the questions from the database and returns them to the Bot.
 8. The Bot DMs the student the questions.
@@ -409,7 +409,7 @@ sequenceDiagram
     actor Educator
     participant Discord
     participant ClassroomBot
-    Student->>Discord: User sends "/ticketcreate" command
+    Student->>Discord: User sends "/private [question]" command
     activate Student
     activate Discord
     Discord->>ClassroomBot: ClassroomBot reads command from Discord
@@ -435,7 +435,7 @@ sequenceDiagram
 <div>This diagram shows a student asking a question to the educator by creating a ticket for a private chat</div>
 <br/>
 
-1. Student types `/ticketCreate` command
+1. Student types `/private [question]` command
 2. ClassroomBot reads the command from discord
 3. The bot creates a new private chat
 4. The educator and student are added to the private chat
@@ -459,7 +459,7 @@ sequenceDiagram
     actor Educator
     participant Discord
     participant ClassroomBot
-    Educator->>Discord: User sends "/pollcreate" command
+    Educator->>Discord: User sends "/poll" command
     activate Discord
     Discord->>ClassroomBot: ClassroomBot reads command from Discord
     activate ClassroomBot
@@ -519,13 +519,13 @@ sequenceDiagram
     ClassroomBot->>ClassroomBot: timerOn()
     
     loop
-        ClassroomBot->> Student1: asks for an input (/present)
+        ClassroomBot->> Student1: asks for an input
         activate Student1
         ClassroomBot->>Student1: remainingTime(5 minute)
         Student1-->>Discord: /present
         deactivate Student1
         Discord->>ClassroomBot: /present
-        ClassroomBot->> Student2: asks for an input (/present)
+        ClassroomBot->> Student2: asks for an input
         ClassroomBot->>Student2: remainingTime(5 minute)
     end
 
@@ -567,7 +567,7 @@ sequenceDiagram
 1. User sends a command to the Discord server to initiate attendance tracking by typing `/attendance`.
 2. The Discord server then passes the attendance request to the ClassroomBot.
 3. The ClassroomBot starts a timer and begins a loop asking students in the classroom if they are present or not.
-4. Student1  responds with a `"/present"` whereas Student2 does not.
+4. Student1  responds with present whereas Student2 does not.
 5. Once loop is complete, the ClassroomBot deactivates and sends a request to FastAPI to mark the attendance.
 6. The FastAPI stores the attendance data in a Database.
 7. The FastAPI service then retrieves the list of students who were marked absent in the database and sends it back to the ClassroomBot.
